@@ -1,12 +1,13 @@
 {
     "features":  [
+                     "Sunshine Wellness \u0026 Spa at 785C+68 Port Vila",
+                     "Google Maps frontage reconstruction",
+                     "walkable salon and courtyard",
+                     "New Game starts at Sunshine",
+                     "shop map marker and journal tracking",
                      "local minimap",
-                     "quest route and heading",
-                     "driving zoom",
-                     "mobile layout",
-                     "corrected aircraft boarding",
                      "TH/EN"
                  ],
-    "pack_bytes":  73848368,
-    "commit":  "07c12dff12bf7e0199d8d5bbfddf26bd3dd30ad8"
+    "pack_bytes":  73860376,
+    "commit":  "f7f31cadfbfc5fd4f13b28b9ae0f79f4ec5b5981"
 }
