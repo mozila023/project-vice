@@ -35,7 +35,7 @@ func _ready() -> void:
 	add_child(mini_map)
 	atlas_entries=game.places.entries
 	atlas_search=LineEdit.new()
-	atlas_search.placeholder_text=l("Search places or type: beach, hospital…","ค้นหาชื่อสถานที่ หรือประเภท เช่น beach, hospital…")
+	atlas_search.placeholder_text=l("Search places or type: beach, hospital…","ค้นหาชื่อสถานที่ หรือประเภท เช่น ชายหาด โรงพยาบาล…")
 	atlas_search.add_theme_font_override("font",font)
 	atlas_search.add_theme_font_size_override("font_size",14)
 	atlas_search.size=Vector2(650,34)
@@ -232,7 +232,7 @@ func _draw() -> void:
 		if key in ["notes_prev","notes_next","community_meal","port_report","bar_greet","bar_story"]: label={"notes_prev":l("← PREVIOUS","← ก่อนหน้า"),"notes_next":l("NEXT →","ถัดไป →"),"community_meal":l("COMMUNITY MEAL · 2 FISH","มื้อแบ่งปัน · ปลา 2 ตัว"),"port_report":l("REPORT TO FOREMAN","รายงานหัวหน้างาน"),"bar_greet":l("GREET TAVI","ทักทาย Tavi"),"bar_story":l("LISTEN TO THE STORY","ฟังเรื่องราวชุมชน")}[key]
 		if key=="atlas_toggle": label=l("MY NOTES" if atlas_mode else "ALL PLACES · %d" % game.places.entries.size(),"บันทึกของฉัน" if atlas_mode else "สถานที่ทั้งหมด · %d" % game.places.entries.size())
 		if key=="track_place": label=l("TRACK THIS PLACE","นำทางไปสถานที่นี้")
-		if key.begins_with("atlas_"): label=l("DETAILS","ดูข้อมูล")
+		if key.begins_with("atlas_") and key!="atlas_toggle": label=l("DETAILS","ดูข้อมูล")
 		if key=="settings": label=l("SETTINGS","ตั้งค่า")
 		if key=="main_menu": label=l("MAIN MENU","เมนูหลัก")
 		if game.driving and key=="jump": label=l("BRAKE","เบรกมือ")
@@ -253,7 +253,6 @@ func draw_pack_frame() -> void:
 	card(Rect2(c-Vector2(355,255),Vector2(710,510)),Color(0.02,0.08,0.09,0.97))
 	icon("backpack",c+Vector2(-330,-240),22,GOLD)
 	text(c+Vector2(-296,-218),l("YOUR ISLAND PACK","กระเป๋าและบันทึกการเดินทาง"),22,GOLD)
-	text(c+Vector2(-330,231),l("Tab close · F5 save","Tab ปิด · F5 บันทึก"),13)
 
 func draw_journal() -> void:
 	var c := size/2
