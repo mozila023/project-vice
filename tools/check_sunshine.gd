@@ -15,7 +15,7 @@ func run() -> void:
 	await physics_frame
 	var spa=game.sunshine
 	var expected := preload("res://scripts/map_coordinates.gd").project(-17.7419608,168.3207769)
-	check(Vector2(spa.position.x,spa.position.z).distance_to(expected)<0.01,"shop uses the verified Port Vila geographic projection")
+	check(spa.MAP_PIN.distance_to(expected)<0.01,"shop uses the verified Port Vila geographic projection")
 	check(Vector2(game.player.position.x,game.player.position.z).distance_to(spa.SPAWN)<0.1,"New Game spawns at the shop entrance")
 	check(game.story.stage==0 and game.fish==0,"new start preserves the fresh story")
 	var reachable := true
@@ -37,7 +37,7 @@ func run() -> void:
 	check(absf(game.player.position.y-spa.floor_height)<0.2,"player stands on the salon floor without clipping")
 	game.story.tracked_place=spa.TITLE
 	game.navigation.update(0,true)
-	check(Vector2(game.story.target().x,game.story.target().z).distance_to(spa.SITE)<0.1,"shop can be tracked as an optional destination")
+	check(Vector2(game.story.target().x,game.story.target().z).distance_to(Vector2(game.spawn.x,game.spawn.z))<0.1,"shop can be tracked as an optional destination")
 	game.panel="island"
 	check(game.field_hud.buttons().has("place_4"),"journal exposes the new shop destination")
 	var groups=0

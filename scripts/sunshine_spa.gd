@@ -1,8 +1,9 @@
 extends Node3D
-## Site verified against the user-supplied Plus Code and the linked business website.
+## MAP_PIN is the verified business location. SITE stages the model clear of the compressed road network.
 ## Interior follows the site's salon photograph; frontage follows the Google Maps
 ## exterior photo. Unseen elevations/dimensions are interpreted. See SUNSHINE_SPA.md.
-const SITE := Vector2(-447.56486,882.01488)
+const MAP_PIN := Vector2(-447.56486,882.01488)
+const SITE := Vector2(-495.564849853516,854.014892578125)
 const ADDRESS := "785C+68 · Seaside · Port Vila · Vanuatu"
 const TITLE := "Sunshine Wellness & Spa"
 const SPAWN := SITE+Vector2(-5.3,-7.8)

@@ -2,7 +2,7 @@ extends SceneTree
 var failures := 0
 func _initialize() -> void:
 	if DisplayServer.get_name()=="headless":
-		printerr("Run without --headless: this audit reads real MultiMesh render transforms.")
+		printerr("Run without --headless: this audit reads actual render mesh vertices.")
 		quit(2)
 		return
 	run.call_deferred()
@@ -39,21 +39,36 @@ func run() -> void:
 		if old_gap>.1: old_floating+=1
 		if worst.is_empty() or old_gap>worst.gap: worst={"at":t.origin,"gap":old_gap,"label":support.label}
 	if not gaps.is_empty(): failures+=1
-	# Inspect actual render instances, not only the collision/support bookkeeping.
+	# Inspect actual render mesh vertices, not only the collision/support bookkeeping.
 	var visible_count := 0
 	var render_gaps := 0
 	var render_examples := []
+	var render_vertices := {}
 	for node in game.settlement.get_children():
-		if not node is MultiMeshInstance3D or not String(node.name).begins_with("VisibleFoundations_"): continue
-		for i in range(node.multimesh.instance_count):
-			visible_count+=1
-			var transform: Transform3D=node.global_transform*node.multimesh.get_instance_transform(i)
-			for x in [-.5,.5]:
-				for z in [-.5,.5]:
-					var at: Vector3=transform*Vector3(x,-.5,z)
-					if at.y>game.world.surface_height_at(at.x,at.z)+.005:
-						render_gaps+=1
-						if render_examples.size()<4: render_examples.append({"at":at,"ground":game.world.surface_height_at(at.x,at.z),"node":node.position,"instance":node.multimesh.get_instance_transform(i).origin})
+		if not node is MeshInstance3D or not String(node.name).begins_with("Town_concrete_"): continue
+		for surface in range(node.mesh.get_surface_count()):
+			var arrays: Array=node.mesh.surface_get_arrays(surface)
+			for vertex in arrays[Mesh.ARRAY_VERTEX]:
+				var p: Vector3=node.global_transform*vertex
+				render_vertices[Vector3i(roundi(p.x*100),roundi(p.y*100),roundi(p.z*100))]=true
+	for support in supports:
+		var present := true
+		for x in [-.5,.5]:
+			for z in [-.5,.5]:
+				for y in [support.bottom,support.top]:
+					var p: Vector3=support.transform*(support.center+Vector3(x*support.size.x,y,z*support.size.z))
+					var key := Vector3i(roundi(p.x*100),roundi(p.y*100),roundi(p.z*100))
+					if not render_vertices.has(key):
+						var near := false
+						for dx in [-1,0,1]:
+							for dy in [-1,0,1]:
+								for dz in [-1,0,1]:
+									if render_vertices.has(key+Vector3i(dx,dy,dz)): near=true
+						if not near: present=false
+		if present: visible_count+=1
+		else:
+			render_gaps+=1
+			if render_examples.size()<4: render_examples.append(support.transform.origin)
 	if visible_count!=supports.size() or render_gaps>0: failures+=1
 	for label in ["Foundation","PorchDeck","LowerStep","UpperStep","ShopFoundation","ShopPorch"]:
 		if int(labels.get(label,0))==0: failures+=1

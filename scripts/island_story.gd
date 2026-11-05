@@ -62,6 +62,12 @@ func action_text() -> String:
 		5: return l("SEE YOU, LUNA","แล้วเจอกันนะ Luna")
 	return l("LET'S KEEP WALKING","เดินต่อกันเลย")
 func target() -> Vector3:
+	match tracked_place:
+		"Sunshine Wellness & Spa": return game.spawn
+		"PAD THAI @ELLUK": return game.restaurant.position+Vector3(0,0,15.5)
+		"Ifira Port": return game.landmarks.port_desk
+		"Evening Nakamal": return game.landmarks.bar_desk
+
 	if game.places.by_id.has(tracked_place): return game.places.target(tracked_place)
 	for place in PLACES:
 		if place.id==tracked_place: return Vector3(place.at.x,game.ground(place.at.x,place.at.y),place.at.y)
@@ -93,7 +99,7 @@ func update() -> void:
 			discovered.append(place.id)
 func data() -> Dictionary:
 	var at: Vector3=game.luna.position
-	return {"map_scale":10,"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered.duplicate(),"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
+	return {"map_scale":10,"layout_version":2,"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered.duplicate(),"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
 func restore(value: Variant) -> void:
 	stage=0; meals=0; discovered.clear(); tracked_place=""
 	game.quests.restore(value.get("quests",{}) if value is Dictionary else {})

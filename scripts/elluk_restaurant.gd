@@ -1,6 +1,8 @@
 extends Node3D
 ## Front elevation follows the three user supplied March 2025 reference photographs.
-const SITE := Vector2(-570.83226,1116.6267)
+## MAP_PIN retains the real restaurant location; SITE is the nearby playable plot clear of the road.
+const MAP_PIN := Vector2(-570.83226,1116.6267)
+const SITE := Vector2(-570.832275390625,1140.62670898438)
 const LATITUDE := -17.763097
 const LONGITUDE := 168.3091479
 const STAIR_TOP := 7.8

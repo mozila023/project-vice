@@ -2,7 +2,7 @@ extends Node3D
 ## Towns and villages from the baked placement list: corrugated-iron homes on concrete plinths,
 ## verandas, louvre windows and rain tanks, concrete shop blocks in Port Vila, power lines along the road.
 const CHUNK := 180.0
-const CACHE_VERSION := 3
+const CACHE_VERSION := 4
 const CACHE_PATH := "res://assets/baked/settlement.scn"
 var allow_cache := true
 var world: Node3D
@@ -16,7 +16,6 @@ var refined_parts: Array[Dictionary] = []
 var refined_colliders: Array = []
 var house_sites: Array[Dictionary] = []
 var foundation_supports: Array[Dictionary] = []
-var support_batches := {}
 var pole_sites: Array[Vector3] = []
 var wire_spans: Array[Dictionary] = []
 var downloaded_buildings := 0
@@ -105,27 +104,35 @@ func build() -> void:
 		else: house(chunk,t,data,rng)
 		add_collider(t,data)
 	for chain in world.baked.poles:
-		var grounded: PackedVector3Array=chain.duplicate()
-		for i in range(grounded.size()):
-			var at: Vector3=grounded[i]
-			# Divert the complete electrical chain around new business parcels, including its solids.
-			if preload("res://scripts/island_landmarks.gd").reserved(at.x,at.z,1):
-				var sites := preload("res://scripts/island_landmarks.gd")
-				at.z=sites.BAR.y-12 if absf(at.z-sites.BAR.y)<11 else sites.PORT.y-22
-			at.y=world.surface_height_at(at.x,at.z)
-			grounded[i]=at
-		for i in range(grounded.size()):
-			var at: Vector3=grounded[i]
-			for site in preload("res://scripts/place_sites.gd").SITES:
-				if absf(at.x-site.at[0])<site.size[0]/2+2 and absf(at.z-site.at[1])<site.size[1]/2+9: at.x=site.at[0]+site.size[0]/2+3
-			at.y=world.surface_height_at(at.x,at.z)
-			grounded[i]=at
+		var grounded := PackedVector3Array()
+		for original in chain:
+			var at := safe_pole(original)
+			if at.is_finite(): grounded.append(at)
+			else:
+				power_line(grounded);pole_colliders(grounded);grounded.clear()
 		power_line(grounded)
 		pole_colliders(grounded)
 	commit()
-	commit_supports()
 	street_lamps()
 	world.night_listeners.append(on_night)
+
+func pole_clear(at: Vector2) -> bool:
+	if world.surface_height_at(at.x,at.y)<.3 or preload("res://scripts/placement_rules.gd").clearance(world,at)<1.3: return false
+	if preload("res://scripts/sunshine_spa.gd").reserved(at.x,at.y,1) or preload("res://scripts/elluk_restaurant.gd").reserved(at.x,at.y,1) or preload("res://scripts/seaside_inn.gd").reserved(at.x,at.y,1) or preload("res://scripts/island_landmarks.gd").reserved(at.x,at.y,1) or preload("res://scripts/place_sites.gd").reserved(at.x,at.y,1): return false
+	for house in house_sites:
+		var p: Vector3=house.transform.affine_inverse()*Vector3(at.x,0,at.y)
+		var d: Dictionary=house.data
+		if preload("res://scripts/placement_rules.gd").house_rect(d.w,d.d,d.style==2).grow(.7).has_point(Vector2(p.x,p.z)): return false
+	return true
+
+func safe_pole(original: Vector3) -> Vector3:
+	var at := Vector2(original.x,original.z)
+	if pole_clear(at): return Vector3(at.x,world.surface_height_at(at.x,at.y),at.y)
+	for radius in [2,4,6,9,12,16,24,32,48,64]:
+		for i in range(24):
+			var p: Vector2=at+Vector2.from_angle(i*TAU/24)*radius
+			if pole_clear(p): return Vector3(p.x,world.surface_height_at(p.x,p.y),p.y)
+	return Vector3.INF
 
 func load_cached() -> bool:
 	if not ResourceLoader.exists(CACHE_PATH): return false
@@ -241,38 +248,11 @@ func ground_support(chunk: Vector2i,t: Transform3D,center: Vector3,size: Vector3
 			bottom=minf(bottom,world.surface_height_at(at.x,at.z)-t.origin.y-0.25)
 	var dimensions := Vector3(size.x,top-bottom,size.z)
 	var at := center+Vector3(0,(top+bottom)*0.5,0)
-	# Engine-native box instances keep bases visible independently of authored wall batches.
-	if not support_batches.has(chunk): support_batches[chunk]=[]
-	support_batches[chunk].append(t*Transform3D(Basis.from_scale(dimensions),at))
+	# Serialize solid bases in the same concrete mesh as the building, not a separate
+	# MultiMesh whose bounds and distance cutoff can hide the base before the walls.
+	cube(tool_for(chunk,"concrete"),t,at,dimensions,Color.WHITE)
 	extra_boxes.append([at,dimensions])
 	foundation_supports.append({"label":label,"transform":t,"center":center,"size":size,"bottom":bottom,"top":top})
-
-func commit_supports() -> void:
-	var box := BoxMesh.new()
-	box.size=Vector3.ONE
-	var material: StandardMaterial3D=materials["concrete"].duplicate()
-	material.uv1_triplanar=true
-	material.vertex_color_use_as_albedo=false
-	material.albedo_color=Color("b7b5a7")
-	box.material=material
-	for chunk: Vector2i in support_batches:
-		var transforms: Array=support_batches[chunk]
-		var origin := Vector3((chunk.x+.5)*CHUNK,0,(chunk.y+.5)*CHUNK)
-		var instances := MultiMesh.new()
-		instances.transform_format=MultiMesh.TRANSFORM_3D
-		instances.mesh=box
-		instances.instance_count=transforms.size()
-		for i in range(transforms.size()):
-			var local: Transform3D=transforms[i]
-			local.origin-=origin
-			instances.set_instance_transform(i,local)
-		var node := MultiMeshInstance3D.new()
-		node.name="VisibleFoundations_%d_%d" % [chunk.x,chunk.y]
-		node.multimesh=instances
-		node.position=origin
-		node.visibility_range_end=world.building_range()
-		add_child(node)
-	support_batches.clear()
 
 func add_box(body: StaticBody3D,centre: Vector3,size: Vector3) -> void:
 	var shape := CollisionShape3D.new()
@@ -340,6 +320,7 @@ func commit() -> void:
 			node.visibility_range_end=world.building_range()
 			node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		elif entry.key=="pole": node.visibility_range_end=world.building_range()+CHUNK*1.5
+		elif entry.key=="concrete": node.visibility_range_end=world.building_range()+CHUNK*2
 		add_child(node)
 	tools.clear()
 
@@ -568,7 +549,7 @@ func on_night(level: float) -> void:
 		for node in get_children():
 			if not node is GeometryInstance3D: continue
 			if String(node.name).begins_with("Town_") or String(node.name).begins_with("VisibleFoundations_"):
-				node.visibility_range_end=world.building_range()+(CHUNK*1.5 if String(node.name).begins_with("Town_pole_") else 0.0)
+				node.visibility_range_end=world.building_range()+(CHUNK*2 if String(node.name).begins_with("Town_concrete_") else (CHUNK*1.5 if String(node.name).begins_with("Town_pole_") else 0.0))
 	night_level=level
 	var lit := smoothstep(0.35,0.85,level)
 	glass.emission_energy_multiplier=lit*1.35

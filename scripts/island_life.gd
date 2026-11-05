@@ -434,7 +434,7 @@ func build_life() -> void:
 	for i in range(18):
 		var x := -980+rng.randf_range(-24,70)
 		var z := rng.randf_range(190,300)
-		if ground(x,z)<1 or inside_building(x,z): continue
+		if ground(x,z)<1 or inside_building(x,z) or preload("res://scripts/placement_rules.gd").clearance(world,Vector2(x,z))<.6: continue
 		var coconut: Node3D=coconut_scene.instantiate()
 		add_child(coconut)
 		coconut.position=Vector3(x,ground(x,z),z)
@@ -446,9 +446,14 @@ func build_life() -> void:
 		add_child(node)
 		var x := rng.randf_range(-1010,-970)
 		var z := rng.randf_range(240,290)
-		while inside_building(x,z):
+		var attempts := 0
+		while (inside_building(x,z) or preload("res://scripts/placement_rules.gd").clearance(world,Vector2(x,z))<1.2) and attempts<40:
 			x=rng.randf_range(-1010,-970)
 			z=rng.randf_range(240,290)
+			attempts+=1
+		if attempts==40:
+			node.free()
+			continue
 		node.position=Vector3(x,ground(x,z),z)
 		node.rotation.y=rng.randf()*TAU
 		prop_physics.ground_on(node,"driftwood",world)
@@ -1145,7 +1150,7 @@ func save_game(path := "user://efate_life_save.json") -> void:
 	var gathered := []
 	for item in resources:
 		if item.collected: gathered.append(item.id)
-	var data := {"version":2,"map_scale":10,"position":[player.position.x,player.position.y,player.position.z],"health":health,"food":food,"thirst":thirst,"energy":energy,"stamina":stamina,"fish":fish,"cooked_fish":cooked_fish,"coconuts":coconuts,"wood":wood,"coins":coins,"friendship":friendship,"delivered_fish":delivered_fish,"days":days,"day_time":day_time,"gathered":gathered}
+	var data := {"version":2,"map_scale":10,"layout_version":2,"position":[player.position.x,player.position.y,player.position.z],"health":health,"food":food,"thirst":thirst,"energy":energy,"stamina":stamina,"fish":fish,"cooked_fish":cooked_fish,"coconuts":coconuts,"wood":wood,"coins":coins,"friendship":friendship,"delivered_fish":delivered_fish,"days":days,"day_time":day_time,"gathered":gathered}
 	data["story"]=story.data()
 	var file := FileAccess.open(path,FileAccess.WRITE)
 	if file:
@@ -1164,6 +1169,7 @@ func load_game(path := "user://efate_life_save.json") -> void:
 	var loaded := Vector3(float(p[0]),float(p[1]),float(p[2]))
 	loaded=preload("res://scripts/map_coordinates.gd").migrate_position(loaded,int(data.get("map_scale",20)))
 	if absf(loaded.x)>2800 or absf(loaded.z)>2800 or ground(loaded.x,loaded.z)<-0.4: return
+	if int(data.get("layout_version",1))<2: loaded=preload("res://scripts/layout_positions.gd").migrate(loaded)
 	loaded.y=maxf(loaded.y,ground(loaded.x,loaded.z)+0.25)
 	for key in ["health","food","thirst","energy","stamina"]:
 		var value = data.get(key,100)
@@ -1179,6 +1185,7 @@ func load_game(path := "user://efate_life_save.json") -> void:
 	if story_data is Dictionary:
 		story_data["map_scale"]=data.get("map_scale",20)
 	story.restore(story_data)
+	if int(data.get("layout_version",1))<2: luna.position=preload("res://scripts/layout_positions.gd").migrate(luna.position)
 	var gathered = data.get("gathered",[])
 	if not gathered is Array: gathered=[]
 	for item in resources:

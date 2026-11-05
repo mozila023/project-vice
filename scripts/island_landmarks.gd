@@ -1,7 +1,9 @@
 extends Node3D
 ## Blender assets and matching solids, grounded to the rendered island surface.
-const PORT := Vector2(-624.71524,1039.86354)
-const BAR := Vector2(-747.3106,1257.95412)
+const PORT_PIN := Vector2(-624.71524,1039.86354)
+const PORT := Vector2(-692.715209960938,1083.86352539063)
+const BAR_PIN := Vector2(-747.3106,1257.95412)
+const BAR := Vector2(-759.310607910156,1217.9541015625)
 var game: Node3D
 var port: Node3D
 var bar: Node3D

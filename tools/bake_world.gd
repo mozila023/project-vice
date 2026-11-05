@@ -42,6 +42,7 @@ func _initialize() -> void:
 	grade_roads()
 	limit_slopes()
 	world.heights=heights
+	world.index_roads()
 	bake_road_distance()
 	var poles := place_buildings()
 	var images := paint_maps()
@@ -292,15 +293,9 @@ func land_at(x: float,z: float) -> int:
 	return land_class[cz*LAND+cx]
 
 ## The whole footprint plus the veranda or awning in front, not only its corners: a road can cross the middle of a lot.
-func lot_clear_of_roads(x: float,z: float,yaw: float,w: float,d: float) -> bool:
-	var basis := Basis(Vector3.UP,yaw)
-	var depth_back: float=-d*0.5
-	var depth_front: float=d*0.5+3.2
-	for ix in range(5):
-		for iz in range(5):
-			var c: Vector3=basis*Vector3(lerpf(-w*0.5,w*0.5,ix/4.0),0,lerpf(depth_back,depth_front,iz/4.0))
-			if road_distance(x+c.x,z+c.z)<3.5: return false
-	return true
+func lot_clear_of_roads(x: float,z: float,yaw: float,w: float,d: float,shop := false) -> bool:
+	var rules=preload("res://scripts/placement_rules.gd")
+	return rules.rect_clear(world,Vector2(x,z),yaw,rules.house_rect(w,d,shop))
 
 func hits_pole(x: float,z: float,yaw: float,w: float,d: float) -> bool:
 	for pole in pole_points:
@@ -317,7 +312,7 @@ func footprint_contains(x: float,z: float,yaw: float,w: float,d: float,px: float
 func try_building(p: Vector2,yaw: float,w: float,d: float,storeys: int,style: int,drive: float) -> bool:
 	var size: float=maxf(w,d)*0.62
 	var reason := ""
-	if not lot_clear_of_roads(p.x,p.y,yaw,w,d): reason="road"
+	if not lot_clear_of_roads(p.x,p.y,yaw,w,d,style==2): reason="road"
 	elif hits_pole(p.x,p.y,yaw,w,d): reason="pole"
 	elif land_at(p.x,p.y) in [8,9]: reason="land"
 	elif not flat_enough(p.x,p.y,size): reason="slope"
@@ -375,7 +370,7 @@ func place_buildings() -> Array:
 				if built and road.type in ["secondary","tertiary","unclassified"] and int(walked/34.0)!=int((walked+6.0)/34.0):
 					var q := p+normal*(half+2.2)
 					var h: float=world.height_at(q.x,q.y)
-					var clear: bool=h>0.6 and road_distance(q.x,q.y)>=4.2
+					var clear: bool=h>0.6 and preload("res://scripts/placement_rules.gd").clearance(world,q)>=1.3
 					# Mele's hand-placed houses are already standing at this point.
 					for house in buildings_near(q.x,q.y):
 						if footprint_contains(house.x,house.z,house.yaw,house.w,house.d,q.x,q.y,1.0): clear=false

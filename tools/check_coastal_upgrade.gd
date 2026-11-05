@@ -28,7 +28,7 @@ func run() -> void:
 	await physics_frame
 	var coordinates := preload("res://scripts/map_coordinates.gd")
 	check(game.world.geography.meters_per_game_meter==10 and game.world.GRID_N==483,"island geography and detailed physical heightfield use 1:10")
-	check(coordinates.project(-17.763097,168.3091479).distance_to(game.restaurant.SITE)<.01,"Pad Thai GPS pin projects correctly at doubled map scale")
+	check(coordinates.project(-17.763097,168.3091479).distance_to(game.restaurant.MAP_PIN)<.01,"Pad Thai GPS pin projects correctly at doubled map scale")
 	check(game.player.scale==Vector3.ONE and game.player.get_child(0) is CollisionShape3D,"resident dimensions are not stretched with the island")
 	check(game.player.position.distance_to(game.luna.position)<3,"Luna remains within interaction range at new Sunshine spawn")
 	check(coordinates.migrate_position(Vector3(-200,3,400),20)==Vector3(-400,6,800),"legacy save coordinates migrate once to 1:10")

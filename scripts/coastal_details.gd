@@ -26,7 +26,7 @@ func build(owner_game: Node3D) -> void:
 	piece("ac_unit",game.landmarks.port,Vector3(20.6,2.1,5),PI/2)
 	for x in [11.5,18.5]: piece("lantern",game.landmarks.port,Vector3(x,2.3,9.7))
 	var scanned=preload("res://scripts/real_prop_assets.gd")
-	scanned.place("covered_car",game.landmarks.port,Vector3(9,0,-6),PI/2)
+	scanned.place("covered_car",game.landmarks.port,Vector3(-4,0,-5))
 	scanned.place("overhead_crane",game.landmarks.port,Vector3(-16,4.7,12),0,false)
 	for at in [Vector3(-16,0,-10),Vector3(-16,2.4,-10),Vector3(-16,0,-4),Vector3(-16,0,2),Vector3(-9,0,-9)]:
 		var cargo: Node3D=scanned.place("shipping_container",game.landmarks.port,at,PI/2)
