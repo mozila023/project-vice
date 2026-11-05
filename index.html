@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-<meta name="game-source-commit" content="1634c8f0536dd83187dd6bd66a61937693cc8330">
+<meta name="game-source-commit" content="6af2a23d15517b80ab1f8cf681c0ac1b722f1a67">
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
 		<title>Vanuatu Vice</title>
@@ -112,7 +112,7 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":102452744,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":102686712,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const fetchGameResource = window.fetch.bind(window);
 window.fetch = function(input, options) {
@@ -221,6 +221,40 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 }());
 		</script>
-	</body>
+	<style>
+#vice-fullscreen{position:fixed;bottom:max(10px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:20;width:46px;height:42px;border:1px solid #65827e;border-radius:12px;background:#102c2be6;color:#f5d6a2;font:28px sans-serif;touch-action:manipulation;cursor:pointer}
+#vice-fullscreen:focus-visible{outline:2px solid #f5d6a2}
+</style>
+<button id="vice-fullscreen" type="button" aria-label="Full screen" title="Full screen">⛶</button>
+<script>
+(() => {
+  const button = document.getElementById('vice-fullscreen');
+  button.addEventListener('pointerdown', event => event.preventDefault());
+  button.addEventListener('click', async event => {
+    event.stopPropagation();
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        await (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen());
+      } else {
+        const root = document.documentElement;
+        if (root.requestFullscreen) await root.requestFullscreen({ navigationUI: 'hide' });
+        else if (root.webkitRequestFullscreen) await root.webkitRequestFullscreen();
+        else {
+          button.title = 'Safari: Share → Add to Home Screen';
+          alert('Safari: กดแชร์ แล้วเลือกเพิ่มไปยังหน้าจอโฮม เพื่อเล่นแบบเต็มจอ');
+          return;
+        }
+        try { await screen.orientation.lock('landscape'); } catch (_) {}
+      }
+    } catch (_) { button.title = 'แตะเพื่อเปิดเต็มจออีกครั้ง'; }
+    document.getElementById('canvas')?.focus();
+  });
+  const update = () => button.setAttribute('aria-label', (document.fullscreenElement || document.webkitFullscreenElement) ? 'Exit full screen' : 'Full screen');
+  document.addEventListener('fullscreenchange', update);
+  document.addEventListener('webkitfullscreenchange', update);
+})();
+</script>
+
+</body>
 </html>
 
