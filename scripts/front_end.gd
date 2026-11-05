@@ -186,22 +186,14 @@ func build_scene() -> void:
 	add_child(distant_island)
 	ambience=AudioStreamPlayer.new()
 	add_child(ambience)
-	var audio := AudioStreamWAV.new()
-	audio.format=AudioStreamWAV.FORMAT_16_BITS
-	audio.mix_rate=22050
-	var samples := PackedByteArray()
-	samples.resize(22050*4)
-	var flp := 0.0
-	for i in range(22050*2):
-		var t: float=float(i)/22050.0
-		flp=lerpf(flp,sin(i*12.9898)*0.5,0.08)
-		var prop: float=sin(TAU*68*t)*0.42+sin(TAU*136*t+0.3)*0.24+sin(TAU*102*t)*0.18+flp*0.12
-		var value: float=prop*0.09
-		samples.encode_s16(i*2,int(clampf(value,-1.0,1.0)*32767))
-	audio.data=samples
-	audio.loop_mode=AudioStreamWAV.LOOP_FORWARD
-	audio.loop_end=22050*2
-	ambience.stream=audio
+	var audio := preload("res://assets/audio/music/vanuatu_stringband.wav") as AudioStreamWAV
+	if audio != null:
+		audio.loop_mode=AudioStreamWAV.LOOP_FORWARD
+		audio.loop_begin=0
+		audio.loop_end=int(audio.get_length()*audio.mix_rate)
+		ambience.stream=audio
+	ambience.volume_db=-5.5
+	ambience.play()
 	traveler=preload("res://scripts/real_people.gd").new().create(1,1.75)
 	add_child(traveler)
 	traveler.rotation.y=0
@@ -309,6 +301,8 @@ func set_intro_pose(at: float) -> void:
 
 func _process(dt: float) -> void:
 	clock+=dt
+	if is_instance_valid(ambience) and not ambience.playing and not loading:
+		ambience.play()
 	if screen=="intro":
 		set_intro_pose(intro_time+dt)
 		if intro_time>=SHOTS[2]: arrive()

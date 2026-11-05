@@ -13,6 +13,9 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
+	var music := load("res://assets/audio/music/vanuatu_stringband.wav") as AudioStreamWAV
+	check(music != null and music.get_length() > 50.0, "Vanuatu Stringband music loaded (%.2fs)" % (music.get_length() if music else 0.0))
+
 	var voice_ids: Array[String] = [
 		"welcome", "story_0", "story_1", "story_2", "story_3", "story_4", "story_5", "story_6",
 		"villager_greet", "trade_fish", "trade_need_fish", "buy_meal", "chat_island", "ask_malia", "need_wood"
@@ -31,6 +34,7 @@ func run() -> void:
 	var audio: Node3D = scene.get("audio")
 	check(audio != null and is_instance_valid(audio), "IslandAudio node initialized on island")
 	if audio:
+		check(audio.music_player != null and audio.music_player.stream != null and audio.music_player.playing, "Vanuatu Stringband music playing on island")
 		for key: String in ["blip", "step_sand", "step_road", "jump", "cast", "splash", "bite", "catch", "cook", "drink", "eat", "pickup", "rest", "car_door", "car_bump", "ui_open", "ui_close", "ocean_loop", "breeze_loop", "night_loop", "fire_loop", "engine_loop"]:
 			check(audio.sfx_streams.has(key) and audio.sfx_streams[key] != null, "SFX stream ready: " + key)
 
