@@ -1,16 +1,5 @@
 {
-    "features":  [
-                     "Sunshine Wellness \u0026 Spa at 785C+68 Port Vila",
-                     "Google Maps frontage reconstruction",
-                     "walkable salon and courtyard",
-                     "New Game starts at Sunshine",
-                     "grounded houses, vehicles, and walking animations",
-                     "3D fishing rod, reel, float, and catenary line",
-                     "Blender 5.2 3D models \u0026 graphics upgrade",
-                     "Vanuatu Stringband music \u0026 gameplay SFX",
-                     "local minimap",
-                     "TH/EN"
-                 ],
-    "pack_bytes":  78603428,
-    "commit":  "a63e7e6ee2ee40ac5f375923c04a17d4362c2958"
+  "pack": "index.pck",
+  "commit": "a35ec6398ff6a8fcec498d5956413593cbae5bb3",
+  "pack_bytes": 79441108
 }
