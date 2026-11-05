@@ -1,9 +1,12 @@
 {
     "features":  [
-                     "TH/EN story",
-                     "island discoveries",
-                     "relaxed exploration",
-                     "villager outfits"
+                     "realistic people and cars",
+                     "new HUD",
+                     "quest road navigation",
+                     "New Game and Settings",
+                     "flight introduction",
+                     "TH/EN"
                  ],
-    "commit":  "64b728d8c369e42317df1e9488da96325dea9d4c"
+    "pack_bytes":  73836748,
+    "commit":  "f1db33cea95ba761f97f95494521bc32d32cace5"
 }
