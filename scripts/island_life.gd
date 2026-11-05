@@ -151,7 +151,6 @@ func switch_language() -> void:
 	story.language="en" if story.language=="th" else "th"
 	Preferences.language=story.language
 	Preferences.save()
-	if panel=="talk" and is_instance_valid(audio): audio.speak_dialogue_open(active_villager)
 
 func material(key: String,color: Color) -> StandardMaterial3D:
 	if materials.has(key): return materials[key]

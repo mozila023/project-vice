@@ -1,23 +1,19 @@
 extends Node3D
-## Vanuatu Stringband background music, TH/EN spoken dialogue voiceovers, and clean musical gameplay SFX.
+## Vanuatu Stringband background music and clean musical gameplay SFX (all spoken voiceovers removed).
 
 var game: Node3D
 var sfx_streams := {}
-var voice_cache := {}
 
 var music_player: AudioStreamPlayer
-var voice_player: AudioStreamPlayer
 var sfx_pool: Array[AudioStreamPlayer] = []
 var sfx_cursor := 0
 var engine_player: AudioStreamPlayer
 
 var step_timer := 0.0
-var current_speaker := ""
 var last_panel := ""
 var last_paused := false
 var was_on_floor := true
 
-const MALE_NAMES := ["Jonas", "David", "Peter", "Thomas", "Ben", "Paul"]
 const MIX_RATE := 22050
 const MUSIC_PATH := "res://assets/audio/music/vanuatu_stringband.wav"
 
@@ -39,11 +35,6 @@ func setup_players() -> void:
 	add_child(music_player)
 	music_player.play()
 
-	voice_player = AudioStreamPlayer.new()
-	voice_player.name = "VoicePlayer"
-	voice_player.volume_db = 2.0
-	add_child(voice_player)
-
 	for i in range(6):
 		var p := AudioStreamPlayer.new()
 		p.name = "SFX_%d" % i
@@ -57,72 +48,17 @@ func setup_players() -> void:
 	add_child(engine_player)
 
 func is_speaking() -> bool:
-	return (is_instance_valid(voice_player) and voice_player.playing) or (game!=null and game.guide!=null and game.guide.speaking())
-
-func speaker_pitch(speaker_name: String) -> float:
-	if speaker_name.is_empty() or speaker_name.begins_with("Malia"):
-		return 1.0
-	for m: String in MALE_NAMES:
-		if speaker_name.begins_with(m):
-			return 0.84 + float(speaker_name.hash() & 3) * 0.015
-	return 0.98 + float(speaker_name.hash() & 3) * 0.02
-
-func speak_id(id: String, speaker_name := "") -> void:
-	if not is_instance_valid(voice_player) or game == null:
-		return
-	current_speaker = speaker_name
-	var lang: String = "en" if game.story.language == "en" else "th"
-	var path := "res://assets/audio/voice/%s_%s.mp3" % [id, lang]
-	if not voice_cache.has(path):
-		if ResourceLoader.exists(path):
-			voice_cache[path] = load(path)
-		else:
-			voice_cache[path] = null
-	var stream: AudioStream = voice_cache[path]
-	if stream != null:
-		voice_player.stop()
-		voice_player.stream = stream
-		voice_player.pitch_scale = speaker_pitch(speaker_name)
-		voice_player.play()
-
-func speak_dialogue_open(villager_name: String) -> void:
-	play_sfx("ui_open", 1.0, -4.5)
-	if villager_name=="Luna":
-		current_speaker="Luna"
-		voice_player.stop()
-		game.guide.speak_dialogue()
-		return
-	speak_id("villager_greet", villager_name)
+	return false
 
 func on_notice(text: String) -> void:
 	if text.begins_with("Thank you! Three fresh fish"):
 		play_sfx("discover", 1.08, -2.5)
-		speak_id("trade_fish", current_speaker)
-		return
-	if text.begins_with("Bring three fresh fish"):
-		speak_id("trade_need_fish", current_speaker)
-		return
-	if text.begins_with("A home-cooked meal"):
+	elif text.begins_with("A home-cooked meal"):
 		play_sfx("eat", 1.0, -2.5)
-		speak_id("buy_meal", current_speaker)
-		return
-	if text.begins_with("The Efate coast connects"):
-		speak_id("chat_island", current_speaker)
-		return
-	if text.begins_with("Malia is by the beach fire") or text.begins_with("มาเลียอยู่แถวกองไฟ"):
-		speak_id("ask_malia", current_speaker)
-		return
-	if text.begins_with("Bring 3 driftwood") or text.begins_with("นำไม้ลอยน้ำ 3 ชิ้น"):
-		speak_id("need_wood", "Malia")
-		return
-	if text.begins_with("New chapter:") or text.begins_with("บทใหม่:"):
+	elif text.begins_with("New chapter:") or text.begins_with("บทใหม่:"):
 		play_sfx("discover", 1.0, -2.0)
-		if game.panel == "talk" and game.active_villager.begins_with("Malia"):
-			speak_id("story_%d" % clampi(game.story.stage, 0, 6), "Malia")
-		return
-	if text.begins_with("Discovered:") or text.begins_with("ค้นพบ:"):
+	elif text.begins_with("Discovered:") or text.begins_with("ค้นพบ:"):
 		play_sfx("discover", 1.12, -2.5)
-		return
 
 func play_sfx(kind: String, pitch := 1.0, vol_db := 0.0) -> void:
 	if not sfx_streams.has(kind) or sfx_pool.is_empty():
@@ -139,19 +75,16 @@ func _process(dt: float) -> void:
 	if game == null or game.player == null:
 		return
 
-	# Ensure Vanuatu background music stays playing and ducks smoothly during spoken dialogue
+	# Ensure Vanuatu background music stays playing
 	if is_instance_valid(music_player) and music_player.stream != null:
 		if not music_player.playing:
 			music_player.play()
-		var target_music_db := -14.5 if is_speaking() else (-9.0 if game.paused else -5.5)
+		var target_music_db := -9.0 if game.paused else -5.5
 		music_player.volume_db = lerpf(music_player.volume_db, target_music_db, clampf(dt * 6.0, 0.0, 1.0))
 
 	# Panel & pause transitions
 	if game.panel != last_panel:
-		if last_panel=="talk" and current_speaker=="Luna": game.guide.stop_speech()
-		if game.panel == "talk":
-			speak_dialogue_open(game.active_villager)
-		elif game.panel != "":
+		if game.panel != "":
 			play_sfx("ui_open", 1.0, -5.5)
 		elif last_panel != "":
 			play_sfx("ui_close", 0.95, -6.5)
@@ -209,15 +142,6 @@ func make_wav(samples: PackedFloat32Array, loop := false) -> AudioStreamWAV:
 	return wav
 
 func build_streams() -> void:
-	# Clean, musical wooden & acoustic sound effects (zero continuous noise loops)
-	var blip_len := int(MIX_RATE * 0.05)
-	var blip_buf := PackedFloat32Array()
-	blip_buf.resize(blip_len)
-	for i in range(blip_len):
-		var t := float(i) / MIX_RATE
-		blip_buf[i] = sin(TAU * 440.0 * t) * exp(-float(i) / blip_len * 8.0) * 0.3
-	sfx_streams["blip"] = make_wav(blip_buf)
-
 	# Soft low footstep thud on sand/earth
 	var sand_len := int(MIX_RATE * 0.075)
 	var sand_buf := PackedFloat32Array()
@@ -387,7 +311,3 @@ func build_streams() -> void:
 		var sig := sin(TAU * f * t) * 0.55 + sin(TAU * f * 2.0 * t + 0.3) * 0.25 + sin(TAU * f * 3.0 * t) * 0.10
 		eng_buf[i] = sig * 0.32
 	sfx_streams["engine_loop"] = make_wav(eng_buf, true)
-	sfx_streams["ocean_loop"] = sfx_streams["rest"]
-	sfx_streams["breeze_loop"] = sfx_streams["rest"]
-	sfx_streams["night_loop"] = sfx_streams["rest"]
-	sfx_streams["fire_loop"] = sfx_streams["rest"]

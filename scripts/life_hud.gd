@@ -158,15 +158,7 @@ func _draw() -> void:
 		paragraph(c+Vector2(-330,143),l("Cook fish at the beach fire with driftwood. Eat fish or coconuts; drink at a well.","ย่างปลาที่กองไฟโดยใช้ไม้ กินปลาย่างหรือมะพร้าว และดื่มน้ำจากบ่อ"),650,14)
 	elif game.panel=="talk":
 		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
-		var speaking: bool=is_instance_valid(game.audio) and game.audio.is_speaking()
-		var voice_tag: String=("  ·  "+l("SPEAKING","กำลังพูด")) if speaking else ""
-		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+(game.story.title() if game.active_villager=="Luna" else l("Neighbour","เพื่อนบ้าน"))+voice_tag,21,GOLD)
-		if speaking:
-			var wave_x: float=w/2+260
-			var wave_y: float=h/2-170
-			for bar_i in range(4):
-				var bh: float=5.0+absf(sin(Time.get_ticks_msec()*0.012+bar_i*1.1))*11.0
-				draw_rect(Rect2(wave_x+bar_i*6,wave_y-bh*0.5,3.5,bh),GOLD)
+		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+(game.story.title() if game.active_villager=="Luna" else l("Neighbour","เพื่อนบ้าน")),21,GOLD)
 		paragraph(Vector2(w/2-290,h/2-148),game.story.dialogue() if game.active_villager=="Luna" else l("Welcome, neighbour. Pad Thai buys ingredients and serves meals.\nSeaside Inn has a room when you need to rest.\nFish along the coast, explore and enjoy island life.","ยินดีต้อนรับเพื่อนบ้าน Pad Thai รับซื้อวัตถุดิบและมีข้าวให้กิน\nถ้าเหนื่อยก็แวะพักที่โรงแรม Seaside Inn ได้\nตกปลาริมชายฝั่ง ออกสำรวจ และใช้ชีวิตบนเกาะได้ตามใจนะ"),580,17)
 		text(Vector2(w/2-290,h/2+10),l("Your fish: %d  /  Your vatu: %d","ปลาที่มี: %d  /  เงิน: %d วาตู") % [game.fish,game.coins],15)
 	elif game.panel in ["restaurant","hotel"]:
