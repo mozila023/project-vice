@@ -4,6 +4,8 @@ The coastal house is authored by `tools/blender_refine_island.py` in Blender 5.2
 
 `scripts/settlement.gd` fits foundations, porches and both entrance steps to the visible terrain/road surface. Shop foundations and awning slabs also receive terrain-dependent bases instead of fixed depths. Full footprint sampling catches low terrain between corners. Each rendered support has a matching collision volume. Walls, slab, steps and porch posts have separate collision shapes, leaving the porch opening clear. Ordinary homes remain exterior-only; the Sunshine salon keeps its walkable interior.
 
+Foundation rendering now uses engine-native BoxMesh instances grouped into MultiMesh chunks. The previous procedural concrete batch could leave the base invisible even while collision/contact bookkeeping passed. The regression audit now inspects all 1,826 actual render instances as well as terrain and physics. A fixed hillside camera in `tools/shot.gd` (`foundation_worst`) verifies the previously visible gap is filled.
+
 Blender also measures connected components of the existing well, shelter, campfire and salon furniture. `prop_physics.json` contains fitted proxies that preserve gaps between posts and table/chair legs. Loose UV/normal seams are welded for the measurements to avoid one collider per face. Ground props are placed using their actual mesh bottoms. Batched rocks now share a convex collision hull at exactly the same transform as their rendered instances.
 
 The fishing splash is a Blender-authored, 20-track droplet animation. Bites and successful catches play it for one second, with shadows disabled, then remove the node.

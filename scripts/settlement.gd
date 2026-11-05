@@ -13,6 +13,7 @@ var refined_parts: Array[Dictionary] = []
 var refined_colliders: Array = []
 var house_sites: Array[Dictionary] = []
 var foundation_supports: Array[Dictionary] = []
+var support_batches := {}
 
 const WALL_PAINTS := [Color("e4dfca"),Color("b5cdc0"),Color("d8c49d"),Color("ece9dc"),Color("9fc0c6"),Color("d8ab90"),Color("c5cfa8"),Color("e8d9b0")]
 const ROOF_PAINTS := [Color("8a9591"),Color("ab6147"),Color("6a8a87"),Color("a9aba5"),Color("875440"),Color("4f6f7a")]
@@ -42,6 +43,7 @@ func make_materials() -> void:
 	pbr("rust","rusty_corrugated_iron",2.0,0.74,0.08)
 	pbr("wood","weathered_planks",2.2)
 	pbr("concrete","clean_concrete",3.0,0.9,0.0,"concrete_floor_worn_001").normal_enabled=false
+	materials["concrete"].cull_mode=BaseMaterial3D.CULL_DISABLED
 	# Louvre blades as one textured quad rather than a stack of boxes: far fewer triangles, and they anti-alias.
 	var slats := Image.create(4,32,true,Image.FORMAT_RGBA8)
 	for y in range(32):
@@ -96,6 +98,7 @@ func build() -> void:
 		power_line(chain)
 		pole_colliders(chain)
 	commit()
+	commit_supports()
 	street_lamps()
 	world.night_listeners.append(on_night)
 
@@ -183,9 +186,33 @@ func ground_support(chunk: Vector2i,t: Transform3D,center: Vector3,size: Vector3
 			bottom=minf(bottom,world.surface_height_at(at.x,at.z)-t.origin.y-0.25)
 	var dimensions := Vector3(size.x,top-bottom,size.z)
 	var at := center+Vector3(0,(top+bottom)*0.5,0)
-	cube(tool_for(chunk,"concrete"),t,at,dimensions,Color(0.74,0.73,0.69))
+	# Engine-native box instances keep bases visible independently of authored wall batches.
+	if not support_batches.has(chunk): support_batches[chunk]=[]
+	support_batches[chunk].append(t*Transform3D(Basis.from_scale(dimensions),at))
 	extra_boxes.append([at,dimensions])
 	foundation_supports.append({"label":label,"transform":t,"center":center,"size":size,"bottom":bottom,"top":top})
+
+func commit_supports() -> void:
+	var box := BoxMesh.new()
+	box.size=Vector3.ONE
+	var material: StandardMaterial3D=materials["concrete"].duplicate()
+	material.uv1_triplanar=true
+	material.vertex_color_use_as_albedo=false
+	material.albedo_color=Color("b7b5a7")
+	box.material=material
+	for chunk: Vector2i in support_batches:
+		var transforms: Array=support_batches[chunk]
+		var instances := MultiMesh.new()
+		instances.transform_format=MultiMesh.TRANSFORM_3D
+		instances.mesh=box
+		instances.instance_count=transforms.size()
+		for i in range(transforms.size()): instances.set_instance_transform(i,transforms[i])
+		var node := MultiMeshInstance3D.new()
+		node.name="VisibleFoundations_%d_%d" % [chunk.x,chunk.y]
+		node.multimesh=instances
+		node.visibility_range_end=world.building_range()
+		add_child(node)
+	support_batches.clear()
 
 func add_box(body: StaticBody3D,centre: Vector3,size: Vector3) -> void:
 	var shape := CollisionShape3D.new()

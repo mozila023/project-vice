@@ -659,9 +659,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				else: paused=not paused
 				field_hud.release_all()
 			KEY_M: panel="" if panel=="map" else "map"; field_hud.release_all()
-			KEY_TAB: panel="" if panel=="pack" else "pack"; field_hud.release_all()
-			KEY_J: panel="" if panel=="journal" else "journal"; field_hud.release_all()
-			KEY_L: switch_language()
+			KEY_TAB: panel="" if panel in ["pack","journal","island","map"] else "pack"; field_hud.release_all()
 			KEY_E:
 				if not blocked(): interact()
 			KEY_F:

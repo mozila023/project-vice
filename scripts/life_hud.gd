@@ -71,14 +71,15 @@ func meter(rect: Rect2,value: float,color: Color) -> void:
 func buttons() -> Dictionary:
 	var w := size.x
 	var h := size.y
-	var values := {"pause":Rect2(w-70,20,50,46),"map":Rect2(w-158,20,80,46),"pack":Rect2(w-246,20,80,46),"journal":Rect2(w-350,20,96,46),"language":Rect2(w-438,20,80,46)}
+	var values := {"pause":Rect2(w-70,20,50,46),"pack":Rect2(w-178,20,100,46)}
 	if not game.blocked(): values["minimap"]=Rect2(24,236 if mobile else 108,196,224)
 	if game.paused:
 		values.merge({"save":Rect2(w/2-150,h/2+5,140,48),"load":Rect2(w/2+10,h/2+5,140,48),"settings":Rect2(w/2-150,h/2+65,140,48),"main_menu":Rect2(w/2+10,h/2+65,140,48),"resume":Rect2(w/2-150,h/2+125,300,48)})
 	elif game.panel=="talk":
 		values.merge({"story":Rect2(w/2-290,h/2+28,580,45),"sell":Rect2(w/2-290,h/2+80,282,45),"meal":Rect2(w/2+8,h/2+80,282,45),"chat":Rect2(w/2-290,h/2+132,380,45),"close":Rect2(w/2+105,h/2+132,185,45)})
-	elif game.panel in ["journal","island"]:
-		values.merge({"journal":Rect2(w/2-330,h/2-200,150,40),"island":Rect2(w/2-170,h/2-200,170,40),"mode":Rect2(w/2+10,h/2-200,320,40),"track_story":Rect2(w/2-20,h/2+205,225,40),"close":Rect2(w/2+220,h/2+205,110,40)},true)
+	elif game.panel in ["pack","journal","island","map"]:
+		values={"pack":Rect2(w/2-330,h/2-200,150,40),"journal":Rect2(w/2-170,h/2-200,150,40),"island":Rect2(w/2-10,h/2-200,170,40),"map":Rect2(w/2+170,h/2-200,160,40),"close":Rect2(w/2+220,h/2+205,110,40)}
+		if game.panel=="journal": values.merge({"mode":Rect2(w/2-330,h/2+205,230,40),"track_story":Rect2(w/2-90,h/2+205,295,40)})
 		if game.panel=="island":
 			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+i*48,108,36)
 	elif game.panel=="settings": return {}
@@ -108,12 +109,7 @@ func _draw() -> void:
 			var x: float=40+i*110
 			icon(stats[i][0],Vector2(x,vitals_y+75),18,stats[i][2])
 			meter(Rect2(x+26,vitals_y+79,65,11),stats[i][1],stats[i][2])
-		card(Rect2(w-328,96,304,158),Color(0.035,0.07,0.09,0.88))
-		icon("book-open",Vector2(w-310,112),18,GOLD)
-		text(Vector2(w-282,128),l("CURRENT CHAPTER","ภารกิจปัจจุบัน"),12,GOLD)
-		text(Vector2(w-310,155),game.story.tracker_title(),18)
-		paragraph(Vector2(w-310,167),game.story.tracker_task(),268,13)
-		text(Vector2(w-310,234),game.story.progress(),12,GOLD)
+
 		draw_navigation()
 	if not game.blocked():
 		var context: String=game.nearby_context()
@@ -132,20 +128,25 @@ func _draw() -> void:
 		text(Vector2(40,h-38),l("FISH %d   COOKED %d   COCONUT %d   WOOD %d   /   %d VATU","ปลา %d   ปลาย่าง %d   มะพร้าว %d   ไม้ %d   /   %d วาตู") % [game.fish,game.cooked_fish,game.coconuts,game.wood,game.coins],13)
 		if not mobile:
 			var hint: String="W gas · S brake / reverse · A D steer · Space handbrake · E get out · M map · Esc pause" if game.driving else "WASD walk · Shift run · E interact / drive · F cast / cancel · Q eat · Tab pack · M map · Esc pause · F7 touch preview"
-			if game.story.language=="th": hint="W เร่ง · S เบรก/ถอย · A D เลี้ยว · Space เบรกมือ · E ลงรถ · J ภารกิจ · L ภาษา" if game.driving else "WASD เดิน · Shift วิ่ง · E ใช้/ขับรถ · F ตกปลา · Q กิน · J ภารกิจ · M แผนที่ · L ภาษา"
+			if game.story.language=="th": hint="W เร่ง · S เบรก/ถอย · A D เลี้ยว · Space เบรกมือ · E ลงรถ · Tab กระเป๋า / เมนู" if game.driving else "WASD เดิน · Shift วิ่ง · E ใช้/ขับรถ · F ตกปลา · Q กิน · Tab กระเป๋า / เมนู · M แผนที่"
 			text(Vector2(32,h-76),hint,11,Color("b4c2be"))
 		if game.driving:
 			card(Rect2(w-170,h-92,150,72))
 			text(Vector2(w-154,h-48),"%d" % int(absf(game.driving.speed)*3.6),34,GOLD)
 			text(Vector2(w-88,h-48),"km/h",14)
 			text(Vector2(w-154,h-30),"R" if game.driving.speed<-0.5 else "D",12)
+	if game.panel in ["pack","journal","island","map"]: draw_pack_frame()
 	if game.panel=="map": draw_map()
 	elif game.panel in ["journal","island"]: draw_journal()
 	elif game.panel=="pack":
-		card(Rect2(w/2-250,h/2-150,500,310))
-		text(Vector2(w/2-220,h/2-105),"YOUR ISLAND PACK",24,GOLD)
-		var rows := [l("Fresh fish: %d     Grilled fish: %d","ปลาสด: %d     ปลาย่าง: %d") % [game.fish,game.cooked_fish],l("Coconuts: %d     Driftwood: %d","มะพร้าว: %d     ไม้ลอยน้ำ: %d") % [game.coconuts,game.wood],l("Vatu: %d     Friendship: %d","วาตู: %d     มิตรภาพ: %d") % [game.coins,game.friendship],l("Cook fish at the beach fire with driftwood.","ย่างปลาที่กองไฟริมชายหาดโดยใช้ไม้เป็นเชื้อเพลิง"),l("Eat grilled fish or coconuts. Drink at the well.","กินปลาย่างหรือมะพร้าว และดื่มน้ำที่บ่อ"),l("F5 save · F9 load · Tab close","F5 บันทึก · F9 โหลด · Tab ปิด")]
-		for i in range(rows.size()): text(Vector2(w/2-220,h/2-62+i*31),rows[i],16)
+		var c := size/2
+		var items := [[l("Fresh fish","ปลาสด"),game.fish],[l("Grilled fish","ปลาย่าง"),game.cooked_fish],[l("Coconuts","มะพร้าว"),game.coconuts],[l("Driftwood","ไม้ลอยน้ำ"),game.wood],[l("Vatu","เงินวาตู"),game.coins],[l("Friendship","มิตรภาพ"),game.friendship]]
+		for i in range(items.size()):
+			var at := c+Vector2(-330+(i%2)*340,-135+(i/2)*85)
+			card(Rect2(at,Vector2(320,72)),Color(0.06,0.16,0.17,0.9))
+			text(at+Vector2(16,28),items[i][0],16)
+			text(at+Vector2(16,55),str(items[i][1]),21,GOLD)
+		paragraph(c+Vector2(-330,143),l("Cook fish at the beach fire with driftwood. Eat fish or coconuts; drink at a well.","ย่างปลาที่กองไฟโดยใช้ไม้ กินปลาย่างหรือมะพร้าว และดื่มน้ำจากบ่อ"),650,14)
 	elif game.panel=="talk":
 		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
 		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+game.story.title(),21,GOLD)
@@ -158,10 +159,10 @@ func _draw() -> void:
 		text(Vector2(w/2-160,h/2-43),"Save your day, load, or return to the coast.",15)
 	for key in buttons():
 		if key=="minimap": continue
-		if not mobile and not game.blocked() and not key in ["journal","language"]: continue
+		if not mobile and not game.blocked() and not key in ["pack","pause"]: continue
 		var rect: Rect2=buttons()[key]
-		card(rect,Color(0.05,0.17,0.17,0.85))
-		var label: String={"pause":"II","map":"MAP","pack":"BAG","fish":"REEL" if game.fishing_state=="bite" else "FISH","use":"USE","eat":"EAT","jump":"JUMP","run":"WALK" if running else "RUN","save":"SAVE","load":"LOAD","resume":"RESUME","sell":"TRADE 3 FISH  →  45 VATU","meal":"BUY A MEAL  /  8 VATU","chat":"TALK ABOUT THE ISLAND","close":"CLOSE","journal":"JOURNAL","island":l("ISLAND NOTES","บันทึกเกาะ"),"story":"STORY","language":"TH / EN","mode":l("RELAXED" if game.story.relaxed else "SURVIVAL","เดินเล่นสบาย ๆ" if game.story.relaxed else "เอาชีวิตรอด")}.get(key,l("TRACK","นำทาง"))
+		card(rect,Color(0.16,0.27,0.25,0.98) if key==game.panel else Color(0.05,0.17,0.17,0.85))
+		var label: String={"pause":"II","map":"MAP","pack":"BAG","fish":"REEL" if game.fishing_state=="bite" else "FISH","use":"USE","eat":"EAT","jump":"JUMP","run":"WALK" if running else "RUN","save":"SAVE","load":"LOAD","resume":"RESUME","sell":"TRADE 3 FISH  →  45 VATU","meal":"BUY A MEAL  /  8 VATU","chat":"TALK ABOUT THE ISLAND","close":"CLOSE","journal":"JOURNAL","island":l("ISLAND NOTES","บันทึกเกาะ"),"story":"STORY","mode":l("RELAXED" if game.story.relaxed else "SURVIVAL","เดินเล่นสบาย ๆ" if game.story.relaxed else "เอาชีวิตรอด")}.get(key,l("TRACK","นำทาง"))
 		label=preload("res://scripts/island_locale.gd").translate(label,game.story.language)
 		if key=="track_story": label=l("TRACK STORY","นำทางตามภารกิจ")
 		if key=="settings": label=l("SETTINGS","ตั้งค่า")
@@ -175,10 +176,16 @@ func _draw() -> void:
 		draw_arc(origin,68,0,TAU,40,Color(0.9,0.96,0.9,0.5),2,true)
 		draw_circle(origin+move_vector*48,26,Color(0.88,0.94,0.84,0.6))
 
-func draw_journal() -> void:
+func draw_pack_frame() -> void:
 	var c := size/2
 	card(Rect2(c-Vector2(355,255),Vector2(710,510)),Color(0.02,0.08,0.09,0.97))
-	text(c+Vector2(-330,-218),l("EFATE / COASTS & CONNECTIONS","เอฟาเต / สายใยริมฝั่งทะเล"),23,GOLD)
+	icon("backpack",c+Vector2(-330,-240),22,GOLD)
+	text(c+Vector2(-296,-218),l("YOUR ISLAND PACK","กระเป๋าและบันทึกการเดินทาง"),22,GOLD)
+	text(c+Vector2(-330,231),l("Tab close · F5 save","Tab ปิด · F5 บันทึก"),13)
+
+func draw_journal() -> void:
+	var c := size/2
+
 	if game.panel=="island":
 		for i in range(game.story.PLACES.size()):
 			var place: Dictionary=game.story.PLACES[i]
@@ -194,7 +201,7 @@ func draw_journal() -> void:
 		text(c+Vector2(-330,61),game.story.progress(),16,GOLD)
 		paragraph(c+Vector2(-330,83),l("Optional story · no time limit. Chapter rewards: fish +20 vatu; cooking +25; wood +30; homecoming +100.\nRelaxed mode pauses hunger and thirst. Switch modes anytime.","เนื้อเรื่องเป็นทางเลือก ไม่มีเวลาบังคับ รางวัล: ส่งปลา +20 วาตู ทำอาหาร +25 ส่งไม้ +30 กลับบ้าน +100\nโหมดเดินเล่นหยุดความหิวและกระหาย สลับโหมดได้ทุกเมื่อ"),650,14)
 	paragraph(c+Vector2(-330,159),l("Real place notes: Vanuatu Tourism Office. Characters, storm and missions are fictional. The map is simplified at 1:20.","ข้อมูลสถานที่: สำนักงานการท่องเที่ยววานูอาตู ตัวละคร พายุ และภารกิจเป็นเรื่องแต่ง แผนที่ย่อส่วน 1:20"),655,12)
-	text(c+Vector2(-330,231),l("J journal · L TH/EN · M map · F5 save","J ภารกิจ · L TH/EN · M แผนที่ · F5 บันทึก"),13)
+
 
 func draw_navigation() -> void:
 	var center := Vector2(size.x/2,47)
@@ -228,17 +235,16 @@ func draw_navigation() -> void:
 	text(at+Vector2(12,70),title.left(24)+("…" if title.length()>24 else ""),12)
 
 func draw_map() -> void:
-	var height := minf(size.y-150,550)
+	var height := minf(size.y-330,340)
 	var width := height
-	var rect := Rect2((size-Vector2(width,height))/2,Vector2(width,height))
-	card(Rect2(rect.position-Vector2(100,38),rect.size+Vector2(200,78)))
+	var rect := Rect2((size-Vector2(width,height))/2+Vector2(0,12),Vector2(width,height))
+
 	draw_texture_rect(game.world.map_texture,rect,false)
 	if game.navigation.active() and game.navigation.route.size()>1:
 		var route := PackedVector2Array()
 		for at: Vector3 in game.navigation.route:
 			route.append(rect.position+Vector2(at.x/2880+0.5,at.z/2880+0.5)*rect.size)
 		draw_polyline(route,Color("dbbd7d"),3,true)
-	text(rect.position+Vector2(-75,-12),l("EFATE / NORTH ↑","เอฟาเต / ทิศเหนือ ↑"),21,GOLD)
 	var p: Vector3=game.player.position
 	var restaurant: Vector2=preload("res://scripts/elluk_restaurant.gd").SITE
 	var restaurant_point: Vector2=rect.position+(restaurant/2880.0+Vector2.ONE*0.5)*rect.size
@@ -258,7 +264,7 @@ func draw_map() -> void:
 		var point: Vector2=rect.position+(Vector2(entry.position[0],entry.position[1])/Vector2(2880,2880)+Vector2.ONE*0.5)*rect.size
 		draw_circle(point,3,GOLD)
 		text(point+Vector2(7,0),entry.name,13)
-	text(rect.position+Vector2(-75,height+24),"© OpenStreetMap contributors · ODbL · 1:20",11)
+	text(rect.position+Vector2(-140,height+18),"© OpenStreetMap contributors · ODbL · 1:20",11)
 
 func _input(event: InputEvent) -> void:
 	if game.panel=="settings": return
@@ -268,7 +274,7 @@ func _input(event: InputEvent) -> void:
 		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if mobile else Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		for key in buttons():
-			if not mobile and not game.blocked() and not key in ["journal","language","minimap"]: continue
+			if not mobile and not game.blocked() and not key in ["pack","pause","minimap"]: continue
 			if buttons()[key].has_point(event.position):
 				activate(key,true)
 				get_viewport().set_input_as_handled()
@@ -308,8 +314,7 @@ func activate(key: String,pressed: bool) -> void:
 		if key=="jump": Input.action_release("jump")
 		return
 	match key:
-		"language": game.switch_language()
-		"journal", "island": game.panel="" if game.panel==key else key; release_all()
+		"journal", "island": game.panel=key; release_all()
 		"mode": game.story.relaxed=not game.story.relaxed; Preferences.relaxed=game.story.relaxed; Preferences.save()
 		"track_story": game.story.tracked_place=""; game.panel="map"
 		"fish":
@@ -326,8 +331,8 @@ func activate(key: String,pressed: bool) -> void:
 		"main_menu":
 			release_all()
 			get_tree().change_scene_to_file("res://scenes/front_end.tscn")
-		"map", "minimap": game.panel="" if game.panel=="map" else "map"; release_all()
-		"pack": game.panel="" if game.panel=="pack" else "pack"; release_all()
+		"map", "minimap": game.panel="map"; release_all()
+		"pack": game.panel="pack"; release_all()
 		"close": game.panel=""; release_all()
 		"save": game.save_game()
 		"load": game.load_game()

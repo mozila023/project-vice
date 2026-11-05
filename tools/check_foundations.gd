@@ -34,6 +34,19 @@ func run() -> void:
 		if old_gap>.1: old_floating+=1
 		if worst.is_empty() or old_gap>worst.gap: worst={"at":t.origin,"gap":old_gap,"label":support.label}
 	if not gaps.is_empty(): failures+=1
+	# Inspect actual render instances, not only the collision/support bookkeeping.
+	var visible_count := 0
+	var render_gaps := 0
+	for node in game.settlement.get_children():
+		if not node is MultiMeshInstance3D or not String(node.name).begins_with("VisibleFoundations_"): continue
+		for i in range(node.multimesh.instance_count):
+			visible_count+=1
+			var transform: Transform3D=node.global_transform*node.multimesh.get_instance_transform(i)
+			for x in [-.5,.5]:
+				for z in [-.5,.5]:
+					var at: Vector3=transform*Vector3(x,-.5,z)
+					if at.y>game.world.surface_height_at(at.x,at.z)+.005: render_gaps+=1
+	if visible_count!=supports.size() or render_gaps>0: failures+=1
 	for label in ["Foundation","PorchDeck","LowerStep","UpperStep","ShopFoundation","ShopPorch"]:
 		if int(labels.get(label,0))==0: failures+=1
 	# Visual support and collision must cover the same volume on sampled sloped lots.
@@ -46,7 +59,7 @@ func run() -> void:
 		var hit: Dictionary=game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from,at,1))
 		if hit.is_empty(): failures+=1
 		ray_count+=1
-	var result := {"failures":failures,"buildings":game.settlement.house_sites.size(),"supports":supports.size(),"samples":samples,"support_types":labels,"gaps":gaps.slice(0,20),"worst":worst,"old_unsupported_slabs":old_floating,"collision_checks":ray_count}
+	var result := {"failures":failures,"buildings":game.settlement.house_sites.size(),"supports":supports.size(),"visible_supports":visible_count,"render_gaps":render_gaps,"samples":samples,"support_types":labels,"gaps":gaps.slice(0,20),"worst":worst,"old_unsupported_slabs":old_floating,"collision_checks":ray_count}
 	var file := FileAccess.open("res://checks/foundation-results.json",FileAccess.WRITE)
 	file.store_string(JSON.stringify(result,"\t"))
 	print("FOUNDATION AUDIT ",JSON.stringify(result))

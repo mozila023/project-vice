@@ -4,6 +4,9 @@
 ##   godot --path . --script res://tools/shot.gd -- <absolute_out_dir> [pose_name ...]
 
 const POSES := {
+	"pack_th": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
+	"pack_map": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
+	"foundation_worst": [-316.9262,2.0,74.5,0,-0.06,9.0,10.5,false],
 	"elluk_front": [-285.41613,1.7,574.5,0.0,-0.04,7.0,10.5,false],
 	"elluk_interior": [-285.41613,1.55,561.8,0.0,-0.08,4.0,10.5,true],
 	"spa_front": [-229.08243,1.5,433.20744,-2.58,-0.03,5.5,10.5,true],
@@ -63,6 +66,9 @@ func run() -> void:
 		game.notice_time=0
 		game.paused=false
 		game.field_hud.mobile=pose_name in ["mobile_hud","mobile_drive"]
+		if pose_name in ["pack_th","pack_map"]:
+			game.story.language="th"
+			game.panel="pack" if pose_name=="pack_th" else "map"
 		if pose_name in ["journal_th","journal_en","island_th","talk_th"]:
 			game.story.language="en" if pose_name=="journal_en" else "th"
 			game.panel="island" if pose_name=="island_th" else ("talk" if pose_name=="talk_th" else "journal")

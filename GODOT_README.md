@@ -8,9 +8,11 @@ New Game now starts at Sunshine Wellness & Spa in Seaside, Port Vila (785C+68), 
 
 The public game is hosted by GitHub Pages from the `gh-pages` branch. The `main` branch holds the source. Updating source does not automatically redeploy the web build.
 
+After exporting to `build/refined-web`, run `tools/publish_web.ps1` to overwrite the original web filenames on `gh-pages`. This keeps `index.html` and `index.pck` at the existing play URL and revalidates the pack for returning players.
+
 The game opens on a New Game / Continue / Settings menu. New Game plays a skippable three-shot flight introduction before arriving on the island. Settings persist language, graphics quality, volume, look sensitivity, relaxed mode and quest guidance. The game uses realistic Rocketbox people, an Innerscene sedan fleet, a compass and dynamic quest direction/distance markers, road routes on the map, and a redesigned HUD. See [ASSET_CREDITS.md](ASSET_CREDITS.md) for downloaded asset sources, licences, optimization and visual limitations.
 
-An optional six-chapter TH/EN story and an independent discovery journal cover Mele, Port Vila, Port Havannah and Eton. Relaxed exploration is the default; survival mode can be enabled in the journal. Press J for the journal, L for TH/EN, E to interact/drive, F to fish, and M for the map. See [ISLAND_STORY.md](ISLAND_STORY.md) for island research sources and mission details.
+An optional six-chapter TH/EN story and an independent discovery journal cover Mele, Port Vila, Port Havannah and Eton. Relaxed exploration is the default; survival mode can be enabled in the journal. Press Tab for inventory, quests and island notes, E to interact/drive, F to fish, and M for the map. See [ISLAND_STORY.md](ISLAND_STORY.md) for island research sources and mission details.
 
 The north-up minimap centres on the player, shows facing direction, nearby roads/villagers and the tracked quest route, and points to off-map goals at its edge. It zooms out when driving. Tap it or press M for the full map. It reuses the existing atlas at 10Hz, with separate desktop/mobile placement to keep touch controls clear.
 
@@ -20,9 +22,9 @@ The current Godot game focuses on peaceful exploration, fishing, cooking, villag
 
 Map data: roads, land use and building density come from OpenStreetMap (© OpenStreetMap contributors, ODbL). To rebuild: `tools/download_osm_detail.ps1`, `node tools/process_geography.mjs`, then run `tools/clean_textures.gd` (only if wall textures change) and `tools/bake_world.gd` with `godot --headless --path . --script`, followed by `godot --headless --path . --import`. The game map is 1:20, so streets are generalised and one game building stands for many mapped ones.
 
-Controls: WASD move/drive, mouse or touch look, Shift sprint, Space jump/handbrake, E interact/enter/exit/reel, F cast/cancel, Q eat, Esc pause, Tab pack, J journal, L language, M map, F5 save, F9 load. Touch controls are provided on mobile.
+Controls: WASD move/drive, mouse or touch look, Shift sprint, Space jump/handbrake, E interact/enter/exit/reel, F cast/cancel, Q eat, Esc pause, Tab bag/menu, M map, F5 save, F9 load. Inventory, quests, island notes and map share compact tabs inside the bag. Tab closes any of these tabs. Language is chosen before entering the game; gameplay has no TH/EN or quest button/card. Touch controls include a bag button.
 
-Shift now plays a distinct running clip. After Stamina exhaustion, release Shift (or toggle touch RUN off) and recover at least 20 Stamina to run again. Energy at zero still permits walking. PAD THAI @ELLUK is available under J → Island Notes → TRACK. Its location follows the supplied Maps pin; the interior is photo referenced and unseen exterior details remain interpreted. See [ELLUK_UPDATE.md](ELLUK_UPDATE.md).
+Shift now plays a distinct running clip. After Stamina exhaustion, release Shift (or toggle touch RUN off) and recover at least 20 Stamina to run again. Energy at zero still permits walking. PAD THAI @ELLUK is available under Tab → Island Notes → TRACK. Its location follows the supplied Maps pin; the interior is photo referenced and unseen exterior details remain interpreted. See [ELLUK_UPDATE.md](ELLUK_UPDATE.md).
 
 Saves use `user://efate_life_save.json` and include player needs, inventory, story progress, collected resources, discoveries and language. Vehicle positions reset on a new launch. Preferences use a separate `user://vice_settings.cfg`. Starting New Game leaves the previous save intact until a new save is written.
 
