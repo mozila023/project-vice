@@ -21,7 +21,7 @@ The island already uses downloaded photographic ground, plaster, wood, iron and 
 - Excludes the unused 23MB Kenney download catalogue from exports.
 - New menu, opening, HUD, compass, road guidance and settings use engine-native scenes and small assets.
 
-Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/check_driving.gd`, `tools/check_boarding.gd`. Native-render screenshots can be reproduced with `tools/shot_front.gd`, `tools/shot.gd` and `tools/shot_boarding.gd`. Native FPS does not establish performance on physical phones.
+Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/check_driving.gd`, `tools/check_boarding.gd`, `tools/check_minimap.gd`. Native-render screenshots can be reproduced with `tools/shot_front.gd`, `tools/shot.gd` and `tools/shot_boarding.gd`. Native FPS does not establish performance on physical phones.
 
 ### Boarding alignment
 

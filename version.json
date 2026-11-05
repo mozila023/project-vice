@@ -1,10 +1,12 @@
 {
     "features":  [
-                     "metre-scale aircraft",
-                     "door-aligned boarding stairs",
-                     "centred passenger path",
+                     "local minimap",
+                     "quest route and heading",
+                     "driving zoom",
+                     "mobile layout",
+                     "corrected aircraft boarding",
                      "TH/EN"
                  ],
-    "pack_bytes":  73843536,
-    "commit":  "f34e3f187b514bb97a179d85504c6f1d9497428b"
+    "pack_bytes":  73848368,
+    "commit":  "07c12dff12bf7e0199d8d5bbfddf26bd3dd30ad8"
 }
