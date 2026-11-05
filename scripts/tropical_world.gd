@@ -432,7 +432,7 @@ func multimesh_node(mesh: Mesh,chunk: Dictionary,material: Material) -> MultiMes
 	for i in range(chunk.count):
 		var placement := mm.get_instance_transform(i)
 		var p: Vector3=chunk.centre+placement.origin
-		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5)):
+		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5)):
 			placement.basis=Basis(Vector3.ZERO,Vector3.ZERO,Vector3.ZERO)
 			mm.set_instance_transform(i,placement)
 	var node := MultiMeshInstance3D.new()
@@ -595,7 +595,7 @@ func group_trunks(chunk: Dictionary,is_tree: bool) -> void:
 		# Row two of the atlas holds bushes, which the player can push through.
 		if is_tree and buffer[at+13]>0.5: continue
 		var p: Vector3=chunk.centre+Vector3(buffer[at+3],buffer[at+7],buffer[at+11])
-		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5)): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5)): continue
 		var key := Vector2i(floori(p.x/TREE_CELL),floori(p.z/TREE_CELL))
 		if not trunk_groups.has(key): trunk_groups[key]=[]
 		trunk_groups[key].append([p,is_tree])

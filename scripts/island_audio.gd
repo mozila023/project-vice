@@ -57,7 +57,7 @@ func setup_players() -> void:
 	add_child(engine_player)
 
 func is_speaking() -> bool:
-	return is_instance_valid(voice_player) and voice_player.playing
+	return (is_instance_valid(voice_player) and voice_player.playing) or (game!=null and game.guide!=null and game.guide.speaking())
 
 func speaker_pitch(speaker_name: String) -> float:
 	if speaker_name.is_empty() or speaker_name.begins_with("Malia"):
@@ -87,11 +87,12 @@ func speak_id(id: String, speaker_name := "") -> void:
 
 func speak_dialogue_open(villager_name: String) -> void:
 	play_sfx("ui_open", 1.0, -4.5)
-	if villager_name.begins_with("Malia"):
-		var st: int = clampi(game.story.stage, 0, 6)
-		speak_id("story_%d" % st, villager_name)
-	else:
-		speak_id("villager_greet", villager_name)
+	if villager_name=="Luna":
+		current_speaker="Luna"
+		voice_player.stop()
+		game.guide.speak_dialogue()
+		return
+	speak_id("villager_greet", villager_name)
 
 func on_notice(text: String) -> void:
 	if text.begins_with("Thank you! Three fresh fish"):
@@ -147,6 +148,7 @@ func _process(dt: float) -> void:
 
 	# Panel & pause transitions
 	if game.panel != last_panel:
+		if last_panel=="talk" and current_speaker=="Luna": game.guide.stop_speech()
 		if game.panel == "talk":
 			speak_dialogue_open(game.active_villager)
 		elif game.panel != "":

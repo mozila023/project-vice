@@ -4,6 +4,11 @@ var world: Node3D
 var settlement: Node3D
 var sunshine: Node3D
 var restaurant: Node3D
+var hotel: Node3D
+var luna: CharacterBody3D
+var guide=preload("res://scripts/luna_guide.gd").new()
+var resting := false
+const REAL_DAY_SECONDS := 3600.0
 var player: CharacterBody3D
 var foot_contact=preload("res://scripts/foot_contact.gd").new()
 var visual: Node3D
@@ -109,14 +114,19 @@ func _ready() -> void:
 	restaurant.world=world
 	add_child(restaurant)
 	restaurant.build()
+	hotel=preload("res://scripts/seaside_inn.gd").new()
+	hotel.world=world
+	add_child(hotel)
+	hotel.build()
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
 	audio=preload("res://scripts/island_audio.gd").new()
 	audio.game=self
 	add_child(audio)
 	navigation.build(self)
+	guide.build(self)
 	navigation.update(0,true)
 	apply_preferences()
-	tell(story.l("Welcome to Sunshine Wellness & Spa, Seaside, Port Vila. Explore the salon or follow the gold route to Malia in Mele.","ยินดีต้อนรับสู่ Sunshine Wellness & Spa ย่านซีไซด์ พอร์ตวิลา เดินชมร้านหรือตามเส้นสีทองไปพบมาเลียที่เมเลได้เลย"))
+	tell(story.l("Welcome to Sunshine. Your friend Luna is waiting outside to show you food and a place to sleep.","ยินดีต้อนรับสู่ Sunshine! Luna เพื่อนสาวรออยู่หน้าร้าน ไปคุยให้เธอพาไปรู้จักร้านอาหารและที่พักได้เลย"))
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	field_hud=preload("res://scripts/life_hud.gd").new()
@@ -686,7 +696,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		look_timer=1.5
 
 func blocked() -> bool:
-	return paused or panel!=""
+	return paused or panel!="" or resting
 
 func on_focus_lost() -> void:
 	if field_hud: field_hud.release_all()
@@ -698,8 +708,7 @@ func _physics_process(dt: float) -> void:
 	if not blocked():
 		elapsed+=dt
 		notice_time=maxf(0,notice_time-dt)
-		day_time+=dt/180.0
-		if day_time>=24: day_time-=24; days+=1
+		advance_hours(dt*24.0/REAL_DAY_SECONDS)
 		var input := Input.get_vector("left","right","forward","back")
 		if field_hud.mobile: input=(input+field_hud.move_vector).limit_length()
 		var moving := input.length()>0.1 and driving==null
@@ -757,6 +766,9 @@ func _physics_process(dt: float) -> void:
 
 func update_villagers(dt: float) -> void:
 	for npc in villagers:
+		if npc.get("guide",false):
+			guide.update(dt)
+			continue
 		var body: CharacterBody3D=npc.body
 		if body.position.distance_to(player.position)<3.0 or npc.wait>0:
 			npc.wait=maxf(0,npc.wait-dt)
@@ -960,6 +972,9 @@ func cancel_fishing() -> void:
 	if is_instance_valid(line): line.mesh=null
 
 func nearby_context() -> String:
+	if is_instance_valid(luna) and player.position.distance_to(luna.position)<3: return story.l("TALK TO LUNA","คุยกับ Luna")
+	if restaurant_inside(): return story.l("PAD THAI · EAT / SELL INGREDIENTS","PAD THAI · กินข้าว / ขายวัตถุดิบ")
+	if hotel.contains(player.position): return story.l("SEASIDE INN · SLEEP UNTIL MORNING","SEASIDE INN · นอนพักถึงเช้า")
 	if driving: return "GET OUT" if absf(driving.speed)<=3.0 else ""
 	if fishing_state=="bite": return "REEL IN THE FISH"
 	if player.position.distance_to(camp_position)<3.5: return "COOK FISH / 1 raw fish + 1 driftwood"
@@ -976,6 +991,22 @@ func interact() -> void:
 	if blocked(): return
 	if driving: leave_car(); return
 	if fishing_state=="bite": reel(); return
+	if is_instance_valid(luna) and player.position.distance_to(luna.position)<3:
+		active_villager="Luna"
+		panel="talk"
+		field_hud.release_all()
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+		return
+	if restaurant_inside():
+		panel="restaurant"
+		field_hud.release_all()
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+		return
+	if hotel.contains(player.position):
+		panel="hotel"
+		field_hud.release_all()
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+		return
 	if player.position.distance_to(camp_position)<3.5:
 		if fish>0 and wood>0:
 			fish-=1; wood-=1; cooked_fish+=1
@@ -1029,6 +1060,11 @@ func eat() -> void:
 
 func trade(option: String) -> void:
 	if panel!="talk": return
+	if active_villager=="Luna":
+		if option=="story": story.talk()
+		panel=""
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if field_hud.mobile else Input.MOUSE_MODE_CAPTURED
+		return
 	match option:
 		"sell":
 			if fish>=3:
@@ -1048,6 +1084,55 @@ func trade(option: String) -> void:
 			return
 	panel=""
 	Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if field_hud.mobile else Input.MOUSE_MODE_CAPTURED
+
+func advance_hours(hours: float) -> void:
+	if not is_finite(hours) or hours<0: return
+	var total := day_time+hours
+	days+=floori(total/24.0)
+	day_time=fposmod(total,24.0)
+
+func time_period() -> String:
+	if day_time<5 or day_time>=20: return story.l("Night","กลางคืน")
+	if day_time<9: return story.l("Morning","เช้า")
+	if day_time<12: return story.l("Late morning","สาย")
+	if day_time<17: return story.l("Afternoon","บ่าย")
+	return story.l("Evening","ค่ำ")
+
+func restaurant_inside() -> bool:
+	return absf(player.position.x-restaurant.SITE.x)<7.6 and absf(player.position.z-restaurant.SITE.y)<6.3 and absf(player.position.y-restaurant.floor_height)<1.0
+
+func service(option: String) -> void:
+	if panel=="restaurant" and restaurant_inside():
+		if option=="restaurant_meal":
+			if coins<8: tell(story.l("A meal costs 8 vatu.","ข้าวหนึ่งมื้อราคา 8 วาตู เงินยังไม่พอ")); return
+			coins-=8; food=minf(100,food+45); thirst=minf(100,thirst+20); health=minf(100,health+5)
+			tell(story.l("Enjoy your Pad Thai meal!","อิ่มอร่อยที่ Pad Thai ฟื้นความหิวและกระหายแล้ว"))
+		elif option.begins_with("ingredient_"):
+			var item: String=option.trim_prefix("ingredient_")
+			var prices := {"fish":15,"coconuts":5,"wood":4}
+			if not prices.has(item): return
+			if int(get(item))<=0: tell(story.l("You have none of that ingredient to sell.","ยังไม่มีวัตถุดิบชนิดนี้ให้ขาย")); return
+			set(item,int(get(item))-1)
+			coins+=int(prices[item])
+			tell(story.l("Ingredient sold · +%d vatu","ขายวัตถุดิบแล้ว · +%d วาตู") % int(prices[item]))
+		if is_instance_valid(audio): audio.play_sfx("eat" if option=="restaurant_meal" else "pickup",1.0,-2.0)
+	elif panel=="hotel" and option=="sleep" and hotel.contains(player.position):
+		if coins<10: tell(story.l("A room costs 10 vatu.","ค่าห้อง 10 วาตู เงินยังไม่พอ ลองขายวัตถุดิบที่ Pad Thai")); return
+		coins-=10
+		var hours := fposmod(8.0-day_time,24.0)
+		if hours<.1: hours=24.0
+		advance_hours(hours)
+		energy=100; stamina=100; sprint_locked=false; health=minf(100,health+30)
+		food=maxf(5,food-8); thirst=maxf(5,thirst-10)
+		player.position=hotel.rest_point
+		player.velocity=Vector3.ZERO
+		panel=""
+		resting=true
+		field_hud.sleep_effect=1.0
+		if is_instance_valid(audio): audio.play_sfx("rest",1.0,-2.0)
+		world.update_daylight(day_time,true)
+		tell(story.l("08:00 · A fresh morning at Seaside Inn.","08:00 · ตื่นรับวันใหม่ที่ Seaside Inn พร้อมพลังเต็มแล้ว"))
+		get_tree().create_timer(1.2).timeout.connect(func(): resting=false)
 
 func save_game() -> void:
 	var gathered := []

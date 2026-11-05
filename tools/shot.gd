@@ -4,6 +4,9 @@
 ##   godot --path . --script res://tools/shot.gd -- <absolute_out_dir> [pose_name ...]
 
 const POSES := {
+	"luna_welcome": [-229.08243,1.4,433.20744,-2.58,-.10,5.5,8.0,true],
+	"hotel_front": [-199,1.7,515.5,0,-.06,7,10.5,false],
+	"restaurant_service": [-285.41613,1.55,561.8,0,-.08,4,13.0,true],
 	"low_town": [-254.0,2.0,438.0,0.6,-0.03,6.0,10.5,false],
 	"power_poles": [-254.0,3.8,438.0,0.6,-0.03,10.0,10.5,false],
 	"pack_th": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
@@ -67,6 +70,10 @@ func run() -> void:
 		game.panel=""
 		game.notice_time=0
 		game.paused=false
+		if pose_name=="luna_welcome":
+			game.active_villager="Luna"
+			game.panel="talk"
+		if pose_name=="restaurant_service": game.panel="restaurant"
 		if pose_name=="low_town":
 			game.world.tier=0
 			game.world.apply_tier()
@@ -125,7 +132,7 @@ func run() -> void:
 		if pose_name=="spa_interior":
 			game.player.position.y=game.sunshine.floor_height+0.03
 			ground=game.sunshine.floor_height
-		if pose_name=="elluk_interior":
+		if pose_name in ["elluk_interior","restaurant_service"]:
 			game.player.position.y=game.restaurant.floor_height+0.04
 			ground=game.restaurant.floor_height
 			game.yaw=0

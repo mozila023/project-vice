@@ -108,4 +108,4 @@ func bearing() -> float:
 	return atan2(-delta.x,-delta.z)
 
 func active() -> bool:
-	return Preferences.navigation and (game.story.stage<6 or game.story.tracked_place!="")
+	return Preferences.navigation and (game.story.stage<game.story.COMPLETE_STAGE or game.story.tracked_place!="")

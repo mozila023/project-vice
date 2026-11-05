@@ -3,6 +3,7 @@ var game: Node3D
 var mobile := OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
 var move_vector := Vector2.ZERO
 var running := false
+var sleep_effect := 0.0
 var fingers := {}
 var stick_origin := Vector2.ZERO
 var font: Font
@@ -30,6 +31,7 @@ func _ready() -> void:
 	add_child(mini_map)
 
 func _process(_dt: float) -> void:
+	sleep_effect=maxf(0,sleep_effect-_dt/1.5)
 	smoothed_health=lerpf(smoothed_health,game.health,clampf(_dt*7,0,1))
 	if game.panel=="settings" and not is_instance_valid(settings_view):
 		settings_view=preload("res://scripts/settings_panel.gd").new()
@@ -76,12 +78,19 @@ func buttons() -> Dictionary:
 	if game.paused:
 		values.merge({"save":Rect2(w/2-150,h/2+5,140,48),"load":Rect2(w/2+10,h/2+5,140,48),"settings":Rect2(w/2-150,h/2+65,140,48),"main_menu":Rect2(w/2+10,h/2+65,140,48),"resume":Rect2(w/2-150,h/2+125,300,48)})
 	elif game.panel=="talk":
-		values.merge({"story":Rect2(w/2-290,h/2+28,580,45),"sell":Rect2(w/2-290,h/2+80,282,45),"meal":Rect2(w/2+8,h/2+80,282,45),"chat":Rect2(w/2-290,h/2+132,380,45),"close":Rect2(w/2+105,h/2+132,185,45)})
+		if game.active_villager=="Luna":
+			values.merge({"story":Rect2(w/2-290,h/2+65,580,48),"close":Rect2(w/2+105,h/2+132,185,45)})
+		else:
+			values.merge({"sell":Rect2(w/2-290,h/2+80,282,45),"meal":Rect2(w/2+8,h/2+80,282,45),"chat":Rect2(w/2-290,h/2+132,380,45),"close":Rect2(w/2+105,h/2+132,185,45)})
+	elif game.panel=="restaurant":
+		values.merge({"restaurant_meal":Rect2(w/2-290,h/2+12,580,45),"ingredient_fish":Rect2(w/2-290,h/2+72,180,45),"ingredient_coconuts":Rect2(w/2-100,h/2+72,200,45),"ingredient_wood":Rect2(w/2+110,h/2+72,180,45),"close":Rect2(w/2+105,h/2+132,185,45)})
+	elif game.panel=="hotel":
+		values.merge({"sleep":Rect2(w/2-290,h/2+65,580,48),"close":Rect2(w/2+105,h/2+132,185,45)})
 	elif game.panel in ["pack","journal","island","map"]:
 		values={"pack":Rect2(w/2-330,h/2-200,150,40),"journal":Rect2(w/2-170,h/2-200,150,40),"island":Rect2(w/2-10,h/2-200,170,40),"map":Rect2(w/2+170,h/2-200,160,40),"close":Rect2(w/2+220,h/2+205,110,40)}
 		if game.panel=="journal": values.merge({"mode":Rect2(w/2-330,h/2+205,230,40),"track_story":Rect2(w/2-90,h/2+205,295,40)})
 		if game.panel=="island":
-			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+i*48,108,36)
+			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+i*42,108,36)
 	elif game.panel=="settings": return {}
 	elif game.panel!="": values["close"]=Rect2(w/2-70,h-85,140,48)
 	elif mobile:
@@ -97,7 +106,7 @@ func _draw() -> void:
 		card(Rect2(24,24,260,64),Color(0.035,0.07,0.09,0.86))
 		icon("map-pin",Vector2(39,40),20,GOLD)
 		text(Vector2(71,49),"EFATE / VANUATU",16)
-		text(Vector2(71,70),l("DAY %02d  ·  %02d:%02d","วันที่ %02d  ·  %02d:%02d") % [game.days,int(game.day_time),int(fmod(game.day_time,1)*60)],12,GOLD)
+		text(Vector2(71,70),l("DAY %02d  ·  %02d:%02d","วันที่ %02d  ·  %02d:%02d") % [game.days,int(game.day_time),int(fmod(game.day_time,1)*60)]+" · "+game.time_period(),12,GOLD)
 		var vitals_y: float=108 if mobile else h-194
 		card(Rect2(24,vitals_y,354,112),Color(0.035,0.07,0.09,0.9))
 		icon("heart-pulse",Vector2(40,vitals_y+16),25,Color("e29689"))
@@ -151,15 +160,21 @@ func _draw() -> void:
 		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
 		var speaking: bool=is_instance_valid(game.audio) and game.audio.is_speaking()
 		var voice_tag: String=("  ·  "+l("SPEAKING","กำลังพูด")) if speaking else ""
-		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+game.story.title()+voice_tag,21,GOLD)
+		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+(game.story.title() if game.active_villager=="Luna" else l("Neighbour","เพื่อนบ้าน"))+voice_tag,21,GOLD)
 		if speaking:
 			var wave_x: float=w/2+260
 			var wave_y: float=h/2-170
 			for bar_i in range(4):
 				var bh: float=5.0+absf(sin(Time.get_ticks_msec()*0.012+bar_i*1.1))*11.0
 				draw_rect(Rect2(wave_x+bar_i*6,wave_y-bh*0.5,3.5,bh),GOLD)
-		paragraph(Vector2(w/2-290,h/2-148),game.story.dialogue() if game.active_villager.begins_with("Malia") else l("Welcome, neighbour. Ask Malia about our shared meal.\nBefore exploring village land, greet your hosts and ask permission.\nYou can trade here, or explore the coast at your own pace.","ยินดีต้อนรับ ลองถามมาเลียเรื่องมื้ออาหารของหมู่บ้านนะ\nก่อนสำรวจพื้นที่ชุมชน ควรทักทายและขออนุญาตเจ้าบ้าน\nจะแวะแลกของที่นี่ หรือออกเดินเล่นเลียบชายฝั่งก็ได้"),580,17)
+		paragraph(Vector2(w/2-290,h/2-148),game.story.dialogue() if game.active_villager=="Luna" else l("Welcome, neighbour. Pad Thai buys ingredients and serves meals.\nSeaside Inn has a room when you need to rest.\nFish along the coast, explore and enjoy island life.","ยินดีต้อนรับเพื่อนบ้าน Pad Thai รับซื้อวัตถุดิบและมีข้าวให้กิน\nถ้าเหนื่อยก็แวะพักที่โรงแรม Seaside Inn ได้\nตกปลาริมชายฝั่ง ออกสำรวจ และใช้ชีวิตบนเกาะได้ตามใจนะ"),580,17)
 		text(Vector2(w/2-290,h/2+10),l("Your fish: %d  /  Your vatu: %d","ปลาที่มี: %d  /  เงิน: %d วาตู") % [game.fish,game.coins],15)
+	elif game.panel in ["restaurant","hotel"]:
+		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
+		text(Vector2(w/2-290,h/2-163),"PAD THAI @ELLUK" if game.panel=="restaurant" else "SEASIDE INN",23,GOLD)
+		var description: String=l("Meals restore hunger and thirst. Sell ingredients one at a time.\nFresh fish: 15 vatu · Coconut: 5 · Driftwood: 4\nYour stock: %d fish · %d coconuts · %d driftwood", "กินข้าวเติมความหิวและกระหาย ขายวัตถุดิบได้ครั้งละหนึ่งชิ้น\nปลาสด 15 วาตู · มะพร้าว 5 · ไม้ลอยน้ำ 4\nของที่มี: ปลา %d · มะพร้าว %d · ไม้ %d") % [game.fish,game.coconuts,game.wood] if game.panel=="restaurant" else l("Rest in your room until the next 08:00 for 10 vatu.\nEnergy and Stamina fully recover; health improves.\nA full day on the island takes one real hour.","พักในห้องถึงเช้าเวลา 08:00 ค่าห้อง 10 วาตู\nฟื้น Energy และ Stamina เต็ม พร้อมฟื้นฟูสุขภาพ\nหนึ่งวันบนเกาะเท่ากับหนึ่งชั่วโมงจริง")
+		paragraph(Vector2(w/2-290,h/2-125),description,580,17)
+		text(Vector2(w/2-290,h/2-20),l("Your vatu: %d","เงินที่มี: %d วาตู") % game.coins,17,GOLD)
 	if game.paused:
 		draw_rect(Rect2(Vector2.ZERO,size),Color(0.01,0.04,0.04,0.4))
 		card(Rect2(w/2-245,h/2-145,490,350))
@@ -173,6 +188,12 @@ func _draw() -> void:
 		var label: String={"pause":"II","map":"MAP","pack":"BAG","fish":"REEL" if game.fishing_state=="bite" else "FISH","use":"USE","eat":"EAT","jump":"JUMP","run":"WALK" if running else "RUN","save":"SAVE","load":"LOAD","resume":"RESUME","sell":"TRADE 3 FISH  →  45 VATU","meal":"BUY A MEAL  /  8 VATU","chat":"TALK ABOUT THE ISLAND","close":"CLOSE","journal":"JOURNAL","island":l("ISLAND NOTES","บันทึกเกาะ"),"story":"STORY","mode":l("RELAXED" if game.story.relaxed else "SURVIVAL","เดินเล่นสบาย ๆ" if game.story.relaxed else "เอาชีวิตรอด")}.get(key,l("TRACK","นำทาง"))
 		label=preload("res://scripts/island_locale.gd").translate(label,game.story.language)
 		if key=="track_story": label=l("TRACK STORY","นำทางตามภารกิจ")
+		if key=="story" and game.active_villager=="Luna": label=game.story.action_text()
+		if key=="restaurant_meal": label=l("EAT A MEAL · 8 VATU","กินข้าว · 8 วาตู")
+		if key=="ingredient_fish": label=l("SELL FISH · 15","ขายปลา · 15")
+		if key=="ingredient_coconuts": label=l("SELL COCONUT · 5","ขายมะพร้าว · 5")
+		if key=="ingredient_wood": label=l("SELL WOOD · 4","ขายไม้ · 4")
+		if key=="sleep": label=l("SLEEP UNTIL 08:00 · 10 VATU","นอนถึง 08:00 · 10 วาตู")
 		if key=="settings": label=l("SETTINGS","ตั้งค่า")
 		if key=="main_menu": label=l("MAIN MENU","เมนูหลัก")
 		if game.driving and key=="jump": label=l("BRAKE","เบรกมือ")
@@ -183,6 +204,10 @@ func _draw() -> void:
 		draw_circle(origin,68,Color(0.02,0.08,0.09,0.4))
 		draw_arc(origin,68,0,TAU,40,Color(0.9,0.96,0.9,0.5),2,true)
 		draw_circle(origin+move_vector*48,26,Color(0.88,0.94,0.84,0.6))
+
+	if sleep_effect>0:
+		draw_rect(Rect2(Vector2.ZERO,size),Color(0.015,0.025,0.04,sleep_effect))
+		text(size/2+Vector2(-120,0),l("08:00 · A NEW MORNING","08:00 · เช้าวันใหม่"),23,Color(1,1,1,sleep_effect))
 
 func draw_pack_frame() -> void:
 	var c := size/2
@@ -197,7 +222,7 @@ func draw_journal() -> void:
 	if game.panel=="island":
 		for i in range(game.story.PLACES.size()):
 			var place: Dictionary=game.story.PLACES[i]
-			var y: float=-146+i*48
+			var y: float=-146+i*42
 			text(c+Vector2(-330,y),l(place.id,place.th)+(" ✓" if place.id in game.story.discovered else ""),18,GOLD)
 			var note: String=l(place.en,place.fact_th)
 			while font.get_string_size(note,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x>510: note=note.left(note.length()-2).strip_edges()+"…"
@@ -207,8 +232,8 @@ func draw_journal() -> void:
 		paragraph(c+Vector2(-330,-112),game.story.dialogue(),655,16)
 		paragraph(c+Vector2(-330,-12),game.story.task(),655,17,GOLD)
 		text(c+Vector2(-330,61),game.story.progress(),16,GOLD)
-		paragraph(c+Vector2(-330,83),l("Optional story · no time limit. Chapter rewards: fish +20 vatu; cooking +25; wood +30; homecoming +100.\nRelaxed mode pauses hunger and thirst. Switch modes anytime.","เนื้อเรื่องเป็นทางเลือก ไม่มีเวลาบังคับ รางวัล: ส่งปลา +20 วาตู ทำอาหาร +25 ส่งไม้ +30 กลับบ้าน +100\nโหมดเดินเล่นหยุดความหิวและกระหาย สลับโหมดได้ทุกเมื่อ"),650,14)
-	paragraph(c+Vector2(-330,159),l("Real place notes: Vanuatu Tourism Office. Characters, storm and missions are fictional. The map is simplified at 1:20.","ข้อมูลสถานที่: สำนักงานการท่องเที่ยววานูอาตู ตัวละคร พายุ และภารกิจเป็นเรื่องแต่ง แผนที่ย่อส่วน 1:20"),655,12)
+		paragraph(c+Vector2(-330,83),l("Luna's welcome tour: Sunshine → Pad Thai → Seaside Inn.\nMeals: 8 vatu · Rooms: 10 vatu · Full game day: 1 real hour.","ทัวร์กับ Luna: Sunshine → Pad Thai → Seaside Inn\nข้าว 8 วาตู · ห้องพัก 10 วาตู · หนึ่งวันเกมเท่ากับหนึ่งชั่วโมงจริง"),650,14)
+	paragraph(c+Vector2(-330,159),l("Luna and Seaside Inn are fictional. Sunshine and Pad Thai follow supplied location references. Map scale: 1:20.","Luna และ Seaside Inn เป็นส่วนสมมติ Sunshine และ Pad Thai อ้างอิงสถานที่ที่ให้มา แผนที่ย่อส่วน 1:20"),655,12)
 
 
 func draw_navigation() -> void:
@@ -258,6 +283,9 @@ func draw_map() -> void:
 	var restaurant_point: Vector2=rect.position+(restaurant/2880.0+Vector2.ONE*0.5)*rect.size
 	draw_circle(restaurant_point,4,GOLD)
 	text(restaurant_point+Vector2(8,36),"PAD THAI @ELLUK",12,GOLD)
+	var inn: Vector2=rect.position+(game.hotel.SITE/2880.0+Vector2.ONE*.5)*rect.size
+	draw_rect(Rect2(inn-Vector2.ONE*3,Vector2.ONE*6),Color("b9e4dc"))
+	if game.story.tracked_place=="Seaside Inn": text(inn+Vector2(7,-15),"Seaside Inn",12,GOLD)
 	var spa: Vector2=preload("res://scripts/sunshine_spa.gd").SITE
 	var spa_point: Vector2=rect.position+(spa/2880.0+Vector2.ONE*0.5)*rect.size
 	draw_rect(Rect2(spa_point-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))
@@ -347,6 +375,7 @@ func activate(key: String,pressed: bool) -> void:
 		"save": game.save_game()
 		"load": game.load_game()
 		"sell", "meal", "chat", "story": game.trade(key)
+		"restaurant_meal", "ingredient_fish", "ingredient_coconuts", "ingredient_wood", "sleep": game.service(key)
 		_:
 			if key.begins_with("place_"):
 				var place: Dictionary=game.story.PLACES[int(key.trim_prefix("place_"))]

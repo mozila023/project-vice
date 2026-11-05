@@ -87,7 +87,7 @@ func build() -> void:
 	load_refined_house()
 	for data in world.baked.buildings:
 		# Reserve the landmark parcel rather than placing a generic house through it.
-		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/seaside_inn.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed=data.seed
 		var base: float=footing(data)

@@ -23,17 +23,12 @@ func run() -> void:
 	var config := ConfigFile.new()
 	check(config.load("res://checks/preferences-test.cfg")==OK and config.get_value("game","language")==preferences.language and config.get_value("game","quality")==preferences.quality,"settings serialize to a separate test file")
 	front.start_new_game()
-	check(front.screen=="intro" and preferences.launch=="new" and front.traveler.visible,"New Game begins boarding scene")
-	front.set_intro_pose(11.0)
-	check(front.cabin.visible and not front.apron.visible,"second cinematic shot is inside the aircraft")
-	front.set_intro_pose(20.0)
-	check(front.island.visible and front.island_environment.environment!=null and front.front_environment.environment==null,"arrival uses the real island and one active environment")
+	check(front.screen=="loading" and preferences.launch=="new","New Game loads Sunshine directly")
 	front.arrive()
-	front.arrive()
-	check(front.loading,"skip intro starts loading exactly once")
+	check(front.loading,"duplicate arrival request is harmless")
 	var deadline := Time.get_ticks_msec()+20000
 	while (current_scene==front or current_scene==null) and Time.get_ticks_msec()<deadline: await process_frame
-	check(current_scene!=front and current_scene!=null,"cinematic transitions into the playable island")
+	check(current_scene!=front and current_scene!=null,"New Game transitions into the playable island")
 	if current_scene==null or current_scene==front:
 		quit(1)
 		return
@@ -42,15 +37,9 @@ func run() -> void:
 	check(game.story.stage==0 and game.fish==0,"new game starts with fresh story and inventory")
 	check(game.player.visible and game.player.collision_mask!=0,"player is controllable after arrival")
 	check(game.navigation.graph.get_point_count()>100,"quest navigation indexes mapped roads")
-	game.story.stage=0
 	game.navigation.update(0,true)
-	check(game.navigation.road_route and game.navigation.route.size()>2,"distant quest follows connected road waypoints")
-	check(is_finite(game.navigation.bearing()) and game.navigation.distance()>0,"guidance supplies direction and distance")
-	game.story.stage=3
-	game.wood=0
-	var wood_goal: Vector3=game.story.target()
-	game.wood=3
-	check(game.story.target().is_equal_approx(game.villagers[0].body.position) and not wood_goal.is_equal_approx(game.story.target()),"quest target switches from driftwood to Malia when supplies are ready")
+	check(game.story.target().distance_to(game.luna.position)<.01,"initial guidance targets Luna beside Sunshine")
+	check(is_finite(game.navigation.bearing()),"Luna guidance supplies a finite direction")
 	var previous_navigation: bool=preferences.navigation
 	preferences.navigation=false
 	check(not game.navigation.active(),"settings can disable quest guidance")

@@ -215,11 +215,8 @@ func build_scene() -> void:
 	island.visible=false
 
 func start_new_game() -> void:
-	screen="intro"
-	intro_time=0.0
 	Preferences.launch="new"
-	ambience.play()
-	set_intro_pose(0.0)
+	arrive()
 
 func window_panel(z: float) -> void:
 	var surface := SurfaceTool.new()
