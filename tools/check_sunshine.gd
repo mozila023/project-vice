@@ -14,7 +14,7 @@ func run() -> void:
 	if root.focus_exited.is_connected(game.on_focus_lost): root.focus_exited.disconnect(game.on_focus_lost)
 	await physics_frame
 	var spa=game.sunshine
-	var expected := Vector2((168.3207769-168.363)*5300.0,-(-17.7419608+17.6625)*5550.0)
+	var expected := preload("res://scripts/map_coordinates.gd").project(-17.7419608,168.3207769)
 	check(Vector2(spa.position.x,spa.position.z).distance_to(expected)<0.01,"shop uses the verified Port Vila geographic projection")
 	check(Vector2(game.player.position.x,game.player.position.z).distance_to(spa.SPAWN)<0.1,"New Game spawns at the shop entrance")
 	check(game.story.stage==0 and game.fish==0,"new start preserves the fresh story")

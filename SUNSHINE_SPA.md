@@ -16,3 +16,8 @@ The requested display name **Sunshine Wellness & Spa** appears on the facade and
 The map projection is the existing Efate formula: `x=(longitude-168.363)*5300`, `z=-(latitude+17.6625)*5550`, giving site `(-223.78243,441.00744)`. The island is compressed 1:20, while this building, doorway and furnishings stay human scale. Street frontage orientation, dimensions, unseen elevations, exact tree species and the treatment corner are interpretations, not survey measurements or an exact replica. Neighbouring buildings and coastline remain the game's simplified Efate geography.
 
 No downloaded business photos are bundled or used as in-game textures. Reference downloads stay under ignored `checks/`; the reconstruction uses code geometry and existing credited material textures/foliage. The shop is batched by material, with no additional render viewport, photo download or service dependency at runtime.
+# Placement repair
+
+The salon shell has a permanent local offset, separate from the mutable builder offset used for the boundary wall. Architectural attachments now use that permanent value. The condenser is on the opaque rear wall; roof drainage follows the shell roof edge. The foundation samples the rotated, offset footprint and fills to the lowest visible terrain.
+
+The interpreted hospital model formerly overlapped the salon and a road. Its visual plot is now (-421.56486, 852.01488); the original hospital OSM coordinate remains in the geographic directory. This is a nearby staged game building, not a surveyed hospital reconstruction.

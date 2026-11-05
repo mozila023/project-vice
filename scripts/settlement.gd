@@ -2,7 +2,7 @@ extends Node3D
 ## Towns and villages from the baked placement list: corrugated-iron homes on concrete plinths,
 ## verandas, louvre windows and rain tanks, concrete shop blocks in Port Vila, power lines along the road.
 const CHUNK := 180.0
-const CACHE_VERSION := 2
+const CACHE_VERSION := 3
 const CACHE_PATH := "res://assets/baked/settlement.scn"
 var allow_cache := true
 var world: Node3D

@@ -11,7 +11,8 @@ var batches := {}
 var materials := {}
 var body: StaticBody3D
 var floor_height := 0.0
-var offset := Vector3(-1,0,-2)
+const SHELL_OFFSET := Vector3(-1,0,-2)
+var offset := SHELL_OFFSET
 
 static func reserved(x: float,z: float,margin := 0.0) -> bool:
 	return absf(x-SITE.x)<10.0+margin and absf(z-SITE.y)<8.5+margin
@@ -67,9 +68,16 @@ func label(value: String,at: Vector3,size: int,pixel: float,color: Color) -> voi
 
 func build() -> void:
 	name="SunshineWellnessSpa"
-	floor_height=world.height_at(SITE.x,SITE.y)
-	for x in [-6.0,6.0]:
-		for z in [-4.25,4.25]: floor_height=maxf(floor_height,world.height_at(SITE.x+x,SITE.y+z))
+	offset=SHELL_OFFSET
+	var lowest := INF
+	floor_height=-INF
+	var facing := Basis(Vector3.UP,PI)
+	for x in range(14):
+		for z in range(10):
+			var sample: Vector3=facing*(Vector3(-6.2+x*12.4/13,0,-4.45+z*8.9/9)+SHELL_OFFSET)
+			var ground: float=world.surface_height_at(SITE.x+sample.x,SITE.y+sample.z)
+			floor_height=maxf(floor_height,ground)
+			lowest=minf(lowest,ground)
 	floor_height+=0.12
 	position=Vector3(SITE.x,floor_height,SITE.y)
 	rotation.y=PI
@@ -100,7 +108,8 @@ func build() -> void:
 	body.name="WalkableSalon"
 	body.collision_layer=1
 	add_child(body)
-	box("plaster",Vector3(0,-0.88,0),Vector3(12.4,1.7,8.9),true)
+	var foundation_depth: float=maxf(1.7,floor_height-lowest+.35)
+	box("plaster",Vector3(0,-foundation_depth/2-.03,0),Vector3(12.4,foundation_depth,8.9),true)
 	box("tile",Vector3(0,-0.015,0),Vector3(12,0.03,8.5),true)
 	# Fine grout, cream tiles and aluminium window frames visible in the reference.
 	for x in range(-6,7): box("grout",Vector3(x,0.004,0),Vector3(0.008,0.003,8.5))

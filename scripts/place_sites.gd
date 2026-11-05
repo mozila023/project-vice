@@ -92,8 +92,8 @@ const SITES := [
 		"name": "Port Vila Central Hospital",
 		"category": "hospital",
 		"at": [
-			-437.7132200001199,
-			890.6362499999897
+			-421.56486,
+			852.01488
 		],
 		"size": [
 			18,

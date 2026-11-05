@@ -8,10 +8,11 @@ func build(owner_game: Node3D) -> void:
 	kit=load("res://assets/models/coastal_detail/detail_kit.glb").instantiate()
 	for building in [game.sunshine,game.restaurant,game.landmarks.port,game.landmarks.bar]: materials.polish(building)
 	# Sunshine forecourt and facade. Keep its front door and Luna's start free.
-	var spa_offset: Vector3=game.sunshine.offset
+	var spa_offset: Vector3=game.sunshine.SHELL_OFFSET
 	for at in [Vector3(-5,0,5.8),Vector3(7.5,0,5.8)]: ground_piece("planter",game.sunshine.to_global(at+spa_offset))
-	for x in [-5.6,5.5]: piece("lantern",game.sunshine,Vector3(x,2.2,4.36)+spa_offset)
-	piece("ac_unit",game.sunshine,Vector3(6.29,2,-1)+spa_offset,PI/2)
+	for x in [-6.0,6.0]: piece("lantern",game.sunshine,Vector3(x,2.2,4.36)+spa_offset)
+	# Fix the condenser to the opaque rear wall, away from the glazed side elevation.
+	piece("ac_unit",game.sunshine,Vector3(4.5,1.8,-4.54)+spa_offset,PI)
 	piece("gutter",game.sunshine,Vector3(4,3.3,4.65)+spa_offset)
 	# Raised restaurant: timber rails and stairs remain untouched and fully walkable.
 	for x in [-6,6]:

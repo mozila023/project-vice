@@ -37,6 +37,11 @@ fs.writeFileSync('assets/geography/efate-places.json',JSON.stringify({version:1,
 fs.writeFileSync('checks/island-survey-audit.json',JSON.stringify({source_count:raw.elements.length,included:entries.length,excluded:audit},null,2));
 const dimensions={airport:[28,10],hospital:[18,10],market:[18,10],museum:[12,8],post:[12,8],culture:[12,8],beach:[7,5],underwater_post:[7,5],waterfall:[18,16],lagoon:[18,12],river:[18,12],cave:[10,8]};
 const sites=entries.filter(e=>e.featured).map(e=>({id:e.id,name:e.name,category:e.category,at:e.at,size:dimensions[e.category]}));
+// Hospital campus centroid conflicts with the compressed salon parcel and road.
+// Keep the geographic directory pin; stage the interpreted model on a nearby clear plot.
+const hospital=sites.find(e=>e.category==='hospital');
+hospital.at=[-421.56486,852.01488];
+hospital.building_note='Model staged on nearby dry plot to avoid Sunshine and road; original OSM pin retained.';
 // The OSM attraction centroid is beside the entrance road; stage the interpreted cliff behind its entry.
 const cascades=sites.find(e=>e.category==='waterfall');
 cascades.at=[cascades.at[0]-22,cascades.at[1]-24];

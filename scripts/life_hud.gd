@@ -9,6 +9,7 @@ var atlas_entries: Array = []
 var atlas_search: LineEdit
 var sleep_effect := 0.0
 var fingers := {}
+var finger_positions := {}
 var stick_origin := Vector2.ZERO
 var font: Font
 var icons := {}
@@ -24,6 +25,7 @@ const INK := Color(0.02,0.08,0.09,0.80)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	resized.connect(release_all)
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 	font=ThemeDB.fallback_font
 	font=preload("res://assets/fonts/NotoSansThai.ttf")
@@ -376,6 +378,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		mobile=true
 		if event.pressed:
+			finger_positions[event.index]=event.position
 			for key in buttons():
 				if buttons()[key].has_point(event.position):
 					fingers[event.index]=key
@@ -387,19 +390,23 @@ func _input(event: InputEvent) -> void:
 				fingers[event.index]="move"
 				stick_origin=event.position
 				move_vector=Vector2.ZERO
-			else: fingers[event.index]="look"
+			elif not "look" in fingers.values(): fingers[event.index]="look"
 		else:
 			var role: String=fingers.get(event.index,"")
 			if role=="move": move_vector=Vector2.ZERO
 			activate(role,false)
 			fingers.erase(event.index)
+			finger_positions.erase(event.index)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag and fingers.has(event.index):
 		var role: String=fingers[event.index]
+		var delta: Vector2=event.position-finger_positions.get(event.index,event.position)
+		finger_positions[event.index]=event.position
 		if role=="move": move_vector=((event.position-stick_origin)/65).limit_length()
 		elif role=="look" and not game.blocked():
-			game.yaw-=event.relative.x*0.004*Preferences.sensitivity
-			game.pitch=clampf(game.pitch-event.relative.y*0.004*Preferences.sensitivity,-0.95,0.65)
+			var gain: float=1.1/maxf(size.y,1)*Preferences.sensitivity
+			game.yaw-=delta.x*gain
+			game.pitch=clampf(game.pitch-delta.y*gain,-0.95,0.65)
 			game.look_timer=1.5
 		get_viewport().set_input_as_handled()
 
@@ -458,6 +465,7 @@ func activate(key: String,pressed: bool) -> void:
 
 func release_all() -> void:
 	fingers.clear()
+	finger_positions.clear()
 	move_vector=Vector2.ZERO
 	running=false
 	Input.action_release("jump")
