@@ -40,7 +40,16 @@ func run() -> void:
 	check(game.places.search("hospital").size()>0 and game.places.search("Blue Lagoon").size()==1,"inventory search finds services and natural attractions")
 	game.story.language="th"
 	check(game.places.search("โรงพยาบาล").size()>0,"Thai category search finds mapped hospitals")
-	game.panel="island"; game.field_hud.atlas_mode=true
+	game.panel="island"; game.field_hud.atlas_mode=false
+	var tap := InputEventScreenTouch.new()
+	tap.index=0; tap.pressed=true
+	tap.position=game.field_hud.buttons().atlas_toggle.get_center()
+	game.field_hud._input(tap)
+	var emulated := InputEventMouseButton.new()
+	emulated.device=-1; emulated.button_index=MOUSE_BUTTON_LEFT; emulated.pressed=true; emulated.position=tap.position
+	game.field_hud._input(emulated)
+	check(game.field_hud.atlas_mode,"one touch opens directory once despite an emulated mouse event")
+	tap.pressed=false; game.field_hud._input(tap)
 	game.field_hud.atlas_search.text="Blue Lagoon"
 	game.field_hud.atlas_search.text_changed.emit("Blue Lagoon")
 	game.field_hud.activate("atlas_0",true)

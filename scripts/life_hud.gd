@@ -229,7 +229,7 @@ func _draw() -> void:
 		if key=="sleep": label=l("SLEEP UNTIL 08:00 · 10 VATU","นอนถึง 08:00 · 10 วาตู")
 		if key.begins_with("quest_"): label=l("TRACK","นำทาง") if int(key.trim_prefix("quest_")) not in game.quests.claimed else l("COMPLETE","สำเร็จ")
 		if key=="quest_1" and game.quests.ready(1) and 1 not in game.quests.claimed: label=l("CLAIM REWARD","รับรางวัล")
-		if key in ["notes_prev","notes_next","community_meal","port_report","bar_greet","bar_story"]: label={"notes_prev":l("← PREVIOUS","← ก่อนหน้า"),"notes_next":l("NEXT →","ถัดไป →"),"community_meal":l("COMMUNITY MEAL · 2 FISH","มื้อแบ่งปัน · ปลา 2 ตัว"),"port_report":l("REPORT TO FOREMAN","รายงานหัวหน้างาน"),"bar_greet":l("GREET TAVI","ทักทาย Tavi"),"bar_story":l("LISTEN TO THE STORY","ฟังเรื่องราวชุมชน")}[key]
+		if key in ["notes_prev","notes_next","community_meal","port_report","bar_greet","bar_story"]: label={"notes_prev":l("< PREVIOUS","< ก่อนหน้า"),"notes_next":l("NEXT >","ถัดไป >"),"community_meal":l("COMMUNITY MEAL · 2 FISH","มื้อแบ่งปัน · ปลา 2 ตัว"),"port_report":l("REPORT TO FOREMAN","รายงานหัวหน้างาน"),"bar_greet":l("GREET TAVI","ทักทาย Tavi"),"bar_story":l("LISTEN TO THE STORY","ฟังเรื่องราวชุมชน")}[key]
 		if key=="atlas_toggle": label=l("MY NOTES" if atlas_mode else "ALL PLACES · %d" % game.places.entries.size(),"บันทึกของฉัน" if atlas_mode else "สถานที่ทั้งหมด · %d" % game.places.entries.size())
 		if key=="track_place": label=l("TRACK THIS PLACE","นำทางไปสถานที่นี้")
 		if key.begins_with("atlas_") and key!="atlas_toggle": label=l("DETAILS","ดูข้อมูล")
@@ -367,6 +367,8 @@ func draw_map() -> void:
 	text(rect.position+Vector2(-140,height+18),"© OpenStreetMap contributors · ODbL · 1:10",11)
 
 func _input(event: InputEvent) -> void:
+	# A touch also generates an emulated mouse press. Custom-drawn buttons must activate only once.
+	if event is InputEventMouseButton and event.device==-1: return
 	if game.panel=="settings": return
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_F7:
 		mobile=not mobile

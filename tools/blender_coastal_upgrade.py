@@ -44,6 +44,7 @@ def hall(w,d,kind):
         for x in [-w/4-1,w/4+1]:box('Front wall',(x,1.6,d/2),(w/2-2,3.2,.15),'plaster',True)
         box('Door lintel',(0,2.95,d/2),(4,.5,.15),'plaster',True)
     for x in range(-int(w/2)+2,int(w/2),4):
+        if kind=='market' or abs(x)<2.1:continue
         box('Window',(x,1.8,d/2+.09),(2.1,1.25,.05),'glass')
         for xx in [-1.1,1.1]:box('Window trim',(x+xx,1.8,d/2+.14),(.07,1.4,.06),'wood')
         box('Sill',(x,1.13,d/2+.17),(2.3,.08,.19),'wood')
@@ -52,6 +53,7 @@ def hall(w,d,kind):
         beam('Rainwater pipe',(x,3.15,d/2+.3),(x,.05,d/2+.3),.05,'steel')
     box('Welcome fascia',(0,2.65,d/2+.15),(min(w-1,10),.45,.09),'teal')
     if kind=='market':
+        for x in [-w/2,-w/4,w/4,w/2]:box('Front support column',(x,1.6,d/2),(.18,3.2,.18),'wood',True)
         for x in [-5,0,5]:
             box('Market counter',(x,.8,0),(3,.15,1.3),'wood',True,.02)
             for xx in [-1.3,1.3]:box('Counter leg',(x+xx,.4,0),(.12,.8,1),'wood')
