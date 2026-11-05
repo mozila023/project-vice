@@ -7,9 +7,10 @@
                      "grounded houses, vehicles, and walking animations",
                      "3D fishing rod, reel, float, and catenary line",
                      "Blender 5.2 3D models \u0026 graphics upgrade",
+                     "TH/EN spoken dialogue voiceovers \u0026 3D island audio",
                      "local minimap",
                      "TH/EN"
                  ],
-    "pack_bytes":  74775236,
-    "commit":  "02d7db5c2d9b9d7204753c25369ffac1f7d59e95"
+    "pack_bytes":  79858172,
+    "commit":  "54ac031fcfda8937613bd5829d5d155b11ca60ee"
 }
