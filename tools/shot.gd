@@ -4,6 +4,8 @@
 ##   godot --path . --script res://tools/shot.gd -- <absolute_out_dir> [pose_name ...]
 
 const POSES := {
+	"low_town": [-254.0,2.0,438.0,0.6,-0.03,6.0,10.5,false],
+	"power_poles": [-254.0,3.8,438.0,0.6,-0.03,10.0,10.5,false],
 	"pack_th": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
 	"pack_map": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
 	"foundation_worst": [-316.9262,2.0,74.5,0,-0.06,9.0,10.5,false],
@@ -65,6 +67,15 @@ func run() -> void:
 		game.panel=""
 		game.notice_time=0
 		game.paused=false
+		if pose_name=="low_town":
+			game.world.tier=0
+			game.world.apply_tier()
+		if pose_name=="power_poles":
+			var closest := Vector3.INF
+			for at: Vector3 in game.settlement.pole_sites:
+				if closest==Vector3.INF or at.distance_to(game.spawn)<closest.distance_to(game.spawn): closest=at
+			p[0]=closest.x+8
+			p[2]=closest.z+10
 		game.field_hud.mobile=pose_name in ["mobile_hud","mobile_drive"]
 		if pose_name in ["pack_th","pack_map"]:
 			game.story.language="th"
@@ -102,6 +113,15 @@ func run() -> void:
 			p[2]=at.z+4.0
 		var ground: float=game.ground(p[0],p[2])
 		game.player.position=Vector3(p[0],maxf(ground,0.0)+0.02,p[2])
+		if pose_name in ["low_town","power_poles"]:
+			game.player.position.y=maxf(ground,0.0)+.5
+			game.visual.position.y=0
+			for i in range(20):
+				await physics_frame
+				game.player.velocity=Vector3(0,-4,0)
+				game.player.move_and_slide()
+				game.player.apply_floor_snap()
+			game.foot_contact.update(game.player,game.visual,game.world,1.0)
 		if pose_name=="spa_interior":
 			game.player.position.y=game.sunshine.floor_height+0.03
 			ground=game.sunshine.floor_height

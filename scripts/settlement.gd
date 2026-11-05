@@ -14,6 +14,8 @@ var refined_colliders: Array = []
 var house_sites: Array[Dictionary] = []
 var foundation_supports: Array[Dictionary] = []
 var support_batches := {}
+var pole_sites: Array[Vector3] = []
+var wire_spans: Array[Dictionary] = []
 
 const WALL_PAINTS := [Color("e4dfca"),Color("b5cdc0"),Color("d8c49d"),Color("ece9dc"),Color("9fc0c6"),Color("d8ab90"),Color("c5cfa8"),Color("e8d9b0")]
 const ROOF_PAINTS := [Color("8a9591"),Color("ab6147"),Color("6a8a87"),Color("a9aba5"),Color("875440"),Color("4f6f7a")]
@@ -42,6 +44,7 @@ func make_materials() -> void:
 	pbr("iron","worn_corrugated_iron",2.0,0.62,0.12)
 	pbr("rust","rusty_corrugated_iron",2.0,0.74,0.08)
 	pbr("wood","weathered_planks",2.2)
+	materials["pole"]=materials["wood"].duplicate()
 	pbr("concrete","clean_concrete",3.0,0.9,0.0,"concrete_floor_worn_001").normal_enabled=false
 	materials["concrete"].cull_mode=BaseMaterial3D.CULL_DISABLED
 	# Louvre blades as one textured quad rather than a stack of boxes: far fewer triangles, and they anti-alias.
@@ -95,8 +98,10 @@ func build() -> void:
 		else: house(chunk,t,data,rng)
 		add_collider(t,data)
 	for chain in world.baked.poles:
-		power_line(chain)
-		pole_colliders(chain)
+		var grounded: PackedVector3Array=chain.duplicate()
+		for i in range(grounded.size()): grounded[i].y=world.surface_height_at(grounded[i].x,grounded[i].z)
+		power_line(grounded)
+		pole_colliders(grounded)
 	commit()
 	commit_supports()
 	street_lamps()
@@ -202,14 +207,19 @@ func commit_supports() -> void:
 	box.material=material
 	for chunk: Vector2i in support_batches:
 		var transforms: Array=support_batches[chunk]
+		var origin := Vector3((chunk.x+.5)*CHUNK,0,(chunk.y+.5)*CHUNK)
 		var instances := MultiMesh.new()
 		instances.transform_format=MultiMesh.TRANSFORM_3D
 		instances.mesh=box
 		instances.instance_count=transforms.size()
-		for i in range(transforms.size()): instances.set_instance_transform(i,transforms[i])
+		for i in range(transforms.size()):
+			var local: Transform3D=transforms[i]
+			local.origin-=origin
+			instances.set_instance_transform(i,local)
 		var node := MultiMeshInstance3D.new()
 		node.name="VisibleFoundations_%d_%d" % [chunk.x,chunk.y]
 		node.multimesh=instances
+		node.position=origin
 		node.visibility_range_end=world.building_range()
 		add_child(node)
 	support_batches.clear()
@@ -242,15 +252,44 @@ func commit() -> void:
 	for id in tools:
 		var entry: Dictionary=tools[id]
 		var s: SurfaceTool=entry.tool
-		if entry.key in ["board","plaster","iron","rust","wood","concrete"]: s.generate_tangents()
+		var raw: Array=s.commit_to_arrays()
+		var indices: PackedInt32Array=raw[Mesh.ARRAY_INDEX] if raw[Mesh.ARRAY_INDEX]!=null else PackedInt32Array()
+		# Imported meshes are indexed; hand-authored triangles appended afterward are not.
+		# Include those vertices explicitly or only the imported portion reaches the renderer.
+		if not indices.is_empty():
+			var used := PackedByteArray()
+			used.resize((raw[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+			for vertex in indices: used[vertex]=1
+			var added := 0
+			for vertex in range(used.size()):
+				if used[vertex]==0:
+					indices.append(vertex)
+					added+=1
+			assert(added%3==0,"Unreferenced town geometry must contain complete triangles")
+			raw[Mesh.ARRAY_INDEX]=indices
+		var complete := ArrayMesh.new()
+		complete.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,raw)
+		s=SurfaceTool.new()
+		s.create_from(complete,0)
+		if entry.key in ["board","plaster","iron","rust","wood","concrete","pole"]: s.generate_tangents()
 		var node := MeshInstance3D.new()
 		node.name="Town_%s_%d_%d" % [entry.key,entry.chunk.x,entry.chunk.y]
-		node.mesh=s.commit()
+		var source: ArrayMesh=s.commit()
+		var origin := Vector3((entry.chunk.x+.5)*CHUNK,0,(entry.chunk.y+.5)*CHUNK)
+		var arrays: Array=source.surface_get_arrays(0)
+		var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+		for i in range(vertices.size()): vertices[i]-=origin
+		arrays[Mesh.ARRAY_VERTEX]=vertices
+		var local := ArrayMesh.new()
+		local.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+		node.mesh=local
+		node.position=origin
 		node.material_override=materials[entry.key]
 		node.visibility_range_end=world.building_range()
 		if entry.key=="wire":
-			node.visibility_range_end=200.0
+			node.visibility_range_end=world.building_range()
 			node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif entry.key=="pole": node.visibility_range_end=world.building_range()+CHUNK*1.5
 		add_child(node)
 	tools.clear()
 
@@ -277,17 +316,17 @@ const ALL_FACES := [[0,1,2,3],[4,5,6,7],[1,4,7,2],[5,0,3,6],[3,2,7,6],[5,4,1,0]]
 const WALL_FACES := [[0,1,2,3],[1,4,7,2],[5,0,3,6],[3,2,7,6]]
 
 func cube(s: SurfaceTool,t: Transform3D,centre: Vector3,size: Vector3,color: Color,faces: Array=ALL_FACES) -> void:
-	var h := size*0.5
-	var p := [centre+Vector3(-h.x,-h.y,h.z),centre+Vector3(h.x,-h.y,h.z),centre+Vector3(h.x,h.y,h.z),centre+Vector3(-h.x,h.y,h.z),
-		centre+Vector3(h.x,-h.y,-h.z),centre+Vector3(-h.x,-h.y,-h.z),centre+Vector3(-h.x,h.y,-h.z),centre+Vector3(h.x,h.y,-h.z)]
-	for f in faces:
-		var a: Vector3=p[f[0]]
-		var b: Vector3=p[f[1]]
-		var c: Vector3=p[f[2]]
-		var d: Vector3=p[f[3]]
-		var w := a.distance_to(b)
-		var v := a.distance_to(d)
-		quad(s,t,a,b,c,d,[Vector2(0,0),Vector2(w,0),Vector2(w,v),Vector2(0,v)],color)
+	# Native closed boxes keep supports, poles and shop fittings visible from every side.
+	var primitive := BoxMesh.new()
+	primitive.size=size
+	var arrays: Array=primitive.surface_get_arrays(0)
+	var colors := PackedColorArray()
+	colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+	colors.fill(color)
+	arrays[Mesh.ARRAY_COLOR]=colors
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+	s.append_from(mesh,0,t*Transform3D(Basis.IDENTITY,centre))
 
 ## Frame, glass, and louvre blades on a wall plane. side: 0 front(+z) 1 back 2 right(+x) 3 left.
 func window(chunk: Vector2i,t: Transform3D,side: int,along: float,half_depth: float,sill: float,w: float,h: float,trim: Color,louvres := true) -> void:
@@ -410,18 +449,21 @@ func power_line(chain: PackedVector3Array) -> void:
 	var height := 7.4
 	for i in range(chain.size()):
 		var base: Vector3=chain[i]
+		pole_sites.append(base)
 		var chunk := Vector2i(floori(base.x/CHUNK),floori(base.z/CHUNK))
 		var ahead: Vector3=chain[mini(i+1,chain.size()-1)]-chain[maxi(i-1,0)]
 		ahead.y=0
 		if ahead.length_squared()<0.01: ahead=Vector3.FORWARD
 		var t := Transform3D(Basis(Vector3.UP,atan2(ahead.x,ahead.z)),base)
-		var wood := tool_for(chunk,"wood")
+		var wood := tool_for(chunk,"pole")
 		cube(wood,t,Vector3(0,height*0.5-0.4,0),Vector3(0.2,height+0.8,0.2),Color(0.52,0.46,0.40))
 		cube(wood,t,Vector3(0,height-0.5,0),Vector3(1.7,0.1,0.1),Color(0.42,0.37,0.32))
+		for off in [-.75,0,.75]: cube(wood,t,Vector3(off,height-.42,0),Vector3(.10,.15,.10),Color("d6d5bd"))
 		if i==0: continue
 		var from: Vector3=chain[i-1]
 		var dist := from.distance_to(base)
 		if dist>70.0: continue
+		wire_spans.append({"from":from,"to":base,"chunk":chunk})
 		var wire := tool_for(chunk,"wire")
 		for off in [-0.75,0.0,0.75]:
 			var side: Vector3=(base-from).cross(Vector3.UP).normalized()*off
@@ -452,7 +494,12 @@ func street_lamps() -> void:
 
 var night_level := 0.0
 func on_night(level: float) -> void:
-	if level<0.0: level=night_level
+	if level<0.0:
+		level=night_level
+		for node in get_children():
+			if not node is GeometryInstance3D: continue
+			if String(node.name).begins_with("Town_") or String(node.name).begins_with("VisibleFoundations_"):
+				node.visibility_range_end=world.building_range()+(CHUNK*1.5 if String(node.name).begins_with("Town_pole_") else 0.0)
 	night_level=level
 	var lit := smoothstep(0.35,0.85,level)
 	glass.emission_energy_multiplier=lit*1.35

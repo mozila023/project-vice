@@ -5,6 +5,7 @@ var settlement: Node3D
 var sunshine: Node3D
 var restaurant: Node3D
 var player: CharacterBody3D
+var foot_contact=preload("res://scripts/foot_contact.gd").new()
 var visual: Node3D
 var pivot: Node3D
 var camera: Camera3D
@@ -723,8 +724,7 @@ func _physics_process(dt: float) -> void:
 			locomotion_speed=Vector2(actual.x,actual.z).length()
 			if not jumping and player.velocity.y<=0.0: player.apply_floor_snap()
 			if moving and fishing_state=="": player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
-			var g_h: float=ground(player.position.x,player.position.z)
-			visual.position.y=world.road_surface_offset(player.position.x,player.position.z) if absf(player.position.y-g_h)<0.08 else 0.0
+			foot_contact.update(player,visual,world,dt)
 		world.update_tree_collision(player.position)
 		stamina=clampf(stamina+(-17 if sprint and locomotion_speed>0.3 else 13)*dt,0,100)
 		food=maxf(0,food-dt*0.045) if not story.relaxed else food
@@ -798,8 +798,7 @@ func update_villagers(dt: float) -> void:
 		body.velocity.y=-8
 		body.move_and_slide()
 		body.apply_floor_snap()
-		var npc_gh: float=ground(body.position.x,body.position.z)
-		npc.visual.position.y=world.road_surface_offset(body.position.x,body.position.z) if absf(body.position.y-npc_gh)<0.08 else 0.0
+		foot_contact.update(body,npc.visual,world,dt,body.position.distance_squared_to(player.position)<1600.0)
 
 func update_traffic(dt: float) -> void:
 	var length := traffic_curve.get_baked_length()

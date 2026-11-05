@@ -1,6 +1,11 @@
 extends SceneTree
 var failures := 0
-func _initialize() -> void: run.call_deferred()
+func _initialize() -> void:
+	if DisplayServer.get_name()=="headless":
+		printerr("Run without --headless: this audit reads real MultiMesh render transforms.")
+		quit(2)
+		return
+	run.call_deferred()
 func run() -> void:
 	root.get_node("Preferences").launch="new"
 	change_scene_to_file("res://scenes/island.tscn")
@@ -37,6 +42,7 @@ func run() -> void:
 	# Inspect actual render instances, not only the collision/support bookkeeping.
 	var visible_count := 0
 	var render_gaps := 0
+	var render_examples := []
 	for node in game.settlement.get_children():
 		if not node is MultiMeshInstance3D or not String(node.name).begins_with("VisibleFoundations_"): continue
 		for i in range(node.multimesh.instance_count):
@@ -45,7 +51,9 @@ func run() -> void:
 			for x in [-.5,.5]:
 				for z in [-.5,.5]:
 					var at: Vector3=transform*Vector3(x,-.5,z)
-					if at.y>game.world.surface_height_at(at.x,at.z)+.005: render_gaps+=1
+					if at.y>game.world.surface_height_at(at.x,at.z)+.005:
+						render_gaps+=1
+						if render_examples.size()<4: render_examples.append({"at":at,"ground":game.world.surface_height_at(at.x,at.z),"node":node.position,"instance":node.multimesh.get_instance_transform(i).origin})
 	if visible_count!=supports.size() or render_gaps>0: failures+=1
 	for label in ["Foundation","PorchDeck","LowerStep","UpperStep","ShopFoundation","ShopPorch"]:
 		if int(labels.get(label,0))==0: failures+=1
@@ -59,7 +67,7 @@ func run() -> void:
 		var hit: Dictionary=game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from,at,1))
 		if hit.is_empty(): failures+=1
 		ray_count+=1
-	var result := {"failures":failures,"buildings":game.settlement.house_sites.size(),"supports":supports.size(),"visible_supports":visible_count,"render_gaps":render_gaps,"samples":samples,"support_types":labels,"gaps":gaps.slice(0,20),"worst":worst,"old_unsupported_slabs":old_floating,"collision_checks":ray_count}
+	var result := {"failures":failures,"buildings":game.settlement.house_sites.size(),"supports":supports.size(),"visible_supports":visible_count,"render_gaps":render_gaps,"render_examples":render_examples,"samples":samples,"support_types":labels,"gaps":gaps.slice(0,20),"worst":worst,"old_unsupported_slabs":old_floating,"collision_checks":ray_count}
 	var file := FileAccess.open("res://checks/foundation-results.json",FileAccess.WRITE)
 	file.store_string(JSON.stringify(result,"\t"))
 	print("FOUNDATION AUDIT ",JSON.stringify(result))
