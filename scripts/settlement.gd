@@ -87,7 +87,7 @@ func build() -> void:
 	load_refined_house()
 	for data in world.baked.buildings:
 		# Reserve the landmark parcel rather than placing a generic house through it.
-		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/seaside_inn.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/seaside_inn.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/island_landmarks.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed=data.seed
 		var base: float=footing(data)
@@ -99,7 +99,14 @@ func build() -> void:
 		add_collider(t,data)
 	for chain in world.baked.poles:
 		var grounded: PackedVector3Array=chain.duplicate()
-		for i in range(grounded.size()): grounded[i].y=world.surface_height_at(grounded[i].x,grounded[i].z)
+		for i in range(grounded.size()):
+			var at: Vector3=grounded[i]
+			# Divert the complete electrical chain around new business parcels, including its solids.
+			if preload("res://scripts/island_landmarks.gd").reserved(at.x,at.z,1):
+				var sites := preload("res://scripts/island_landmarks.gd")
+				at.z=sites.BAR.y-12 if absf(at.z-sites.BAR.y)<11 else sites.PORT.y-22
+			at.y=world.surface_height_at(at.x,at.z)
+			grounded[i]=at
 		power_line(grounded)
 		pole_colliders(grounded)
 	commit()

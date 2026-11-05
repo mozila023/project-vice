@@ -5,6 +5,9 @@ var settlement: Node3D
 var sunshine: Node3D
 var restaurant: Node3D
 var hotel: Node3D
+var landmarks: Node3D
+var population=preload("res://scripts/island_population.gd").new()
+var quests=preload("res://scripts/island_quests.gd").new()
 var luna: CharacterBody3D
 var guide=preload("res://scripts/luna_guide.gd").new()
 var resting := false
@@ -89,6 +92,7 @@ func ground(x: float,z: float) -> float:
 
 func _ready() -> void:
 	story.game=self
+	quests.game=self
 	story.language=Preferences.language
 	story.relaxed=Preferences.relaxed
 	rng.seed=745
@@ -118,11 +122,15 @@ func _ready() -> void:
 	hotel.world=world
 	add_child(hotel)
 	hotel.build()
+	landmarks=preload("res://scripts/island_landmarks.gd").new()
+	add_child(landmarks)
+	landmarks.build(self)
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
 	audio=preload("res://scripts/island_audio.gd").new()
 	audio.game=self
 	add_child(audio)
 	navigation.build(self)
+	population.build(self)
 	guide.build(self)
 	navigation.update(0,true)
 	apply_preferences()
@@ -396,30 +404,6 @@ func build_life() -> void:
 	prop_physics.ground_on(shelter,"island_shelter",world)
 	prop_physics.add(shelter,"island_shelter")
 	build_fire()
-	var names := ["Malia / Fisher","Jonas / Market","Lina","David","Ana","Peter","Sera","Thomas","Rose","Ben","Mary","Paul"]
-	for i in range(12):
-		var body := CharacterBody3D.new()
-		body.name="Villager_%02d"%i
-		add_child(body)
-		capsule(body)
-		body.collision_mask=VILLAGER_MASK
-		var appearance := people.create(i,rng.randf_range(1.6,1.85))
-		body.add_child(appearance)
-		appearance.rotation.y=PI
-		var points: Array[Vector3]=[]
-		if i==0:
-			# The fisher works around the cooking fire.
-			for p in [Vector2(-496,128),Vector2(-493,141),Vector2(-503,146)]: points.append(Vector3(p.x,ground(p.x,p.y)+0.2,p.y))
-		else:
-			# Each villager keeps their own line across the green, so they rarely meet head on.
-			var side := -1.0 if i%2==0 else 1.0
-			var x: float=-489.0+side*(2.0+(i%4)*2.0)
-			var offset: float=(i%5)*3.0
-			for z in [66.0,86.0,106.0,126.0,136.0]:
-				points.append(Vector3(x,ground(x,z+offset)+0.15,z+offset))
-			if i%3==0: points.reverse()
-		body.position=points[i%points.size()]
-		villagers.append({"body":body,"visual":appearance,"name":names[i],"points":points,"target":(i+1)%points.size(),"wait":rng.randf_range(0,4),"speed":rng.randf_range(0.8,1.3),"check_at":body.position,"check_time":0.0})
 	traffic_curve=Curve3D.new()
 	for p in world.geography.get("traffic_route",[]):
 		traffic_curve.add_point(Vector3(p[0],maxf(0.75,ground(p[0],p[1])+0.2),p[1]))
@@ -764,10 +748,13 @@ func _physics_process(dt: float) -> void:
 	pivot.rotation=Vector3(pitch,yaw,0)
 
 func update_villagers(dt: float) -> void:
+	population.update(dt)
+	landmarks.update_hours()
 	for npc in villagers:
 		if npc.get("guide",false):
 			guide.update(dt)
 			continue
+		if not npc.get("active",true): continue
 		var body: CharacterBody3D=npc.body
 		if body.position.distance_to(player.position)<3.0 or npc.wait>0:
 			npc.wait=maxf(0,npc.wait-dt)
@@ -785,7 +772,7 @@ func update_villagers(dt: float) -> void:
 			var heading: Vector3=delta.normalized()
 			# Step around neighbours: ease away from anyone close and always pass on the right.
 			for other in villagers:
-				if other==npc: continue
+				if other==npc or not other.get("active",true): continue
 				var away: Vector3=body.position-other.body.position
 				away.y=0
 				var gap: float=away.length()
@@ -836,7 +823,8 @@ func update_traffic(dt: float) -> void:
 func blocked_ahead(node: CharacterBody3D,direction: Vector3) -> bool:
 	if direction.length_squared()<0.5: return false
 	var targets: Array[Vector3]=[player.position]
-	for npc in villagers: targets.append(npc.body.position)
+	for npc in villagers:
+		if npc.get("active",true): targets.append(npc.body.position)
 	for other in cars:
 		if other!=node: targets.append(other.position)
 	for at in targets:
@@ -971,6 +959,7 @@ func cancel_fishing() -> void:
 	if is_instance_valid(line): line.mesh=null
 
 func nearby_context() -> String:
+	if landmarks.context()!="": return landmarks.context()
 	if is_instance_valid(luna) and player.position.distance_to(luna.position)<3: return story.l("TALK TO LUNA","คุยกับ Luna")
 	if restaurant_inside(): return story.l("PAD THAI · EAT / SELL INGREDIENTS","PAD THAI · กินข้าว / ขายวัตถุดิบ")
 	if hotel.contains(player.position): return story.l("SEASIDE INN · SLEEP UNTIL MORNING","SEASIDE INN · นอนพักถึงเช้า")
@@ -980,7 +969,7 @@ func nearby_context() -> String:
 	if player.position.distance_to(well_position)<3.5: return "DRINK / REFILL AT THE WELL"
 	if player.position.distance_to(shelter_position)<3.5: return "REST AT YOUR SHELTER"
 	for npc in villagers:
-		if npc.body.position.distance_to(player.position)<3: return "TALK / "+npc.name
+		if npc.get("active",true) and npc.body.position.distance_to(player.position)<3: return "TALK / "+npc.name
 	for item in resources:
 		if not item.collected and item.node.position.distance_to(player.position)<2.5: return "COLLECT "+item.kind.to_upper()
 	if nearest_car(): return "DRIVE THIS CAR"
@@ -989,6 +978,10 @@ func nearby_context() -> String:
 func interact() -> void:
 	if blocked(): return
 	if driving: leave_car(); return
+	if landmarks.interact():
+		field_hud.release_all()
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if blocked() else Input.mouse_mode
+		return
 	if fishing_state=="bite": reel(); return
 	if is_instance_valid(luna) and player.position.distance_to(luna.position)<3:
 		active_villager="Luna"
@@ -1026,7 +1019,7 @@ func interact() -> void:
 		if is_instance_valid(audio): audio.play_sfx("rest",1.0,-1.5)
 		tell("You rested for eight hours. A new day on the island."); return
 	for npc in villagers:
-		if npc.body.position.distance_to(player.position)<3:
+		if npc.get("active",true) and npc.body.position.distance_to(player.position)<3:
 			active_villager=npc.name
 			panel="talk"
 			field_hud.release_all()
@@ -1077,7 +1070,8 @@ func trade(option: String) -> void:
 				tell("A home-cooked meal shared with your neighbours.")
 			else: tell("A village meal costs 8 vatu.")
 		"chat":
-			tell("The Efate coast connects Port Vila, Mele, Eton and Undine Bay. The village needs fresh fish each day.")
+			quests.on_talk(active_villager)
+			tell(quests.neighbour_story())
 		"story":
 			story.talk()
 			return

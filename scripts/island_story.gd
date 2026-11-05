@@ -9,6 +9,8 @@ var discovered: Array[String] = []
 var tracked_place := ""
 var game: Node3D
 const PLACES := [
+	{"id":"Ifira Port","at":Vector2(-312.35762,519.93177),"th":"Ifira Port","en":"The island supply line: public quay cargo lists and port office, 07–18.","fact_th":"เส้นทางเสบียงของเกาะ ตรวจรายการสินค้าบนลานสาธารณะ สำนักงาน 07–18 น."},
+	{"id":"Evening Nakamal","at":Vector2(-373.6553,628.97706),"th":"Evening Nakamal","en":"Temporary game name. An evening community gathering place, 16–23.","fact_th":"ชื่อชั่วคราวในเกม ศาลาพบปะชุมชนยามเย็น เปิด 16–23 น."},
 	{"id":"Mele","at":Vector2(-489,141),"th":"เมเล","en":"Your home base beside Mele Bay. Greet your hosts and ask before entering homes or gardens.","fact_th":"ฐานพักริมอ่าวเมเล ทักทายเจ้าบ้านและขออนุญาตก่อนเข้าบ้านหรือสวนของผู้อื่น"},
 	{"id":"Port Vila","at":Vector2(-254,438),"th":"พอร์ตวิลา","en":"Port Vila is on Efate. Its markets are a place to discover local produce and food such as laplap.","fact_th":"พอร์ตวิลาตั้งอยู่บนเอฟาเต ตลาดเป็นแหล่งพบผลผลิตและอาหารท้องถิ่น เช่น ลัป ลัป"},
 	{"id":"Port Havannah","at":Vector2(-462,-533),"th":"พอร์ตฮาวานนาห์","en":"Havannah Harbour lies northwest of Port Vila, with trips to nearby Moso and Lelepa islands.","fact_th":"อ่าวฮาวานนาห์อยู่ทางตะวันตกเฉียงเหนือของพอร์ตวิลา มีเส้นทางไปเกาะโมโซและเลเลปา"},
@@ -42,8 +44,8 @@ const DIALOGUE := [
 	["You're all set! Pad Thai handles food and ingredients; Seaside Inn is your rest stop.\nI'll stay around the inn if you want to chat. Enjoy your new island life!", "ครบแล้วนะ! Pad Thai ไว้กินข้าวและขายของ Seaside Inn ไว้นอนพัก\nฉันจะอยู่แถวโรงแรม ถ้าอยากคุยก็แวะมาได้ ใช้ชีวิตบนเกาะให้สนุกนะ!"]
 ]
 func l(en: String,th: String) -> String: return th if language=="th" else en
-func title() -> String: return l(TITLES[stage][0],TITLES[stage][1])
-func task() -> String: return l(TASKS[stage][0],TASKS[stage][1])
+func title() -> String: return game.quests.title() if stage==COMPLETE_STAGE and game.quests.has_active() else l(TITLES[stage][0],TITLES[stage][1])
+func task() -> String: return game.quests.task() if stage==COMPLETE_STAGE and game.quests.has_active() else l(TASKS[stage][0],TASKS[stage][1])
 func dialogue() -> String: return l(DIALOGUE[stage][0],DIALOGUE[stage][1])
 func tracker_title() -> String:
 	for place in PLACES:
@@ -61,9 +63,11 @@ func action_text() -> String:
 func target() -> Vector3:
 	for place in PLACES:
 		if place.id==tracked_place: return Vector3(place.at.x,game.ground(place.at.x,place.at.y),place.at.y)
+	if game.quests.has_active(): return game.quests.target()
 	return game.luna.position if is_instance_valid(game.luna) else game.spawn
 func progress() -> String:
 	if tracked_place!="": return distance_text()
+	if stage==COMPLETE_STAGE and game.quests.has_active(): return game.quests.progress()
 	if stage==COMPLETE_STAGE: return l("TOUR COMPLETE","รู้จักสถานที่ครบแล้ว")
 	return l("Places introduced: %d / 2","แนะนำสถานที่แล้ว: %d / 2") % (2 if stage>=4 else (1 if stage>=2 else 0))
 func distance_text() -> String:
@@ -88,9 +92,10 @@ func update() -> void:
 			game.tell(l("Discovered: ","ค้นพบ: ")+l(place.id,place.th))
 func data() -> Dictionary:
 	var at: Vector3=game.luna.position
-	return {"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered,"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
+	return {"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered,"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
 func restore(value: Variant) -> void:
 	stage=0; meals=0; discovered.clear(); tracked_place=""
+	game.quests.restore(value.get("quests",{}) if value is Dictionary else {})
 	if not value is Dictionary: return
 	if value.get("tour_version",0)==1:
 		var saved=value.get("stage",0)

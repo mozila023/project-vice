@@ -11,9 +11,8 @@ func run() -> void:
 	while current_scene==null or current_scene.get("view")==null: await process_frame
 	var front=current_scene
 	front.set_process(false)
-	for pose in ["menu","settings","boarding","cabin","approach"]:
+	for pose in ["menu","settings"]:
 		front.screen="menu" if pose=="menu" else ("settings" if pose=="settings" else "intro")
-		front.set_intro_pose({"boarding":4.0,"cabin":11.0,"approach":20.0}.get(pose,0.0))
 		for i in range(15): await process_frame
 		root.get_texture().get_image().save_png(out.path_join(pose+".png"))
 		print("FRONT SHOT ",pose)

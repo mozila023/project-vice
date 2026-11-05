@@ -57,7 +57,7 @@ func run() -> void:
 	await follow(game,4)
 	game.active_villager="Luna";game.panel="talk"
 	game.trade("story")
-	check(game.story.stage==5 and not game.navigation.active(),"hotel introduction finishes onboarding without mandatory fetch quests")
+	check(game.story.stage==5 and game.quests.unlocked(),"hotel introduction finishes onboarding and unlocks optional island stories")
 	game.player.position=game.restaurant.position+Vector3(0,.08,2.5)
 	game.panel=""
 	game.interact()

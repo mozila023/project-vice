@@ -1,4 +1,5 @@
 extends Control
+const AERIAL := preload("res://assets/menu/efate_aerial.png")
 var front: Node3D
 var font: Font=preload("res://assets/fonts/NotoSansThai.ttf")
 var actions: Control
@@ -50,15 +51,10 @@ func rebuild() -> void:
 				button(Preferences.l("CONTINUE","เล่นต่อจากบันทึก"),Vector2(64,y+68),310,front.continue_game)
 				y+=68
 			button(Preferences.l("SETTINGS","ตั้งค่า"),Vector2(64,y+68),310,func(): front.screen="settings")
-			button("TH / EN",Vector2(size.x-160,28),130,func(): Preferences.language="en" if Preferences.language=="th" else "th"; Preferences.save())
 		"settings":
 			settings=preload("res://scripts/settings_panel.gd").new()
 			actions.add_child(settings)
 			settings.closed.connect(func(): front.screen="menu")
-		"intro":
-			button(Preferences.l("SKIP INTRO →","ข้ามฉากเปิด →"),Vector2(size.x-246,28),218,front.arrive)
-			button(Preferences.l("NEXT →","ถัดไป →"),Vector2(size.x-206,size.y-103),174,func(): front.set_intro_pose(front.SHOTS[front.shot_index()]+0.01) if front.shot_index()<2 else front.arrive())
-
 func text(at: Vector2,value: String,pixels := 18,color := PAPER) -> void:
 	draw_string(font,at,value,HORIZONTAL_ALIGNMENT_LEFT,-1,pixels,color)
 
@@ -79,6 +75,9 @@ func _draw() -> void:
 	if not is_instance_valid(front): return
 	var w := size.x
 	var h := size.y
+	var scale_factor: float=maxf(w/AERIAL.get_width(),h/AERIAL.get_height())*(1.035+sin(front.clock*.035)*.015)
+	var image_size: Vector2=AERIAL.get_size()*scale_factor
+	draw_texture_rect(AERIAL,Rect2((size-image_size)/2,image_size),false)
 	if front.screen=="menu":
 		draw_texture_rect(shade,Rect2(0,0,w*0.85,h),false)
 		text(Vector2(64,h*0.19),"AN EFATE ISLAND STORY",14,GOLD)
@@ -89,14 +88,6 @@ func _draw() -> void:
 		text(Vector2(w-335,h-32),"EFATE / SOUTH PACIFIC",12)
 	elif front.screen=="settings":
 		draw_rect(Rect2(Vector2.ZERO,size),Color(0.02,0.05,0.065,0.7))
-	elif front.screen=="intro":
-		draw_rect(Rect2(0,0,w,70),Color(0.015,0.025,0.035,0.9))
-		draw_rect(Rect2(0,h-165,w,165),Color(0.015,0.025,0.035,0.95))
-		var shot: int=front.shot_index()
-		text(Vector2(34,43),[Preferences.l("01 / DEPARTURE","01 / ออกเดินทาง"),Preferences.l("02 / OVER THE PACIFIC","02 / เหนือมหาสมุทรแปซิฟิก"),Preferences.l("03 / A NEW HORIZON","03 / ขอบฟ้าใหม่")][shot],15,GOLD)
-		paragraph(Vector2(40,h-135),Preferences.l(front.CAPTIONS[shot][0],front.CAPTIONS[shot][1]),w-300,24)
-		text(Vector2(40,h-30),Preferences.l("Fictional characters and journey · Inspired by Efate, Vanuatu","ตัวละครและการเดินทางเป็นเรื่องแต่ง · แรงบันดาลใจจากเอฟาเต วานูอาตู"),12,Color("91a7ac"))
-		for i in range(3): draw_rect(Rect2(w-198+i*50,h-35,36,3),GOLD if i==shot else Color("40545b"))
 	elif front.screen=="loading":
 		draw_rect(Rect2(Vector2.ZERO,size),Color("101e25"))
 		text(Vector2(w/2-135,h/2),Preferences.l("ARRIVING IN EFATE…","กำลังเดินทางถึงเอฟาเต…"),25,GOLD)
