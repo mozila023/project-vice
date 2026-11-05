@@ -1,5 +1,9 @@
 # Efate / Afterlight — Godot edition
 
+Play the public web build: https://mozila023.github.io/project-vice/
+
+The public game is hosted by GitHub Pages from the `gh-pages` branch. The `main` branch holds the source. Updating source does not automatically redeploy the web build.
+
 Open `project.godot` with Godot 4.7 and press F6 on `scenes/island.tscn`, or F5 for the main scene.
 
 The previous Unity project is retained in `app/`. This Godot edition reconstructs its island survival loop with procedural assets: terrain, animated ocean shader, palms, settlement details, supplies, infected and a radio objective. No downloaded assets or additional asset licenses are required.
