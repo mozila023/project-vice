@@ -3,6 +3,7 @@ extends Node3D
 var world: Node3D
 var settlement: Node3D
 var sunshine: Node3D
+var restaurant: Node3D
 var player: CharacterBody3D
 var visual: Node3D
 var pivot: Node3D
@@ -20,6 +21,9 @@ var resources: Array[Dictionary] = []
 var boats: Array[Node3D] = []
 var health := 100.0
 var stamina := 100.0
+var sprint_locked := false
+var locomotion_state := "idle"
+var locomotion_speed := 0.0
 var food := 85.0
 var thirst := 90.0
 var energy := 100.0
@@ -64,6 +68,7 @@ var last_fish_button := false
 var materials := {}
 var smoothed_meshes := {}
 var props=preload("res://scripts/props.gd").new()
+var prop_physics=preload("res://scripts/prop_physics.gd").new()
 const ACTORS := ["villager-man","villager-woman","villager-man","villager-woman"]
 const CAR_SCRIPT := preload("res://scripts/car.gd")
 ## Everyone collides with the world and with cars. Villagers walk around each other by steering, not by blocking.
@@ -98,6 +103,10 @@ func _ready() -> void:
 	sunshine.world=world
 	add_child(sunshine)
 	sunshine.build()
+	restaurant=preload("res://scripts/elluk_restaurant.gd").new()
+	restaurant.world=world
+	add_child(restaurant)
+	restaurant.build()
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
 	navigation.build(self)
 	navigation.update(0,true)
@@ -359,12 +368,18 @@ func build_life() -> void:
 	var well: Node3D=preload("res://assets/models/props/village_well.glb").instantiate()
 	add_child(well)
 	well.position=well_position
+	prop_physics.ground_on(well,"village_well",world)
+	prop_physics.add(well,"village_well")
 	var fire_pit: Node3D=preload("res://assets/models/props/campfire_pit.glb").instantiate()
 	add_child(fire_pit)
 	fire_pit.position=camp_position
+	prop_physics.ground_on(fire_pit,"campfire_pit",world)
+	prop_physics.add(fire_pit,"campfire_pit")
 	var shelter: Node3D=preload("res://assets/models/props/island_shelter.glb").instantiate()
 	add_child(shelter)
 	shelter.position=shelter_position
+	prop_physics.ground_on(shelter,"island_shelter",world)
+	prop_physics.add(shelter,"island_shelter")
 	build_fire()
 	var names := ["Malia / Fisher","Jonas / Market","Lina","David","Ana","Peter","Sera","Thomas","Rose","Ben","Mary","Paul"]
 	for i in range(12):
@@ -417,6 +432,7 @@ func build_life() -> void:
 		add_child(coconut)
 		coconut.position=Vector3(x,ground(x,z),z)
 		coconut.rotation.y=rng.randf()*TAU
+		prop_physics.ground_on(coconut,"coconut",world)
 		resources.append({"node":coconut,"kind":"coconut","id":i,"collected":false})
 	for i in range(8):
 		var node: Node3D=driftwood_scene.instantiate()
@@ -428,6 +444,7 @@ func build_life() -> void:
 			z=rng.randf_range(120,145)
 		node.position=Vector3(x,ground(x,z),z)
 		node.rotation.y=rng.randf()*TAU
+		prop_physics.ground_on(node,"driftwood",world)
 		resources.append({"node":node,"kind":"wood","id":100+i,"collected":false})
 
 func spawn_car(kind: String) -> CharacterBody3D:
@@ -680,7 +697,11 @@ func _physics_process(dt: float) -> void:
 		var input := Input.get_vector("left","right","forward","back")
 		if field_hud.mobile: input=(input+field_hud.move_vector).limit_length()
 		var moving := input.length()>0.1 and driving==null
-		var sprint: bool=(Input.is_action_pressed("sprint") or field_hud.running) and stamina>1 and moving and fishing_state==""
+		var wants_sprint: bool=Input.is_action_pressed("sprint") or field_hud.running
+		if stamina<=0.1: sprint_locked=true
+		if not wants_sprint and stamina>=20.0: sprint_locked=false
+		var sprint: bool=wants_sprint and not sprint_locked and stamina>0.1 and energy>0 and moving and fishing_state==""
+		locomotion_speed=0.0
 		if driving:
 			update_driving(dt,input)
 		else:
@@ -693,12 +714,14 @@ func _physics_process(dt: float) -> void:
 			player.velocity.y-=20*dt
 			if player.is_on_floor(): player.velocity.y=6.5 if jumping else -2.5
 			player.move_and_slide()
+			var actual: Vector3=player.get_real_velocity()
+			locomotion_speed=Vector2(actual.x,actual.z).length()
 			if not jumping and player.velocity.y<=0.0: player.apply_floor_snap()
 			if moving and fishing_state=="": player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
 			var g_h: float=ground(player.position.x,player.position.z)
 			visual.position.y=world.road_surface_offset(player.position.x,player.position.z) if absf(player.position.y-g_h)<0.08 else 0.0
 		world.update_tree_collision(player.position)
-		stamina=clampf(stamina+(-17 if sprint else 13)*dt,0,100)
+		stamina=clampf(stamina+(-17 if sprint and locomotion_speed>0.3 else 13)*dt,0,100)
 		food=maxf(0,food-dt*0.045) if not story.relaxed else food
 		thirst=maxf(0,thirst-dt*(0.09 if sprint else 0.055)) if not story.relaxed else thirst
 		energy=maxf(0,energy-dt*0.025) if not story.relaxed else energy
@@ -712,8 +735,10 @@ func _physics_process(dt: float) -> void:
 			health=75; food=50; thirst=50; energy=60
 			cancel_fishing()
 			tell("The villagers helped you back to your shelter. Eat and drink before exploring.")
-		var anim_speed := 1.0 if fishing_state!="" else (1.85 if sprint else (1.35 if moving else 1.0))
-		play_animation(visual,"holding-both" if fishing_state!="" else ("sprint" if sprint else ("walk" if moving else "idle")),anim_speed)
+		var travelling: bool=moving and locomotion_speed>0.15
+		locomotion_state="holding-both" if fishing_state!="" else ("sprint" if sprint and travelling else ("walk" if travelling else "idle"))
+		var anim_speed := clampf(locomotion_speed/(6.4 if locomotion_state=="sprint" else 3.1),0.6,1.5) if travelling else 1.0
+		play_animation(visual,locomotion_state,anim_speed)
 		update_fishing(dt)
 		update_villagers(dt)
 		update_traffic(dt)
@@ -882,6 +907,7 @@ func update_fishing(dt: float) -> void:
 	if fishing_timer<=0:
 		if fishing_state=="waiting":
 			fishing_state="bite"
+			fishing_splash(fishing_spot)
 			fishing_timer=2.8
 			tell("A BITE! Press E / REEL now.")
 		else:
@@ -891,8 +917,22 @@ func update_fishing(dt: float) -> void:
 func reel() -> void:
 	if fishing_state!="bite": return
 	fish+=1
+	fishing_splash(fishing_spot)
 	cancel_fishing()
 	tell("Fish caught! Cook it at the beach fire or trade with a villager.")
+
+func fishing_splash(at: Vector3) -> void:
+	var splash: Node3D=load("res://assets/models/island_refined/fishing_splash.glb").instantiate()
+	add_child(splash)
+	splash.position=Vector3(at.x,0.025,at.z)
+	for mesh: MeshInstance3D in splash.find_children("*","MeshInstance3D",true,false):
+		mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var animation: AnimationPlayer=splash.find_child("AnimationPlayer",true,false)
+	if animation and not animation.get_animation_list().is_empty():
+		var clip: String=animation.get_animation_list()[0]
+		animation.get_animation(clip).loop_mode=Animation.LOOP_NONE
+		animation.play(clip)
+	get_tree().create_timer(1.0).timeout.connect(splash.queue_free)
 
 func cancel_fishing() -> void:
 	fishing_state=""

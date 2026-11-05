@@ -12,7 +12,8 @@ const PLACES := [
 	{"id":"Port Vila","at":Vector2(-254,438),"th":"พอร์ตวิลา","en":"Port Vila is on Efate. Its markets are a place to discover local produce and food such as laplap.","fact_th":"พอร์ตวิลาตั้งอยู่บนเอฟาเต ตลาดเป็นแหล่งพบผลผลิตและอาหารท้องถิ่น เช่น ลัป ลัป"},
 	{"id":"Port Havannah","at":Vector2(-462,-533),"th":"พอร์ตฮาวานนาห์","en":"Havannah Harbour lies northwest of Port Vila, with trips to nearby Moso and Lelepa islands.","fact_th":"อ่าวฮาวานนาห์อยู่ทางตะวันตกเฉียงเหนือของพอร์ตวิลา มีเส้นทางไปเกาะโมโซและเลเลปา"},
 	{"id":"Eton","at":Vector2(1059,488),"th":"อีตัน","en":"Eton is on Efate's east coast. Its beach area is known for white sand and a freshwater inlet.","fact_th":"อีตันอยู่ชายฝั่งตะวันออกของเอฟาเต บริเวณชายหาดมีทรายขาวและทางน้ำจืดไหลมาบรรจบทะเล"},
-	{"id":"Sunshine Wellness & Spa","at":Vector2(-223.78243,441.00744),"th":"Sunshine Wellness & Spa","en":"785C+68, Seaside. Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007). Frontage and salon follow Maps/shop photos.","fact_th":"785C+68 ซีไซด์ Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007) ด้านหน้าและห้องทำเล็บอ้างอิงภาพ Maps/เว็บร้าน"}
+	{"id":"Sunshine Wellness & Spa","at":Vector2(-223.78243,441.00744),"th":"Sunshine Wellness & Spa","en":"785C+68, Seaside. Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007). Frontage and salon follow Maps/shop photos.","fact_th":"785C+68 ซีไซด์ Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007) ด้านหน้าและห้องทำเล็บอ้างอิงภาพ Maps/เว็บร้าน"},
+	{"id":"PAD THAI @ELLUK","at":Vector2(-285.41613,558.31335),"th":"PAD THAI @ELLUK","en":"Elluk Road. Verified Maps pin; raised frontage, timber stairs and orange elephant signs follow supplied photos.","fact_th":"ถนน Elluk พิกัดตาม Maps หน้าร้านยกสูง บันไดไม้ และป้ายสีส้มลายช้างอ้างอิงรูปที่ส่งมา"}
 ]
 const DESTINATION := Vector3(-254,0,438)
 const TITLES := [

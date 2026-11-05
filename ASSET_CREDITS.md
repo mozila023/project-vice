@@ -21,6 +21,8 @@ The island already uses downloaded photographic ground, plaster, wood, iron and 
 
 ## Web/mobile budget
 
+The Elluk restaurant interior and independently grounded salon planters are authored in Blender. Reference URLs and reconstruction limits are in [ELLUK_UPDATE.md](ELLUK_UPDATE.md). No reference photographs are redistributed in the game. Running uses `m_run_neutral.max.fbx` and `f_run_neutral.max.fbx` from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Animations/all_animations_max_motextr_xy), under the existing MIT licence in `assets/models/people/LICENSE.txt`.
+
 The Sunshine Wellness & Spa landmark uses authored code geometry and existing credited textures/foliage. Its reference sources and reconstruction limits are recorded in [SUNSHINE_SPA.md](SUNSHINE_SPA.md). No Google Maps or shop photographs are shipped as textures. `tools/check_sunshine.gd` checks the projected site, New Game start, physical entrance traversal, floor collision, navigation and batching.
 
 - Texture reuse, shared character animation clips, vehicle material batching, streamed tree collision and distance culling.

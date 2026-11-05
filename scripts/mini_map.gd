@@ -91,7 +91,9 @@ func draw_local_map(canvas: Control) -> void:
 	if game.navigation.active():
 		var line := PackedVector2Array()
 		for point: Vector3 in game.navigation.route: line.append(map_point(Vector2(point.x,point.z)))
-		if line.size()>1: canvas.draw_polyline(line,GOLD,2.5,true)
+		if line.size()>1:
+			canvas.draw_polyline(line,Color("102f36"),6,true)
+			canvas.draw_polyline(line,GOLD,2.5,true)
 		var target: Vector3=game.story.target()
 		var marker := goal_marker(Vector2(target.x,target.z))
 		var at: Vector2=marker.point
@@ -102,6 +104,8 @@ func draw_local_map(canvas: Control) -> void:
 			var direction: Vector2=marker.direction
 			var side := Vector2(-direction.y,direction.x)
 			canvas.draw_colored_polygon(PackedVector2Array([at+direction*5,at-direction*4+side*4,at-direction*4-side*4]),GOLD)
+	var restaurant_at: Vector2=map_point(preload("res://scripts/elluk_restaurant.gd").SITE)
+	if Rect2(Vector2.ONE*5,Vector2.ONE*(MAP_SIZE-10)).has_point(restaurant_at): canvas.draw_circle(restaurant_at,3,GOLD)
 	var spa_at: Vector2=map_point(preload("res://scripts/sunshine_spa.gd").SITE)
 	if Rect2(Vector2.ONE*5,Vector2.ONE*(MAP_SIZE-10)).has_point(spa_at):
 		canvas.draw_rect(Rect2(spa_at-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))

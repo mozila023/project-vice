@@ -20,11 +20,10 @@ func create(index: int,height := 1.75) -> Node3D:
 		actor.add_child(player)
 	var library := AnimationLibrary.new()
 	var gender := "f" if kind.begins_with("Female") else "m"
-	for name in ["idle","walk"]:
+	for name in ["idle","walk","sprint"]:
 		var key: String=kind+name
 		if not clips.has(key): clips[key]=retarget(gender,name,skeleton)
 		library.add_animation(name,clips[key])
-	library.add_animation("sprint",clips[kind+"walk"])
 	var hold_key: String=kind+"holding-both"
 	if not clips.has(hold_key): clips[hold_key]=holding_pose(clips[kind+"idle"])
 	library.add_animation("holding-both",clips[hold_key])
@@ -67,7 +66,7 @@ func create(index: int,height := 1.75) -> Node3D:
 	return actor
 
 func retarget(gender: String,name: String,target: Skeleton3D) -> Animation:
-	var filename: String=gender+("_walk_neutral.max.fbx" if name=="walk" else "_idle_breathe_01.max.fbx")
+	var filename: String=gender+{"walk":"_walk_neutral.max.fbx","sprint":"_run_neutral.max.fbx","idle":"_idle_breathe_01.max.fbx"}[name]
 	var source: Node=load("res://assets/models/people/"+filename).instantiate()
 	var skeleton: Skeleton3D=source.find_child("Skeleton3D",true,false)
 	var player: AnimationPlayer=source.find_child("AnimationPlayer",true,false)

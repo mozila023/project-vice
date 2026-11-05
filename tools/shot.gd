@@ -4,6 +4,8 @@
 ##   godot --path . --script res://tools/shot.gd -- <absolute_out_dir> [pose_name ...]
 
 const POSES := {
+	"elluk_front": [-285.41613,1.7,574.5,0.0,-0.04,7.0,10.5,false],
+	"elluk_interior": [-285.41613,1.55,561.8,0.0,-0.08,4.0,10.5,true],
 	"spa_front": [-229.08243,1.5,433.20744,-2.58,-0.03,5.5,10.5,true],
 	"spa_interior": [-222.78243,1.55,442.0,1.55,-0.07,2.0,10.5,false],
 	"spa_side": [-214.5,2.5,432.0,2.45,-0.12,7.0,10.5,false],
@@ -58,6 +60,7 @@ func run() -> void:
 	for pose_name in names:
 		var p: Array=(POSES[pose_name] as Array).duplicate()
 		game.panel=""
+		game.notice_time=0
 		game.paused=false
 		game.field_hud.mobile=pose_name in ["mobile_hud","mobile_drive"]
 		if pose_name in ["journal_th","journal_en","island_th","talk_th"]:
@@ -96,6 +99,12 @@ func run() -> void:
 		if pose_name=="spa_interior":
 			game.player.position.y=game.sunshine.floor_height+0.03
 			ground=game.sunshine.floor_height
+		if pose_name=="elluk_interior":
+			game.player.position.y=game.restaurant.floor_height+0.04
+			ground=game.restaurant.floor_height
+			game.yaw=0
+			game.story.tracked_place="PAD THAI @ELLUK"
+			game.notice_time=0
 		game.pivot.position=Vector3(p[0],maxf(ground,0.0)+p[1],p[2])
 		game.pivot.rotation=Vector3(p[4],p[3],0)
 		game.camera.get_parent().spring_length=p[5]

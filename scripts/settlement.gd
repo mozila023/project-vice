@@ -9,6 +9,10 @@ var glass: StandardMaterial3D
 var lamps: Array[OmniLight3D] = []
 ## Collision boxes for the parts of the building being built that stick out beyond its walls: [centre, size].
 var extra_boxes: Array = []
+var refined_parts: Array[Dictionary] = []
+var refined_colliders: Array = []
+var house_sites: Array[Dictionary] = []
+var foundation_supports: Array[Dictionary] = []
 
 const WALL_PAINTS := [Color("e4dfca"),Color("b5cdc0"),Color("d8c49d"),Color("ece9dc"),Color("9fc0c6"),Color("d8ab90"),Color("c5cfa8"),Color("e8d9b0")]
 const ROOF_PAINTS := [Color("8a9591"),Color("ab6147"),Color("6a8a87"),Color("a9aba5"),Color("875440"),Color("4f6f7a")]
@@ -75,9 +79,10 @@ func make_materials() -> void:
 
 func build() -> void:
 	make_materials()
+	load_refined_house()
 	for data in world.baked.buildings:
 		# Reserve the landmark parcel rather than placing a generic house through it.
-		if preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed=data.seed
 		var base: float=footing(data)
@@ -99,23 +104,88 @@ func footing(data: Dictionary) -> float:
 	var hd: float=data.d*0.5
 	var basis := Basis(Vector3.UP,data.yaw)
 	var origin := Vector3(data.x,0.0,data.z)
-	# Average rotated corners, while keeping the front doorway above the ground at its threshold.
-	var total := 0.0
-	for o in [Vector3.ZERO,Vector3(-hw,0,-hd),Vector3(hw,0,-hd),Vector3(-hw,0,hd),Vector3(hw,0,hd)]:
+	# Keep the complete footprint above the visible surface, including its road overlay.
+	var highest := -1e9
+	var front_edge: float=hd if data.style==2 else data.d*0.71
+	for o in [Vector3.ZERO,Vector3(-hw,0,-hd),Vector3(hw,0,-hd),Vector3(-hw,0,hd),Vector3(hw,0,hd),Vector3(-hw*0.84,0,front_edge),Vector3(hw*0.84,0,front_edge)]:
 		var p: Vector3=origin+basis*o
-		total+=world.height_at(p.x,p.z)
+		var h: float=world.surface_height_at(p.x,p.z)
+		highest=maxf(highest,h)
 	var front: Vector3=origin+basis*Vector3(0,0,hd)
 	var door_min: float=world.height_at(front.x,front.z)-(0.05 if data.style==2 else 0.25)
-	return maxf(total/5.0,door_min)
+	return maxf(highest-0.10,door_min)
 
 func add_collider(t: Transform3D,data: Dictionary) -> void:
 	var body := StaticBody3D.new()
+	body.name="BuildingCollision"
 	var height: float=3.2*data.storeys+1.2
-	add_box(body,Vector3(0,height*0.5,0),Vector3(data.w,height,data.d))
+	if data.style==2:
+		add_box(body,Vector3(0,height*0.5,0),Vector3(data.w,height,data.d))
 	# Everything built onto the house collides too: veranda, rain tank, awning posts.
 	for extra in extra_boxes: add_box(body,extra[0],extra[1])
 	add_child(body)
 	body.global_transform=t
+	house_sites.append({"body":body,"data":data,"transform":t})
+
+func load_refined_house() -> void:
+	var source: Node3D=load("res://assets/models/island_refined/coastal_house.glb").instantiate()
+	for node: MeshInstance3D in source.find_children("*","MeshInstance3D",true,false):
+		var local := Transform3D.IDENTITY
+		var cursor: Node3D=node
+		while cursor!=source:
+			local=cursor.transform*local
+			cursor=cursor.get_parent()
+		for surface in range(node.mesh.get_surface_count()):
+			var mat: Material=node.mesh.surface_get_material(surface)
+			var key: String=mat.resource_name if mat else "paint"
+			if not materials.has(key): key="paint"
+			refined_parts.append({"mesh":node.mesh,"surface":surface,"transform":local,"key":key})
+	source.free()
+	refined_colliders=JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/island_refined/house_colliders.json")).boxes
+
+func refined_house(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGenerator) -> void:
+	var scale := Vector3(data.w/8.0,1.0,data.d/10.0)
+	var tint: Color=WALL_PAINTS[rng.randi()%WALL_PAINTS.size()]
+	var roof: Color=ROOF_PAINTS[rng.randi()%ROOF_PAINTS.size()]
+	for part in refined_parts:
+		var transform: Transform3D=t*Transform3D(Basis.from_scale(scale),Vector3.ZERO)*part.transform
+		var key: String=part.key
+		if key=="board" and data.style==1: key="plaster"
+		var source: Mesh=part.mesh
+		var arrays: Array=source.surface_get_arrays(part.surface)
+		var colors := PackedColorArray()
+		colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+		colors.fill(tint if key in ["board","plaster"] else (roof if key=="iron" else Color.WHITE))
+		arrays[Mesh.ARRAY_COLOR]=colors
+		var colored := ArrayMesh.new()
+		colored.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+		tool_for(chunk,key).append_from(colored,0,transform)
+	for box in refined_colliders:
+		var p: Array=box.center
+		var s: Array=box.size
+		extra_boxes.append([Vector3(p[0],p[1],p[2])*scale,Vector3(s[0],s[1],s[2])*scale])
+	# Every slab needs its own ground contact, including both entrance steps.
+	for slab in refined_colliders:
+		if not slab.name in ["Foundation","PorchDeck","LowerStep","UpperStep"]: continue
+		var slab_center := Vector3(slab.center[0],0,slab.center[2])*scale
+		var slab_size := Vector3(slab.size[0],0,slab.size[2])*scale
+		ground_support(chunk,t,slab_center,slab_size,0.0,slab.name)
+
+func ground_support(chunk: Vector2i,t: Transform3D,center: Vector3,size: Vector3,top: float,label: String) -> void:
+	# Sample the whole footprint; a low point can lie between corner samples.
+	var bottom := top-0.18
+	var nx := maxi(1,ceili(size.x))
+	var nz := maxi(1,ceili(size.z))
+	for ix in range(nx+1):
+		for iz in range(nz+1):
+			var local := center+Vector3((float(ix)/nx-.5)*size.x,0,(float(iz)/nz-.5)*size.z)
+			var at: Vector3=t*local
+			bottom=minf(bottom,world.surface_height_at(at.x,at.z)-t.origin.y-0.25)
+	var dimensions := Vector3(size.x,top-bottom,size.z)
+	var at := center+Vector3(0,(top+bottom)*0.5,0)
+	cube(tool_for(chunk,"concrete"),t,at,dimensions,Color(0.74,0.73,0.69))
+	extra_boxes.append([at,dimensions])
+	foundation_supports.append({"label":label,"transform":t,"center":center,"size":size,"bottom":bottom,"top":top})
 
 func add_box(body: StaticBody3D,centre: Vector3,size: Vector3) -> void:
 	var shape := CollisionShape3D.new()
@@ -209,130 +279,7 @@ func window(chunk: Vector2i,t: Transform3D,side: int,along: float,half_depth: fl
 	cube(paint,f,Vector3(0,-0.03,0.09),Vector3(w+0.24,0.06,0.13),trim.darkened(0.12),WALL_FACES)
 
 func house(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGenerator) -> void:
-	var w: float=data.w
-	var d: float=data.d
-	var wall_h := 2.9
-	var floor_y := 0.42
-	var hw := w*0.5
-	var hd := d*0.5
-	var paint_color: Color=WALL_PAINTS[rng.randi()%WALL_PAINTS.size()]
-	var roof_color: Color=ROOF_PAINTS[rng.randi()%ROOF_PAINTS.size()]
-	var wall_key: String="board" if data.style==0 else "plaster"
-	var rusty := rng.randf()<0.42
-	var roof_key: String="rust" if rusty else "iron"
-	if rusty: roof_color=Color(0.9,0.86,0.8)
-	var trim := Color("c8c6b8") if rng.randf()<0.7 else paint_color.darkened(0.35)
-	var concrete := tool_for(chunk,"concrete")
-	cube(concrete,t,Vector3(0,-1.8,0),Vector3(w+0.5,4.44,d+0.5),Color(0.72,0.71,0.66))
-	var s := tool_for(chunk,wall_key)
-	var top := floor_y+wall_h
-	wall_quad(s,t,Vector3(-hw,floor_y,hd),Vector3(hw,floor_y,hd),top,paint_color)
-	wall_quad(s,t,Vector3(hw,floor_y,-hd),Vector3(-hw,floor_y,-hd),top,paint_color)
-	wall_quad(s,t,Vector3(hw,floor_y,hd),Vector3(hw,floor_y,-hd),top,paint_color)
-	wall_quad(s,t,Vector3(-hw,floor_y,-hd),Vector3(-hw,floor_y,hd),top,paint_color)
-	# Ridge along the frontage: open gables on some homes, the cyclone-resistant hipped roof on others.
-	var hip := rng.randf()<0.45
-	var rise := d*0.2
-	var over := 0.55
-	var ridge := top+rise
-	var eave := top-over*rise/hd
-	var r := tool_for(chunk,roof_key)
-	var ex: float=hw+over
-	var ez: float=hd+over
-	# Half length of the ridge: on a hip it stops short of the ends, by as much as the roof is deep.
-	var rx: float=maxf(ex-ez,0.4) if hip else ex
-	var run := Vector2(ez,rise+over*rise/hd).length()
-	quad(r,t,Vector3(-ex,eave,ez),Vector3(ex,eave,ez),Vector3(rx,ridge,0),Vector3(-rx,ridge,0),[Vector2(-ex,0),Vector2(ex,0),Vector2(rx,run),Vector2(-rx,run)],roof_color)
-	quad(r,t,Vector3(ex,eave,-ez),Vector3(-ex,eave,-ez),Vector3(-rx,ridge,0),Vector3(rx,ridge,0),[Vector2(-ex,0),Vector2(ex,0),Vector2(rx,run),Vector2(-rx,run)],roof_color)
-	# Soffit and roof ends.
-	var shade := Color(0.33,0.32,0.30)
-	var paint := tool_for(chunk,"paint")
-	var no_uv := [Vector2.ZERO,Vector2.ZERO,Vector2.ZERO,Vector2.ZERO]
-	quad(paint,t,Vector3(ex,eave-0.02,ez),Vector3(-ex,eave-0.02,ez),Vector3(-rx,ridge-0.04,0),Vector3(rx,ridge-0.04,0),no_uv,shade)
-	quad(paint,t,Vector3(-ex,eave-0.02,-ez),Vector3(ex,eave-0.02,-ez),Vector3(rx,ridge-0.04,0),Vector3(-rx,ridge-0.04,0),no_uv,shade)
-	for side in [-1.0,1.0]:
-		if hip:
-			var near_corner := Vector3(side*ex,eave,ez*side)
-			var far_corner := Vector3(side*ex,eave,-ez*side)
-			var tip := Vector3(side*rx,ridge,0)
-			triangle(r,t,near_corner,far_corner,tip,roof_color)
-			triangle(paint,t,far_corner+Vector3.DOWN*0.02,near_corner+Vector3.DOWN*0.02,tip+Vector3.DOWN*0.04,shade)
-			continue
-		var x: float=side*hw
-		var a := Vector3(x,top,hd*side)
-		var b := Vector3(x,top,-hd*side)
-		var apex := Vector3(x,ridge,0)
-		var n: Vector3=(t.basis*Vector3(side,0,0)).normalized()
-		for i in range(3):
-			var p: Vector3=[a,b,apex][[0,2,1][i]]
-			s.set_normal(n)
-			s.set_uv(Vector2(p.z,p.y))
-			s.set_color(paint_color*0.92)
-			s.add_vertex(t*p)
-		for z_sign in [-1.0,1.0]:
-			cube(paint,t,Vector3(x+side*over,lerpf(eave,ridge,0.5),z_sign*(hd+over)*0.5),Vector3(0.05,0.14,hd+over+0.3),trim)
-	cube(paint,t,Vector3(0,eave-0.03,hd+over),Vector3(w+over*2,0.17,0.05),trim)
-	cube(paint,t,Vector3(0,eave-0.03,-hd-over),Vector3(w+over*2,0.17,0.05),trim)
-	cube(tool_for(chunk,roof_key),t,Vector3(0,ridge+0.03,0),Vector3(rx*2.0,0.08,0.34),roof_color.darkened(0.08))
-	# Openings: door plus windows along the front, windows on the other walls.
-	var wood := tool_for(chunk,"wood")
-	var door_x: float=rng.randf_range(-hw*0.25,hw*0.25)
-	cube(wood,t,Vector3(door_x,floor_y+1.03,hd+0.03),Vector3(0.96,2.06,0.07),Color(0.68,0.60,0.5).lerp(paint_color,0.3))
-	cube(paint,t,Vector3(door_x,floor_y+2.1,hd+0.04),Vector3(1.12,0.09,0.08),trim)
-	for x in [door_x-0.53,door_x+0.53]:
-		cube(paint,t,Vector3(x,floor_y+1.03,hd+0.04),Vector3(0.09,2.1,0.08),trim)
-	var win_w := 1.25
-	var spot := -hw+1.3
-	while spot<hw-1.0:
-		if absf(spot-door_x)>1.45: window(chunk,t,0,spot,hd,floor_y+0.95,win_w,1.3,trim)
-		spot+=rng.randf_range(2.3,3.1)
-	spot=-hw+1.5
-	while spot<hw-1.0:
-		window(chunk,t,1,spot,hd,floor_y+1.05,1.1,1.15,trim)
-		spot+=rng.randf_range(2.8,3.8)
-	for side in [2,3]:
-		var span_half := hd-1.3
-		var z := -span_half
-		while z<=span_half:
-			window(chunk,t,side,z,hw,floor_y+1.0,1.1,1.2,trim)
-			z+=maxf(2.4,span_half*2.0)
-	# Veranda on most homes: slab, posts, lean-to roof.
-	if rng.randf()<0.72:
-		var deck_d := 2.3
-		var vw := w*rng.randf_range(0.55,0.95)
-		var deck_y := floor_y-0.06
-		cube(concrete,t,Vector3(0,deck_y-1.6,hd+deck_d*0.5),Vector3(vw,3.32,deck_d),Color(0.74,0.73,0.68))
-		var step_base_pt: Vector3=t*Vector3(door_x,0,hd+deck_d+0.6)
-		var front_ground: float=world.height_at(step_base_pt.x,step_base_pt.z)-t.origin.y
-		var num_steps: int=clampi(ceili((deck_y-front_ground)/0.16),2,9)
-		for step in range(num_steps):
-			var step_top: float=deck_y-0.10-step*0.15
-			var step_z: float=hd+deck_d+0.18+step*0.26
-			var step_pt: Vector3=t*Vector3(door_x,0,step_z)
-			var step_ground: float=world.height_at(step_pt.x,step_pt.z)-t.origin.y
-			var step_bottom: float=minf(step_ground-0.45,step_top-0.24)
-			var step_h: float=maxf(0.24,step_top-step_bottom)
-			cube(concrete,t,Vector3(door_x,step_top-step_h*0.5,step_z),Vector3(1.5,step_h,0.3),Color(0.70,0.69,0.65))
-		var low := top-0.72
-		var high := top-0.14
-		var hx: float=vw*0.5+0.2
-		quad(r,t,Vector3(-hx,low,hd+deck_d+0.35),Vector3(hx,low,hd+deck_d+0.35),Vector3(hx,high,hd+0.02),Vector3(-hx,high,hd+0.02),[Vector2(0,0),Vector2(hx*2,0),Vector2(hx*2,deck_d),Vector2(0,deck_d)],roof_color)
-		quad(paint,t,Vector3(hx,low-0.02,hd+deck_d+0.35),Vector3(-hx,low-0.02,hd+deck_d+0.35),Vector3(-hx,high-0.02,hd+0.02),Vector3(hx,high-0.02,hd+0.02),[Vector2.ZERO,Vector2.ZERO,Vector2.ZERO,Vector2.ZERO],shade)
-		for x in [-vw*0.5+0.1,vw*0.5-0.1,-vw*0.17,vw*0.17]:
-			cube(wood,t,Vector3(x,(deck_y+low)*0.5,hd+deck_d-0.1),Vector3(0.11,low-deck_y,0.11),trim.darkened(0.1))
-		extra_boxes.append([Vector3(0,top*0.5,hd+(deck_d+0.9)*0.5),Vector3(vw+0.3,top,deck_d+0.9)])
-	# Rain tank and downpipe: nearly every Vanuatu home collects roof water.
-	if rng.randf()<0.7:
-		var tx: float=(hw+1.05)*(1.0 if rng.randf()<0.5 else -1.0)
-		var tz: float=-hd*0.35
-		var tank_pt: Vector3=t*Vector3(tx,0.0,tz)
-		var tank_ground: float=world.height_at(tank_pt.x,tank_pt.z)-t.origin.y
-		var stand_bottom: float=minf(-0.85,tank_ground-0.65)
-		var stand_h: float=maxf(0.9,0.04-stand_bottom)
-		cube(concrete,t,Vector3(tx,0.04-stand_h*0.5,tz),Vector3(1.85,stand_h,1.85),Color(0.68,0.67,0.62))
-		cylinder(paint,t,Vector3(tx,0.0,tz),0.85,2.1,Color(0.25,0.33,0.26) if rng.randf()<0.6 else Color(0.70,0.71,0.68))
-		cube(paint,t,Vector3(tx*0.93,lerpf(2.1,eave,0.5),-hd-over*0.5),Vector3(0.09,eave-2.1,0.09),Color(0.82,0.82,0.78))
-		extra_boxes.append([Vector3(tx,1.05,tz),Vector3(1.7,2.1,1.7)])
+	refined_house(chunk,t,data,rng)
 
 ## Triangle wound counter-clockwise seen from outside, UVs taken from its position in metres.
 func triangle(s: SurfaceTool,t: Transform3D,a: Vector3,b: Vector3,c: Vector3,color: Color) -> void:
@@ -377,7 +324,7 @@ func shop(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGener
 	var concrete := tool_for(chunk,"concrete")
 	var plaster := tool_for(chunk,"plaster")
 	var paint := tool_for(chunk,"paint")
-	cube(concrete,t,Vector3(0,-1.6,0),Vector3(w+0.4,3.6,d+0.4),Color(0.66,0.65,0.60))
+	ground_support(chunk,t,Vector3.ZERO,Vector3(w+0.4,0,d+0.4),0.2,"ShopFoundation")
 	wall_quad(plaster,t,Vector3(-hw,0.2,hd),Vector3(hw,0.2,hd),top,body_color)
 	wall_quad(plaster,t,Vector3(hw,0.2,-hd),Vector3(-hw,0.2,-hd),top,body_color)
 	wall_quad(plaster,t,Vector3(hw,0.2,hd),Vector3(hw,0.2,-hd),top,body_color)
@@ -399,7 +346,7 @@ func shop(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGener
 	cube(paint,t,Vector3(0,3.02,hd+0.1),Vector3(w-0.2,0.5,0.1),sign_color)
 	var awn := tool_for(chunk,"iron")
 	var ad := 2.7
-	cube(concrete,t,Vector3(0,-1.35,hd+ad*0.5),Vector3(w+0.2,2.9,ad),Color(0.69,0.68,0.63))
+	ground_support(chunk,t,Vector3(0,0,hd+ad*0.5),Vector3(w+0.2,0,ad),0.1,"ShopPorch")
 	var arch: Array=[Vector2(0,0),Vector2(w,0),Vector2(w,ad),Vector2(0,ad)]
 	quad(awn,t,Vector3(-hw,2.82,hd+ad),Vector3(hw,2.82,hd+ad),Vector3(hw,3.08,hd),Vector3(-hw,3.08,hd),arch,Color(0.72,0.72,0.70))
 	quad(paint,t,Vector3(hw,2.8,hd+ad),Vector3(-hw,2.8,hd+ad),Vector3(-hw,3.06,hd),Vector3(hw,3.06,hd),[Vector2.ZERO,Vector2.ZERO,Vector2.ZERO,Vector2.ZERO],Color(0.3,0.3,0.29))

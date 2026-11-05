@@ -126,13 +126,29 @@ func build() -> void:
 	box("blue",Vector3(4.9,1.65,4.3),Vector3(1.7,1.4,0.05))
 	label("SUNSHINE\nWelcome / ยินดีต้อนรับ\nPort Vila · Seaside",Vector3(4.9,1.67,4.34),30,0.0034,Color("f0d8a4"))
 	# Furniture follows the photographed nail salon: sculpted in Blender (black steel, pale timber, cream seating).
-	var furn_scene: PackedScene=load("res://assets/models/props/spa_furniture.glb")
+	var furn_scene: PackedScene=load("res://assets/models/island_refined/spa_grounded.glb")
 	if furn_scene!=null:
 		var furn: Node3D=furn_scene.instantiate()
 		furn.name="SpaBlenderFurniture"
 		add_child(furn)
 		for m: MeshInstance3D in furn.find_children("*","MeshInstance3D",true,false):
 			m.visibility_range_end=180
+		preload("res://scripts/prop_physics.gd").new().add(furn,"spa_furniture",["SpaPlanterPots"])
+		for pot: Node3D in furn.find_children("GroundedPlanter*","Node3D",true,false):
+			var at := pot.global_position
+			var indoors: bool=pot.position.z<2.3
+			at.y=(floor_height if indoors else world.surface_height_at(at.x,at.z))+0.008
+			pot.global_position=at
+			var collision := StaticBody3D.new()
+			collision.collision_layer=1
+			pot.add_child(collision)
+			var shape := CollisionShape3D.new()
+			var cylinder := CylinderShape3D.new()
+			cylinder.radius=0.245
+			cylinder.height=0.44
+			shape.shape=cylinder
+			shape.position.y=0.22
+			collision.add_child(shape)
 	for x in [-4.7,-2.8]: collider_only(Vector3(x,0.26,2.9),Vector3(1.35,0.5,0.4))
 	for z in [-1.5,1.25]:
 		collider_only(Vector3(3.5,0.76,z),Vector3(1.65,0.07,0.7))

@@ -1,5 +1,7 @@
 # Efate / Afterlight — Godot edition
 
+Latest local model/physics update: Blender-authored houses, fitted foundations, solid rocks and props, and an animated fishing splash. See [MODEL_REFINEMENT.md](MODEL_REFINEMENT.md) for source files and verification.
+
 Play the public web build: https://mozila023.github.io/project-vice/
 
 New Game now starts at Sunshine Wellness & Spa in Seaside, Port Vila (785C+68), after the flight introduction. Its white boundary, timber driveway screen, massage signs, shade tree and glazed salon are reconstructed from Google Maps frontage and the business website's nail salon photo. The shop is walkable and trackable in the discovery journal and maps. Dimensions and unseen parts are interpreted; see [SUNSHINE_SPA.md](SUNSHINE_SPA.md) for the verified listing, sources and limitations. Continue retains the saved position.
@@ -19,6 +21,8 @@ The current Godot game focuses on peaceful exploration, fishing, cooking, villag
 Map data: roads, land use and building density come from OpenStreetMap (© OpenStreetMap contributors, ODbL). To rebuild: `tools/download_osm_detail.ps1`, `node tools/process_geography.mjs`, then run `tools/clean_textures.gd` (only if wall textures change) and `tools/bake_world.gd` with `godot --headless --path . --script`, followed by `godot --headless --path . --import`. The game map is 1:20, so streets are generalised and one game building stands for many mapped ones.
 
 Controls: WASD move/drive, mouse or touch look, Shift sprint, Space jump/handbrake, E interact/enter/exit/reel, F cast/cancel, Q eat, Esc pause, Tab pack, J journal, L language, M map, F5 save, F9 load. Touch controls are provided on mobile.
+
+Shift now plays a distinct running clip. After Stamina exhaustion, release Shift (or toggle touch RUN off) and recover at least 20 Stamina to run again. Energy at zero still permits walking. PAD THAI @ELLUK is available under J → Island Notes → TRACK. Its location follows the supplied Maps pin; the interior is photo referenced and unseen exterior details remain interpreted. See [ELLUK_UPDATE.md](ELLUK_UPDATE.md).
 
 Saves use `user://efate_life_save.json` and include player needs, inventory, story progress, collected resources, discoveries and language. Vehicle positions reset on a new launch. Preferences use a separate `user://vice_settings.cfg`. Starting New Game leaves the previous save intact until a new save is written.
 

@@ -4,6 +4,7 @@
 
 tools/.cache/
 build/
+*.blend[0-9]
 
 # Old Unity project and local copies, not part of the Godot game
 /app/

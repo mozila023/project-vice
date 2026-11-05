@@ -80,7 +80,7 @@ func buttons() -> Dictionary:
 	elif game.panel in ["journal","island"]:
 		values.merge({"journal":Rect2(w/2-330,h/2-200,150,40),"island":Rect2(w/2-170,h/2-200,170,40),"mode":Rect2(w/2+10,h/2-200,320,40),"track_story":Rect2(w/2-20,h/2+205,225,40),"close":Rect2(w/2+220,h/2+205,110,40)},true)
 		if game.panel=="island":
-			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-123+i*58,108,36)
+			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+i*48,108,36)
 	elif game.panel=="settings": return {}
 	elif game.panel!="": values["close"]=Rect2(w/2-70,h-85,140,48)
 	elif mobile:
@@ -182,9 +182,11 @@ func draw_journal() -> void:
 	if game.panel=="island":
 		for i in range(game.story.PLACES.size()):
 			var place: Dictionary=game.story.PLACES[i]
-			var y: float=-132+i*58
+			var y: float=-146+i*48
 			text(c+Vector2(-330,y),l(place.id,place.th)+(" ✓" if place.id in game.story.discovered else ""),18,GOLD)
-			paragraph(c+Vector2(-330,y+8),l(place.en,place.fact_th),525,13)
+			var note: String=l(place.en,place.fact_th)
+			while font.get_string_size(note,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x>510: note=note.left(note.length()-2).strip_edges()+"…"
+			text(c+Vector2(-330,y+24),note,12)
 	else:
 		text(c+Vector2(-330,-128),game.story.title(),22,GOLD)
 		paragraph(c+Vector2(-330,-112),game.story.dialogue(),655,16)
@@ -209,26 +211,21 @@ func draw_navigation() -> void:
 	var angle: float=wrapf(-game.navigation.bearing()-heading,-PI,PI)
 	var compass_x: float=center.x+clampf(angle,-1.2,1.2)*125
 	draw_circle(Vector2(compass_x,center.y-1),3,GOLD)
-	var goal: Vector3=game.navigation.next_point+Vector3.UP*2.2
-	var point: Vector2=game.camera.unproject_position(goal)
-	var behind: bool=game.camera.is_position_behind(goal)
-	var inset := Rect2(244,240 if mobile else 185,size.x-602,size.y-(465 if mobile else 410))
-	var offscreen: bool=behind or not inset.has_point(point)
-	if offscreen:
-		var relative: float=wrapf(game.navigation.bearing()-game.yaw,-PI,PI)
-		var direction := Vector2(-sin(relative),-cos(relative))
-		point=size/2+direction*Vector2(size.x*0.34,size.y*0.25)
-		point=point.clamp(inset.position,inset.end)
-		var toward := Vector2(-sin(relative),-cos(relative)).normalized()
-		var normal := Vector2(-toward.y,toward.x)
-		draw_colored_polygon(PackedVector2Array([point+toward*15,point-toward*9+normal*8,point-toward*9-normal*8]),GOLD)
+	# Fixed guidance stays readable when the camera moves behind buildings.
+	var at := Vector2(236,350) if mobile else Vector2(24,344)
+	card(Rect2(at,Vector2(196,84)),Color(0.035,0.07,0.09,0.93))
+	var relative: float=wrapf(game.navigation.bearing()-game.yaw,-PI,PI)
+	var direction := Vector2(-sin(relative),-cos(relative))
+	var normal := Vector2(-direction.y,direction.x)
+	var arrow := at+Vector2(25,27)
+	if game.navigation.arrived:
+		icon("map-pin",arrow-Vector2(11,11),22,GOLD)
 	else:
-		draw_arc(point,18,0,TAU,32,Color(0.85,0.73,0.48,0.3),2,true)
-		icon("map-pin",point-Vector2(12,12),24,GOLD)
-	card(Rect2(point+Vector2(-64,25),Vector2(128,30)),Color(0.035,0.07,0.09,0.9))
-	text(point+Vector2(-48,46),l("%d m · GOAL","%d ม. · จุดหมาย") % int(game.navigation.distance()),12,GOLD)
-	if game.navigation.distance()<6:
-		text(point+Vector2(-60,72),l("You have arrived","ถึงจุดหมายแล้ว"),13)
+		draw_colored_polygon(PackedVector2Array([arrow+direction*12,arrow-direction*8+normal*7,arrow-direction*5,arrow-direction*8-normal*7]),GOLD)
+	text(at+Vector2(48,24),l("Arrived","ถึงจุดหมาย") if game.navigation.arrived else str(int(game.navigation.distance()))+l(" m"," ม."),17,GOLD)
+	text(at+Vector2(48,43),l("Follow road","ตามถนน") if game.navigation.road_route else l("Head to destination","มุ่งหน้าสู่จุดหมาย"),11)
+	var title: String=game.story.tracker_title()
+	text(at+Vector2(12,70),title.left(24)+("…" if title.length()>24 else ""),12)
 
 func draw_map() -> void:
 	var height := minf(size.y-150,550)
@@ -243,6 +240,10 @@ func draw_map() -> void:
 		draw_polyline(route,Color("dbbd7d"),3,true)
 	text(rect.position+Vector2(-75,-12),l("EFATE / NORTH ↑","เอฟาเต / ทิศเหนือ ↑"),21,GOLD)
 	var p: Vector3=game.player.position
+	var restaurant: Vector2=preload("res://scripts/elluk_restaurant.gd").SITE
+	var restaurant_point: Vector2=rect.position+(restaurant/2880.0+Vector2.ONE*0.5)*rect.size
+	draw_circle(restaurant_point,4,GOLD)
+	text(restaurant_point+Vector2(8,36),"PAD THAI @ELLUK",12,GOLD)
 	var spa: Vector2=preload("res://scripts/sunshine_spa.gd").SITE
 	var spa_point: Vector2=rect.position+(spa/2880.0+Vector2.ONE*0.5)*rect.size
 	draw_rect(Rect2(spa_point-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))
