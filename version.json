@@ -1,12 +1,10 @@
 {
     "features":  [
-                     "realistic people and cars",
-                     "mobile HUD",
-                     "quest road navigation",
-                     "New Game and Settings",
-                     "flight introduction",
+                     "metre-scale aircraft",
+                     "door-aligned boarding stairs",
+                     "centred passenger path",
                      "TH/EN"
                  ],
-    "pack_bytes":  73837308,
-    "commit":  "90a839a2693e9dd6031bc63f8bdbe9b398a7777a"
+    "pack_bytes":  73843536,
+    "commit":  "f34e3f187b514bb97a179d85504c6f1d9497428b"
 }

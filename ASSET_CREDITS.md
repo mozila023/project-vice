@@ -21,4 +21,8 @@ The island already uses downloaded photographic ground, plaster, wood, iron and 
 - Excludes the unused 23MB Kenney download catalogue from exports.
 - New menu, opening, HUD, compass, road guidance and settings use engine-native scenes and small assets.
 
-Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/check_driving.gd`. Native-render screenshots can be reproduced with `tools/shot_front.gd` and `tools/shot.gd`. Native FPS does not establish performance on physical phones.
+Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/check_driving.gd`, `tools/check_boarding.gd`. Native-render screenshots can be reproduced with `tools/shot_front.gd`, `tools/shot.gd` and `tools/shot_boarding.gd`. Native FPS does not establish performance on physical phones.
+
+### Boarding alignment
+
+The aircraft retains its source metre units (21.40m fuselage bounding length, 25.74m wingspan). Its display heading is applied before centring it and placing the wheels on the apron. `boarding_sequence.gd` samples the lower aft-door UV from the actual mesh; that one anchor determines the stairs, landing, passenger path and dolly camera. Six open metal treads rise 17.63cm each, with an 82cm clear tread width. The passenger faces the doorway, reaches the landing, then settles before the cut to the separate cabin scene. Eight fixed-time rendered captures check the full approach and climb rather than one representative frame.
