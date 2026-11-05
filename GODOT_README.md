@@ -2,6 +2,8 @@
 
 Play the public web build: https://mozila023.github.io/project-vice/
 
+New Game now starts at Sunshine Wellness & Spa in Seaside, Port Vila (785C+68), after the flight introduction. Its white boundary, timber driveway screen, massage signs, shade tree and glazed salon are reconstructed from Google Maps frontage and the business website's nail salon photo. The shop is walkable and trackable in the discovery journal and maps. Dimensions and unseen parts are interpreted; see [SUNSHINE_SPA.md](SUNSHINE_SPA.md) for the verified listing, sources and limitations. Continue retains the saved position.
+
 The public game is hosted by GitHub Pages from the `gh-pages` branch. The `main` branch holds the source. Updating source does not automatically redeploy the web build.
 
 The game opens on a New Game / Continue / Settings menu. New Game plays a skippable three-shot flight introduction before arriving on the island. Settings persist language, graphics quality, volume, look sensitivity, relaxed mode and quest guidance. The game uses realistic Rocketbox people, an Innerscene sedan fleet, a compass and dynamic quest direction/distance markers, road routes on the map, and a redesigned HUD. See [ASSET_CREDITS.md](ASSET_CREDITS.md) for downloaded asset sources, licences, optimization and visual limitations.

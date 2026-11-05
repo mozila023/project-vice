@@ -11,7 +11,8 @@ const PLACES := [
 	{"id":"Mele","at":Vector2(-489,141),"th":"เมเล","en":"Your home base beside Mele Bay. Greet your hosts and ask before entering homes or gardens.","fact_th":"ฐานพักริมอ่าวเมเล ทักทายเจ้าบ้านและขออนุญาตก่อนเข้าบ้านหรือสวนของผู้อื่น"},
 	{"id":"Port Vila","at":Vector2(-254,438),"th":"พอร์ตวิลา","en":"Port Vila is on Efate. Its markets are a place to discover local produce and food such as laplap.","fact_th":"พอร์ตวิลาตั้งอยู่บนเอฟาเต ตลาดเป็นแหล่งพบผลผลิตและอาหารท้องถิ่น เช่น ลัป ลัป"},
 	{"id":"Port Havannah","at":Vector2(-462,-533),"th":"พอร์ตฮาวานนาห์","en":"Havannah Harbour lies northwest of Port Vila, with trips to nearby Moso and Lelepa islands.","fact_th":"อ่าวฮาวานนาห์อยู่ทางตะวันตกเฉียงเหนือของพอร์ตวิลา มีเส้นทางไปเกาะโมโซและเลเลปา"},
-	{"id":"Eton","at":Vector2(1059,488),"th":"อีตัน","en":"Eton is on Efate's east coast. Its beach area is known for white sand and a freshwater inlet.","fact_th":"อีตันอยู่ชายฝั่งตะวันออกของเอฟาเต บริเวณชายหาดมีทรายขาวและทางน้ำจืดไหลมาบรรจบทะเล"}
+	{"id":"Eton","at":Vector2(1059,488),"th":"อีตัน","en":"Eton is on Efate's east coast. Its beach area is known for white sand and a freshwater inlet.","fact_th":"อีตันอยู่ชายฝั่งตะวันออกของเอฟาเต บริเวณชายหาดมีทรายขาวและทางน้ำจืดไหลมาบรรจบทะเล"},
+	{"id":"Sunshine Wellness & Spa","at":Vector2(-223.78243,441.00744),"th":"Sunshine Wellness & Spa","en":"785C+68, Seaside. Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007). Frontage and salon follow Maps/shop photos.","fact_th":"785C+68 ซีไซด์ Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007) ด้านหน้าและห้องทำเล็บอ้างอิงภาพ Maps/เว็บร้าน"}
 ]
 const DESTINATION := Vector3(-254,0,438)
 const TITLES := [

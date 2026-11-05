@@ -76,6 +76,8 @@ func make_materials() -> void:
 func build() -> void:
 	make_materials()
 	for data in world.baked.buildings:
+		# Reserve the landmark parcel rather than placing a generic house through it.
+		if preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7): continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed=data.seed
 		var base: float=footing(data)

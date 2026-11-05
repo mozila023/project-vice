@@ -58,6 +58,7 @@ func build_cell(key: Vector2i) -> void:
 	for i in range(PER_CELL):
 		var x := origin.x+rng.randf()*CELL
 		var z := origin.z+rng.randf()*CELL
+		if preload("res://scripts/sunshine_spa.gd").reserved(x,z,0.4): continue
 		var kind: int=world.surface_class(x,z)
 		var roll := rng.randf()
 		var entry: Array

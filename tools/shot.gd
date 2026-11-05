@@ -4,8 +4,11 @@
 ##   godot --path . --script res://tools/shot.gd -- <absolute_out_dir> [pose_name ...]
 
 const POSES := {
+	"spa_front": [-229.08243,1.5,433.20744,-2.58,-0.03,5.5,10.5,true],
+	"spa_interior": [-222.78243,1.55,442.0,1.55,-0.07,2.0,10.5,false],
+	"spa_side": [-214.5,2.5,432.0,2.45,-0.12,7.0,10.5,false],
 	# name: [x, y(above ground), z, yaw, pitch, arm_length, hour, show_hud]
-	"spawn": [-514.0, 1.4, 144.0, 1.1, -0.10, 5.5, 8.5, true],
+	"spawn": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,8.5,true],
 	"street": [-489.0, 1.6, 150.0, 0.0, -0.04, 4.0, 10.0, false],
 	"homes": [-470.0, 1.8, 148.0, 0.5, -0.05, 6.0, 15.0, false],
 	"beach": [-528.0, 1.6, 178.0, 2.3, -0.05, 5.0, 9.0, false],
@@ -14,7 +17,7 @@ const POSES := {
 	"car": [0.0, 1.8, 0.0, 0.4, -0.10, 7.0, 10.5, false],
 	"driving": [0.0, 2.0, 0.0, 0.0, -0.16, 8.0, 10.5, true],
 	"mobile_drive": [0.0,2.0,0.0,0.0,-0.16,8.0,10.5,true],
-	"mobile_hud": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
+	"mobile_hud": [-229.08243,1.4,433.20744,-2.58,-0.10,5.5,10.5,true],
 	"journal_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
 	"journal_en": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
 	"island_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
@@ -90,6 +93,9 @@ func run() -> void:
 			p[2]=at.z+4.0
 		var ground: float=game.ground(p[0],p[2])
 		game.player.position=Vector3(p[0],maxf(ground,0.0)+0.02,p[2])
+		if pose_name=="spa_interior":
+			game.player.position.y=game.sunshine.floor_height+0.03
+			ground=game.sunshine.floor_height
 		game.pivot.position=Vector3(p[0],maxf(ground,0.0)+p[1],p[2])
 		game.pivot.rotation=Vector3(p[4],p[3],0)
 		game.camera.get_parent().spring_length=p[5]

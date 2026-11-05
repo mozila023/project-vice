@@ -102,6 +102,9 @@ func draw_local_map(canvas: Control) -> void:
 			var direction: Vector2=marker.direction
 			var side := Vector2(-direction.y,direction.x)
 			canvas.draw_colored_polygon(PackedVector2Array([at+direction*5,at-direction*4+side*4,at-direction*4-side*4]),GOLD)
+	var spa_at: Vector2=map_point(preload("res://scripts/sunshine_spa.gd").SITE)
+	if Rect2(Vector2.ONE*5,Vector2.ONE*(MAP_SIZE-10)).has_point(spa_at):
+		canvas.draw_rect(Rect2(spa_at-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))
 	for npc in game.villagers:
 		var at: Vector2=map_point(Vector2(npc.body.position.x,npc.body.position.z))
 		if Rect2(Vector2.ONE*3,Vector2.ONE*(MAP_SIZE-6)).has_point(at): canvas.draw_circle(at,1.7,Color("9ad1bc"))

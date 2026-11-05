@@ -2,6 +2,7 @@ extends Node3D
 ## Peaceful island survival: fishing, food, village life and exploration.
 var world: Node3D
 var settlement: Node3D
+var sunshine: Node3D
 var player: CharacterBody3D
 var visual: Node3D
 var pivot: Node3D
@@ -31,7 +32,7 @@ var friendship := 0
 var delivered_fish := 0
 var paused := false
 var panel := ""
-var yaw := 1.1
+var yaw := -2.58
 var pitch := -0.10
 var elapsed := 0.0
 var day_time := 8.0
@@ -50,7 +51,7 @@ var well_position := Vector3.ZERO
 var camp_position := Vector3.ZERO
 var shelter_position := Vector3.ZERO
 var village_center := Vector3(-489,0,141)
-var spawn := Vector3(-514,5,144)
+var spawn := Vector3(-229.08243,5,433.20744)
 var rng := RandomNumberGenerator.new()
 var model_cache := {}
 var active_villager := ""
@@ -89,10 +90,15 @@ func _ready() -> void:
 	settlement.world=world
 	add_child(settlement)
 	settlement.build()
+	sunshine=preload("res://scripts/sunshine_spa.gd").new()
+	sunshine.world=world
+	add_child(sunshine)
+	sunshine.build()
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
 	navigation.build(self)
 	navigation.update(0,true)
 	apply_preferences()
+	tell(story.l("Welcome to Sunshine Wellness & Spa, Seaside, Port Vila. Explore the salon or follow the gold route to Malia in Mele.","ยินดีต้อนรับสู่ Sunshine Wellness & Spa ย่านซีไซด์ พอร์ตวิลา เดินชมร้านหรือตามเส้นสีทองไปพบมาเลียที่เมเลได้เลย"))
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	field_hud=preload("res://scripts/life_hud.gd").new()
@@ -196,6 +202,7 @@ func build_player() -> void:
 	add_child(player)
 	spawn.y=ground(spawn.x,spawn.z)+0.3
 	player.position=spawn
+	player.rotation.y=PI
 	capsule(player)
 	player.collision_mask=PLAYER_MASK
 	visual=people.create(1,1.75)

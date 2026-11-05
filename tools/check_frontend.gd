@@ -42,7 +42,7 @@ func run() -> void:
 	check(game.story.stage==0 and game.fish==0,"new game starts with fresh story and inventory")
 	check(game.player.visible and game.player.collision_mask!=0,"player is controllable after arrival")
 	check(game.navigation.graph.get_point_count()>100,"quest navigation indexes mapped roads")
-	game.story.stage=4
+	game.story.stage=0
 	game.navigation.update(0,true)
 	check(game.navigation.road_route and game.navigation.route.size()>2,"distant quest follows connected road waypoints")
 	check(is_finite(game.navigation.bearing()) and game.navigation.distance()>0,"guidance supplies direction and distance")

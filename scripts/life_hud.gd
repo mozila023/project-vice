@@ -80,7 +80,7 @@ func buttons() -> Dictionary:
 	elif game.panel in ["journal","island"]:
 		values.merge({"journal":Rect2(w/2-330,h/2-200,150,40),"island":Rect2(w/2-170,h/2-200,170,40),"mode":Rect2(w/2+10,h/2-200,320,40),"track_story":Rect2(w/2-20,h/2+205,225,40),"close":Rect2(w/2+220,h/2+205,110,40)},true)
 		if game.panel=="island":
-			for i in range(4): values["place_"+str(i)]=Rect2(w/2+220,h/2-123+i*77,108,36)
+			for i in range(game.story.PLACES.size()): values["place_"+str(i)]=Rect2(w/2+220,h/2-123+i*58,108,36)
 	elif game.panel=="settings": return {}
 	elif game.panel!="": values["close"]=Rect2(w/2-70,h-85,140,48)
 	elif mobile:
@@ -182,9 +182,9 @@ func draw_journal() -> void:
 	if game.panel=="island":
 		for i in range(game.story.PLACES.size()):
 			var place: Dictionary=game.story.PLACES[i]
-			var y: float=-132+i*77
+			var y: float=-132+i*58
 			text(c+Vector2(-330,y),l(place.id,place.th)+(" ✓" if place.id in game.story.discovered else ""),18,GOLD)
-			paragraph(c+Vector2(-330,y+8),l(place.en,place.fact_th),525,14)
+			paragraph(c+Vector2(-330,y+8),l(place.en,place.fact_th),525,13)
 	else:
 		text(c+Vector2(-330,-128),game.story.title(),22,GOLD)
 		paragraph(c+Vector2(-330,-112),game.story.dialogue(),655,16)
@@ -243,6 +243,10 @@ func draw_map() -> void:
 		draw_polyline(route,Color("dbbd7d"),3,true)
 	text(rect.position+Vector2(-75,-12),l("EFATE / NORTH ↑","เอฟาเต / ทิศเหนือ ↑"),21,GOLD)
 	var p: Vector3=game.player.position
+	var spa: Vector2=preload("res://scripts/sunshine_spa.gd").SITE
+	var spa_point: Vector2=rect.position+(spa/2880.0+Vector2.ONE*0.5)*rect.size
+	draw_rect(Rect2(spa_point-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))
+	text(spa_point+Vector2(8,20),"Sunshine Wellness & Spa",12,Color("9ad1bc"))
 	draw_circle(rect.position+Vector2(p.x/2880+0.5,p.z/2880+0.5)*rect.size,5,WHITE)
 	var goal: Vector3=game.story.target()
 	var goal_point: Vector2=rect.position+Vector2(goal.x/2880+0.5,goal.z/2880+0.5)*rect.size

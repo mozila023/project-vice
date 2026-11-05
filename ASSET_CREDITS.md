@@ -16,6 +16,8 @@ The island already uses downloaded photographic ground, plaster, wood, iron and 
 
 ## Web/mobile budget
 
+The Sunshine Wellness & Spa landmark uses authored code geometry and existing credited textures/foliage. Its reference sources and reconstruction limits are recorded in [SUNSHINE_SPA.md](SUNSHINE_SPA.md). No Google Maps or shop photographs are shipped as textures. `tools/check_sunshine.gd` checks the projected site, New Game start, physical entrance traversal, floor collision, navigation and batching.
+
 - Texture reuse, shared character animation clips, vehicle material batching, streamed tree collision and distance culling.
 - Auto, low, balanced and high quality settings; auto remains the default.
 - Excludes the unused 23MB Kenney download catalogue from exports.
