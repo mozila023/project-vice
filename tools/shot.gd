@@ -13,6 +13,11 @@ const POSES := {
 	"boats": [-531.0, 1.8, 172.0, 1.2, -0.10, 6.0, 11.0, false],
 	"car": [0.0, 1.8, 0.0, 0.4, -0.10, 7.0, 10.5, false],
 	"driving": [0.0, 2.0, 0.0, 0.0, -0.16, 8.0, 10.5, true],
+	"journal_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
+	"journal_en": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
+	"island_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
+	"talk_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
+	"wardrobe": [-495.0,2.0,150.0,0.0,-0.12,8.0,10.5,false],
 	"town": [-254.0, 2.0, 438.0, 0.6, -0.03, 6.0, 10.5, false],
 	"road": [-300.0, 1.8, 380.0, 0.0, -0.04, 5.0, 14.0, false],
 	"hills": [-420.0, 3.0, 40.0, -0.9, 0.03, 5.0, 11.0, false],
@@ -45,6 +50,19 @@ func run() -> void:
 	game.set_process_unhandled_input(false)
 	for pose_name in names:
 		var p: Array=(POSES[pose_name] as Array).duplicate()
+		game.panel=""
+		if pose_name in ["journal_th","journal_en","island_th","talk_th"]:
+			game.story.language="en" if pose_name=="journal_en" else "th"
+			game.panel="island" if pose_name=="island_th" else ("talk" if pose_name=="talk_th" else "journal")
+			game.active_villager="Malia / Fisher"
+		if pose_name=="wardrobe":
+			game.player.visible=false
+			for i in range(game.villagers.size()):
+				var npc=game.villagers[i]
+				var x: float=-500.0+(i%6)*2.0
+				var z: float=144.0-(i/6)*3.0
+				npc.body.position=Vector3(x,game.ground(x,z),z)
+				npc.body.rotation.y=PI
 		if pose_name=="driving":
 			game.update_traffic(0.016)
 			var car=game.cars[4]

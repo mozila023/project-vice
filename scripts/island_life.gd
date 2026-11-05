@@ -12,6 +12,7 @@ var traffic: Array[Dictionary] = []
 var cars: Array[CharacterBody3D] = []
 var driving: CharacterBody3D
 var look_timer := 0.0
+var story=preload("res://scripts/island_story.gd").new()
 var resources: Array[Dictionary] = []
 var boats: Array[Node3D] = []
 var health := 100.0
@@ -68,6 +69,7 @@ func ground(x: float,z: float) -> float:
 	return world.height_at(x,z)
 
 func _ready() -> void:
+	story.game=self
 	rng.seed=745
 	for action in ["forward","back","left","right","sprint","jump"]:
 		if not InputMap.has_action(action): InputMap.add_action(action)
@@ -278,6 +280,7 @@ func build_life() -> void:
 		capsule(body)
 		body.collision_mask=VILLAGER_MASK
 		var appearance := model("res://assets/models/"+ACTORS[i%ACTORS.size()]+".glb",rng.randf_range(1.6,1.85))
+		preload("res://scripts/villager_wardrobe.gd").dress(appearance,i)
 		body.add_child(appearance)
 		appearance.rotation.y=PI
 		var points: Array[Vector3]=[]
@@ -556,6 +559,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				field_hud.release_all()
 			KEY_M: panel="" if panel=="map" else "map"; field_hud.release_all()
 			KEY_TAB: panel="" if panel=="pack" else "pack"; field_hud.release_all()
+			KEY_J: panel="" if panel=="journal" else "journal"; field_hud.release_all()
+			KEY_L: story.language="en" if story.language=="th" else "th"
 			KEY_E:
 				if not blocked(): interact()
 			KEY_F:
@@ -606,10 +611,10 @@ func _physics_process(dt: float) -> void:
 			if moving: player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
 		world.update_tree_collision(player.position)
 		stamina=clampf(stamina+(-17 if sprint else 13)*dt,0,100)
-		food=maxf(0,food-dt*0.045)
-		thirst=maxf(0,thirst-dt*(0.09 if sprint else 0.055))
-		energy=maxf(0,energy-dt*0.025)
-		if food<=0 or thirst<=0: health=maxf(0,health-dt*0.8)
+		food=maxf(0,food-dt*0.045) if not story.relaxed else food
+		thirst=maxf(0,thirst-dt*(0.09 if sprint else 0.055)) if not story.relaxed else thirst
+		energy=maxf(0,energy-dt*0.025) if not story.relaxed else energy
+		if not story.relaxed and (food<=0 or thirst<=0): health=maxf(0,health-dt*0.8)
 		elif food>60 and thirst>60: health=minf(100,health+dt*0.15)
 		if player.position.y<-1.8: health=maxf(0,health-dt*10)
 		if health<=0:
@@ -623,6 +628,7 @@ func _physics_process(dt: float) -> void:
 		update_fishing(dt)
 		update_villagers(dt)
 		update_traffic(dt)
+		story.update()
 		for i in range(boats.size()):
 			boats[i].position.y=sin(elapsed*0.8+i)*0.04-0.24
 			boats[i].rotation.z=sin(elapsed*0.7+i)*0.015
@@ -793,6 +799,7 @@ func interact() -> void:
 		if fish>0 and wood>0:
 			fish-=1; wood-=1; cooked_fish+=1
 			tell("Grilled fish ready. Press Q / EAT to eat it.")
+			story.event("cook")
 		else: tell("Cooking needs one raw fish and one piece of driftwood.")
 		return
 	if player.position.distance_to(well_position)<3.5:
@@ -838,6 +845,7 @@ func trade(option: String) -> void:
 			if fish>=3:
 				fish-=3; coins+=45; friendship+=1; delivered_fish+=3
 				tell("Thank you! Three fresh fish traded for 45 vatu. Friendship +1.")
+				story.event("trade")
 			else: tell("Bring three fresh fish to trade at the village.")
 		"meal":
 			if coins>=8:
@@ -846,6 +854,9 @@ func trade(option: String) -> void:
 			else: tell("A village meal costs 8 vatu.")
 		"chat":
 			tell("The Efate coast connects Port Vila, Mele, Eton and Undine Bay. The village needs fresh fish each day.")
+		"story":
+			story.talk()
+			return
 	panel=""
 	Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if field_hud.mobile else Input.MOUSE_MODE_CAPTURED
 
@@ -854,6 +865,7 @@ func save_game() -> void:
 	for item in resources:
 		if item.collected: gathered.append(item.id)
 	var data := {"version":2,"position":[player.position.x,player.position.y,player.position.z],"health":health,"food":food,"thirst":thirst,"energy":energy,"stamina":stamina,"fish":fish,"cooked_fish":cooked_fish,"coconuts":coconuts,"wood":wood,"coins":coins,"friendship":friendship,"delivered_fish":delivered_fish,"days":days,"day_time":day_time,"gathered":gathered}
+	data["story"]=story.data()
 	var file := FileAccess.open("user://efate_life_save.json",FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data))
@@ -881,6 +893,7 @@ func load_game() -> void:
 	for key in ["fish","cooked_fish","coconuts","wood","coins","friendship","delivered_fish"]: set(key,clampi(int(data.get(key,0)),0,99999))
 	days=clampi(int(data.get("days",1)),1,99999)
 	day_time=clampf(float(data.get("day_time",8)),0,23.999)
+	story.restore(data.get("story",{}))
 	var gathered = data.get("gathered",[])
 	if not gathered is Array: gathered=[]
 	for item in resources:

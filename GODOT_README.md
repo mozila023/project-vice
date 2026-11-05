@@ -4,6 +4,8 @@ Play the public web build: https://mozila023.github.io/project-vice/
 
 The public game is hosted by GitHub Pages from the `gh-pages` branch. The `main` branch holds the source. Updating source does not automatically redeploy the web build.
 
+The current game includes an optional six-chapter TH/EN story, twelve villager outfit palettes with fabric patterns, driveable cars, and an independent discovery journal for Mele, Port Vila, Port Havannah and Eton. Relaxed exploration is the default; survival mode can be enabled in the journal. Press J for the journal, L for TH/EN, E to interact/drive, F to fish, and M for the map. See [ISLAND_STORY.md](ISLAND_STORY.md) for research sources, creative boundaries, controls and validation.
+
 Open `project.godot` with Godot 4.7 and press F6 on `scenes/island.tscn`, or F5 for the main scene.
 
 The previous Unity project is retained in `app/`. This Godot edition reconstructs its island survival loop with procedural assets: terrain, animated ocean shader, palms, settlement details, supplies, infected and a radio objective. No downloaded assets or additional asset licenses are required.
