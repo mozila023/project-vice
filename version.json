@@ -4,10 +4,11 @@
                      "Google Maps frontage reconstruction",
                      "walkable salon and courtyard",
                      "New Game starts at Sunshine",
-                     "shop map marker and journal tracking",
+                     "grounded houses, vehicles, and walking animations",
+                     "3D fishing rod, reel, float, and catenary line",
                      "local minimap",
                      "TH/EN"
                  ],
-    "pack_bytes":  73860376,
-    "commit":  "f7f31cadfbfc5fd4f13b28b9ae0f79f4ec5b5981"
+    "pack_bytes":  73871880,
+    "commit":  "e20efa080d1a4c88c99704d82507b4bdb09f5b23"
 }
