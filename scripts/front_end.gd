@@ -190,13 +190,17 @@ func build_scene() -> void:
 	audio.format=AudioStreamWAV.FORMAT_16_BITS
 	audio.mix_rate=22050
 	var samples := PackedByteArray()
-	samples.resize(22050*2)
-	for i in range(22050):
-		var value: float=(sin(TAU*70*i/22050.0)*0.45+sin(TAU*113*i/22050.0)*0.2)*0.08
-		samples.encode_s16(i*2,int(value*32767))
+	samples.resize(22050*4)
+	var flp := 0.0
+	for i in range(22050*2):
+		var t: float=float(i)/22050.0
+		flp=lerpf(flp,sin(i*12.9898)*0.5,0.08)
+		var prop: float=sin(TAU*68*t)*0.42+sin(TAU*136*t+0.3)*0.24+sin(TAU*102*t)*0.18+flp*0.12
+		var value: float=prop*0.09
+		samples.encode_s16(i*2,int(clampf(value,-1.0,1.0)*32767))
 	audio.data=samples
 	audio.loop_mode=AudioStreamWAV.LOOP_FORWARD
-	audio.loop_end=22050
+	audio.loop_end=22050*2
 	ambience.stream=audio
 	traveler=preload("res://scripts/real_people.gd").new().create(1,1.75)
 	add_child(traveler)

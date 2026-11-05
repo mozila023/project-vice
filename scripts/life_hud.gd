@@ -149,7 +149,15 @@ func _draw() -> void:
 		paragraph(c+Vector2(-330,143),l("Cook fish at the beach fire with driftwood. Eat fish or coconuts; drink at a well.","ย่างปลาที่กองไฟโดยใช้ไม้ กินปลาย่างหรือมะพร้าว และดื่มน้ำจากบ่อ"),650,14)
 	elif game.panel=="talk":
 		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
-		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+game.story.title(),21,GOLD)
+		var speaking: bool=is_instance_valid(game.audio) and game.audio.is_speaking()
+		var voice_tag: String=("  ·  "+l("SPEAKING","กำลังพูด")) if speaking else ""
+		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+game.story.title()+voice_tag,21,GOLD)
+		if speaking:
+			var wave_x: float=w/2+260
+			var wave_y: float=h/2-170
+			for bar_i in range(4):
+				var bh: float=5.0+absf(sin(Time.get_ticks_msec()*0.012+bar_i*1.1))*11.0
+				draw_rect(Rect2(wave_x+bar_i*6,wave_y-bh*0.5,3.5,bh),GOLD)
 		paragraph(Vector2(w/2-290,h/2-148),game.story.dialogue() if game.active_villager.begins_with("Malia") else l("Welcome, neighbour. Ask Malia about our shared meal.\nBefore exploring village land, greet your hosts and ask permission.\nYou can trade here, or explore the coast at your own pace.","ยินดีต้อนรับ ลองถามมาเลียเรื่องมื้ออาหารของหมู่บ้านนะ\nก่อนสำรวจพื้นที่ชุมชน ควรทักทายและขออนุญาตเจ้าบ้าน\nจะแวะแลกของที่นี่ หรือออกเดินเล่นเลียบชายฝั่งก็ได้"),580,17)
 		text(Vector2(w/2-290,h/2+10),l("Your fish: %d  /  Your vatu: %d","ปลาที่มี: %d  /  เงิน: %d วาตู") % [game.fish,game.coins],15)
 	if game.paused:
@@ -313,6 +321,8 @@ func activate(key: String,pressed: bool) -> void:
 	if not pressed:
 		if key=="jump": Input.action_release("jump")
 		return
+	if is_instance_valid(game.audio) and not key in ["fish","use","eat","jump"]:
+		game.audio.play_sfx("ui_click",1.04,-5.5)
 	match key:
 		"journal", "island": game.panel=key; release_all()
 		"mode": game.story.relaxed=not game.story.relaxed; Preferences.relaxed=game.story.relaxed; Preferences.save()

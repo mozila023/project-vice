@@ -9,6 +9,7 @@ var visual: Node3D
 var pivot: Node3D
 var camera: Camera3D
 var field_hud: Control
+var audio: Node3D
 var villagers: Array[Dictionary] = []
 var traffic: Array[Dictionary] = []
 var cars: Array[CharacterBody3D] = []
@@ -108,6 +109,9 @@ func _ready() -> void:
 	add_child(restaurant)
 	restaurant.build()
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
+	audio=preload("res://scripts/island_audio.gd").new()
+	audio.game=self
+	add_child(audio)
 	navigation.build(self)
 	navigation.update(0,true)
 	apply_preferences()
@@ -136,6 +140,7 @@ func switch_language() -> void:
 	story.language="en" if story.language=="th" else "th"
 	Preferences.language=story.language
 	Preferences.save()
+	if panel=="talk" and is_instance_valid(audio): audio.speak_dialogue_open(active_villager)
 
 func material(key: String,color: Color) -> StandardMaterial3D:
 	if materials.has(key): return materials[key]
@@ -526,6 +531,7 @@ func enter_car(car: CharacterBody3D) -> void:
 	player.velocity=Vector3.ZERO
 	camera.get_parent().spring_length=8.0
 	look_timer=0.0
+	if is_instance_valid(audio): audio.play_sfx("car_door",1.0,-2.0)
 	tell("W accelerate · S brake / reverse · A D steer · Space handbrake · E get out")
 
 func leave_car(forced := false) -> bool:
@@ -555,6 +561,7 @@ func leave_car(forced := false) -> bool:
 	player.collision_layer=CAR_SCRIPT.LAYER_PEOPLE
 	player.collision_mask=PLAYER_MASK
 	camera.get_parent().spring_length=5.5
+	if not forced and is_instance_valid(audio): audio.play_sfx("car_door",0.92,-2.5)
 	return true
 
 func standing_room(spot: Vector3) -> bool:
@@ -832,6 +839,7 @@ func blocked_ahead(node: CharacterBody3D,direction: Vector3) -> bool:
 func tell(value: String) -> void:
 	notice=value
 	notice_time=8
+	if is_instance_valid(audio): audio.on_notice(value)
 
 func fishing_water() -> Vector3:
 	var origin := player.position
@@ -846,7 +854,11 @@ func cast_line() -> void:
 	if blocked(): return
 	if driving: tell("Get out of the car before casting."); return
 	if fishing_state=="bite": reel(); return
-	if fishing_state!="": cancel_fishing(); tell("Line reeled in."); return
+	if fishing_state!="":
+		cancel_fishing()
+		if is_instance_valid(audio): audio.play_sfx("ui_close",1.1,-4.0)
+		tell("Line reeled in.")
+		return
 	var point := fishing_water()
 	if point==Vector3.INF:
 		tell("Walk to the shoreline or the jetty before casting.")
@@ -861,6 +873,9 @@ func cast_line() -> void:
 	bobber.position=point
 	bobber.visible=true
 	rod.visible=true
+	if is_instance_valid(audio):
+		audio.play_sfx("cast",1.0,-1.5)
+		audio.play_sfx("splash",1.0,-3.5)
 	tell("Line cast. Watch the float. Press E / REEL when a fish bites.")
 
 func update_fishing(dt: float) -> void:
@@ -907,6 +922,9 @@ func update_fishing(dt: float) -> void:
 			fishing_state="bite"
 			fishing_splash(fishing_spot)
 			fishing_timer=2.8
+			if is_instance_valid(audio):
+				audio.play_sfx("bite",1.0,-1.0)
+				audio.play_sfx("splash",0.92,-2.0)
 			tell("A BITE! Press E / REEL now.")
 		else:
 			cancel_fishing()
@@ -917,6 +935,9 @@ func reel() -> void:
 	fish+=1
 	fishing_splash(fishing_spot)
 	cancel_fishing()
+	if is_instance_valid(audio):
+		audio.play_sfx("catch",1.0,-1.0)
+		audio.play_sfx("splash",1.08,-1.5)
 	tell("Fish caught! Cook it at the beach fire or trade with a villager.")
 
 func fishing_splash(at: Vector3) -> void:
@@ -959,16 +980,21 @@ func interact() -> void:
 	if player.position.distance_to(camp_position)<3.5:
 		if fish>0 and wood>0:
 			fish-=1; wood-=1; cooked_fish+=1
+			if is_instance_valid(audio): audio.play_sfx("cook",1.0,-1.0)
 			tell("Grilled fish ready. Press Q / EAT to eat it.")
 			story.event("cook")
 		else: tell("Cooking needs one raw fish and one piece of driftwood.")
 		return
 	if player.position.distance_to(well_position)<3.5:
-		thirst=100; tell("Fresh water. Your thirst is restored."); return
+		thirst=100
+		if is_instance_valid(audio): audio.play_sfx("drink",1.0,-1.5)
+		tell("Fresh water. Your thirst is restored.")
+		return
 	if player.position.distance_to(shelter_position)<3.5:
 		energy=100; health=minf(100,health+25); food=maxf(5,food-12); thirst=maxf(5,thirst-15)
 		day_time+=8
 		if day_time>=24: day_time-=24; days+=1
+		if is_instance_valid(audio): audio.play_sfx("rest",1.0,-1.5)
 		tell("You rested for eight hours. A new day on the island."); return
 	for npc in villagers:
 		if npc.body.position.distance_to(player.position)<3:
@@ -983,6 +1009,7 @@ func interact() -> void:
 			item.node.visible=false
 			if item.kind=="coconut": coconuts+=1
 			else: wood+=1
+			if is_instance_valid(audio): audio.play_sfx("pickup",1.08 if item.kind=="coconut" else 0.92,-2.0)
 			tell("Collected "+item.kind+".")
 			return
 	var car := nearest_car()
@@ -993,9 +1020,11 @@ func interact() -> void:
 func eat() -> void:
 	if cooked_fish>0:
 		cooked_fish-=1; food=minf(100,food+38); health=minf(100,health+6)
+		if is_instance_valid(audio): audio.play_sfx("eat",1.0,-1.5)
 		tell("You ate grilled fish. Hunger restored.")
 	elif coconuts>0:
 		coconuts-=1; food=minf(100,food+15); thirst=minf(100,thirst+25)
+		if is_instance_valid(audio): audio.play_sfx("eat",1.08,-1.5)
 		tell("Fresh coconut: food and water restored.")
 	else: tell("No prepared food. Catch a fish and cook it, or gather coconuts.")
 
