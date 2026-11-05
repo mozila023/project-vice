@@ -13,6 +13,8 @@ const POSES := {
 	"boats": [-531.0, 1.8, 172.0, 1.2, -0.10, 6.0, 11.0, false],
 	"car": [0.0, 1.8, 0.0, 0.4, -0.10, 7.0, 10.5, false],
 	"driving": [0.0, 2.0, 0.0, 0.0, -0.16, 8.0, 10.5, true],
+	"mobile_drive": [0.0,2.0,0.0,0.0,-0.16,8.0,10.5,true],
+	"mobile_hud": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
 	"journal_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
 	"journal_en": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
 	"island_th": [-514.0,1.4,144.0,1.1,-0.10,5.5,10.5,true],
@@ -51,6 +53,7 @@ func run() -> void:
 	for pose_name in names:
 		var p: Array=(POSES[pose_name] as Array).duplicate()
 		game.panel=""
+		game.field_hud.mobile=pose_name in ["mobile_hud","mobile_drive"]
 		if pose_name in ["journal_th","journal_en","island_th","talk_th"]:
 			game.story.language="en" if pose_name=="journal_en" else "th"
 			game.panel="island" if pose_name=="island_th" else ("talk" if pose_name=="talk_th" else "journal")
@@ -63,7 +66,7 @@ func run() -> void:
 				var z: float=144.0-(i/6)*3.0
 				npc.body.position=Vector3(x,game.ground(x,z),z)
 				npc.body.rotation.y=PI
-		if pose_name=="driving":
+		if pose_name in ["driving","mobile_drive"]:
 			game.update_traffic(0.016)
 			var car=game.cars[4]
 			game.enter_car(car)

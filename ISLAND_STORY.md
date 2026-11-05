@@ -22,7 +22,7 @@ Consulted 2026-11-05. In-game facts are paraphrased from the Vanuatu Tourism Off
 - [Eton Beach](https://www.vanuatu.travel/en/eton-beach): east-coast location, white sand and river inlet. The Eton note describes the real beach area, not a promise that its inlet is accurately modeled in this game.
 - [Kastom](https://www.vanuatu.travel/en/about-vanuatu/understanding-kastom): respect hosts and ask before entering homes, gardens or customary land. Used for dialogue about being a considerate guest. No sacred rites or dress patterns are reproduced.
 
-Villager clothes use twelve original everyday colour palettes with plain, striped and checked fabrics. They are fictional contemporary outfits, not authenticated traditional garments. The base models and their animations are retained.
+The current visual overhaul uses four realistic Microsoft Rocketbox cast models with everyday outfits, replacing the earlier twelve colour palettes. They are fictional contemporary characters, not authenticated depictions of Efate residents or traditional garments. See `ASSET_CREDITS.md` for their MIT licence and source.
 
 Font: Noto Sans Thai, Google Fonts, SIL Open Font License; see `assets/fonts/OFL.txt`.
 

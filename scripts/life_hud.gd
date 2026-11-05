@@ -79,7 +79,8 @@ func buttons() -> Dictionary:
 	elif game.panel=="settings": return {}
 	elif game.panel!="": values["close"]=Rect2(w/2-70,h-85,140,48)
 	elif mobile:
-		values.merge({"fish":Rect2(w-138,h-180,96,96),"use":Rect2(w-246,h-140,82,82),"eat":Rect2(w-125,h-285,66,66),"jump":Rect2(w-235,h-240,66,66),"run":Rect2(215,h-120,64,64)})
+		if game.driving: values.merge({"use":Rect2(w-138,h-180,96,70),"jump":Rect2(w-246,h-180,96,70)})
+		else: values.merge({"fish":Rect2(w-138,h-180,96,96),"use":Rect2(w-246,h-140,82,82),"eat":Rect2(w-125,h-285,66,66),"jump":Rect2(w-235,h-240,66,66),"run":Rect2(215,h-120,64,64)})
 	return values
 
 func _draw() -> void:
@@ -91,16 +92,17 @@ func _draw() -> void:
 		icon("map-pin",Vector2(39,40),20,GOLD)
 		text(Vector2(71,49),"EFATE / VANUATU",16)
 		text(Vector2(71,70),l("DAY %02d  ·  %02d:%02d","วันที่ %02d  ·  %02d:%02d") % [game.days,int(game.day_time),int(fmod(game.day_time,1)*60)],12,GOLD)
-		card(Rect2(24,h-194,354,112),Color(0.035,0.07,0.09,0.9))
-		icon("heart-pulse",Vector2(40,h-178),25,Color("e29689"))
-		text(Vector2(78,h-158),l("HEALTH","สุขภาพ"),13)
-		text(Vector2(322,h-158),str(int(game.health)),15,Color("e29689"))
-		meter(Rect2(78,h-148,278,14),smoothed_health,Color("c96e61"))
+		var vitals_y: float=108 if mobile else h-194
+		card(Rect2(24,vitals_y,354,112),Color(0.035,0.07,0.09,0.9))
+		icon("heart-pulse",Vector2(40,vitals_y+16),25,Color("e29689"))
+		text(Vector2(78,vitals_y+36),l("HEALTH","สุขภาพ"),13)
+		text(Vector2(322,vitals_y+36),str(int(game.health)),15,Color("e29689"))
+		meter(Rect2(78,vitals_y+46,278,14),smoothed_health,Color("c96e61"))
 		var stats := [["utensils",game.food,Color("d8bf82")],["droplets",game.thirst,Color("79bfc8")],["zap",game.energy,Color("a6bc91")]]
 		for i in range(3):
 			var x: float=40+i*110
-			icon(stats[i][0],Vector2(x,h-119),18,stats[i][2])
-			meter(Rect2(x+26,h-115,65,11),stats[i][1],stats[i][2])
+			icon(stats[i][0],Vector2(x,vitals_y+75),18,stats[i][2])
+			meter(Rect2(x+26,vitals_y+79,65,11),stats[i][1],stats[i][2])
 		card(Rect2(w-328,96,304,158),Color(0.035,0.07,0.09,0.88))
 		icon("book-open",Vector2(w-310,112),18,GOLD)
 		text(Vector2(w-282,128),l("CURRENT CHAPTER","ภารกิจปัจจุบัน"),12,GOLD)
@@ -118,8 +120,9 @@ func _draw() -> void:
 			text(Vector2(w/2-195,h-145),"A BITE!  REEL NOW" if game.fishing_state=="bite" else "FISHING / Watch the float...",20,GOLD)
 			if game.fishing_state=="bite": draw_rect(Rect2(w/2-195,h-135,390*game.fishing_timer/2.8,4),GOLD)
 		if game.notice_time>0:
-			card(Rect2(300,98,w-652,70),Color(0.035,0.07,0.09,0.88))
-			paragraph(Vector2(318,110),game.notice,w-690,14)
+			var notice_y: float=270 if mobile else 98
+			card(Rect2(300,notice_y,w-652,70),Color(0.035,0.07,0.09,0.88))
+			paragraph(Vector2(318,notice_y+12),game.notice,w-690,14)
 		card(Rect2(24,h-66,810,44),Color(0.025,0.06,0.08,0.88))
 		text(Vector2(40,h-38),l("FISH %d   COOKED %d   COCONUT %d   WOOD %d   /   %d VATU","ปลา %d   ปลาย่าง %d   มะพร้าว %d   ไม้ %d   /   %d วาตู") % [game.fish,game.cooked_fish,game.coconuts,game.wood,game.coins],13)
 		if not mobile:
@@ -157,6 +160,8 @@ func _draw() -> void:
 		if key=="track_story": label=l("TRACK STORY","นำทางตามภารกิจ")
 		if key=="settings": label=l("SETTINGS","ตั้งค่า")
 		if key=="main_menu": label=l("MAIN MENU","เมนูหลัก")
+		if game.driving and key=="jump": label=l("BRAKE","เบรกมือ")
+		if game.driving and key=="use": label=l("EXIT","ลงรถ")
 		text(rect.get_center()+Vector2(-font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x/2,5),label,14)
 	if mobile and not game.blocked():
 		var origin := stick_origin if not move_vector.is_zero_approx() else Vector2(112,h-130)
@@ -201,7 +206,7 @@ func draw_navigation() -> void:
 	var goal: Vector3=game.navigation.next_point+Vector3.UP*2.2
 	var point: Vector2=game.camera.unproject_position(goal)
 	var behind: bool=game.camera.is_position_behind(goal)
-	var inset := Rect2(46,185,size.x-404,size.y-410)
+	var inset := Rect2(46,240 if mobile else 185,size.x-404,size.y-(465 if mobile else 410))
 	var offscreen: bool=behind or not inset.has_point(point)
 	if offscreen:
 		var relative: float=wrapf(game.navigation.bearing()-game.yaw,-PI,PI)
