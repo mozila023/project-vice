@@ -2,6 +2,9 @@ extends Node3D
 ## Towns and villages from the baked placement list: corrugated-iron homes on concrete plinths,
 ## verandas, louvre windows and rain tanks, concrete shop blocks in Port Vila, power lines along the road.
 const CHUNK := 180.0
+const CACHE_VERSION := 1
+const CACHE_PATH := "res://assets/baked/settlement.scn"
+var allow_cache := true
 var world: Node3D
 var materials := {}
 var tools := {}
@@ -83,6 +86,7 @@ func make_materials() -> void:
 	materials["wire"]=wire
 
 func build() -> void:
+	if allow_cache and load_cached(): return
 	make_materials()
 	load_refined_house()
 	for data in world.baked.buildings:
@@ -119,6 +123,36 @@ func build() -> void:
 	commit_supports()
 	street_lamps()
 	world.night_listeners.append(on_night)
+
+func load_cached() -> bool:
+	if not ResourceLoader.exists(CACHE_PATH): return false
+	var packed: PackedScene=load(CACHE_PATH)
+	var cached: Node3D=packed.instantiate()
+	if cached.get_meta("cache_version",0)!=CACHE_VERSION or cached.get_meta("world_hash","")!=FileAccess.get_sha256("res://assets/baked/world.dat"):
+		cached.free()
+		return false
+	glass=cached.get_meta("night_glass")
+	pole_sites.assign(cached.get_meta("pole_sites",[]))
+	wire_spans.assign(cached.get_meta("wire_spans",[]))
+	foundation_supports.assign(cached.get_meta("foundation_supports",[]))
+	for house in cached.get_meta("house_sites",[]):
+		var entry: Dictionary=house.duplicate()
+		entry.body=cached.get_node(entry.body_path)
+		house_sites.append(entry)
+	for path in cached.get_meta("lamp_paths",[]): lamps.append(cached.get_node(path))
+	for node in cached.get_children():
+		clear_cached_owner(node)
+		cached.remove_child(node)
+		add_child(node)
+	cached.free()
+	world.night_listeners.append(on_night)
+	on_night(-1)
+	print("TOWN cached geometry loaded")
+	return true
+
+func clear_cached_owner(node: Node) -> void:
+	node.owner=null
+	for child in node.get_children(): clear_cached_owner(child)
 
 func footing(data: Dictionary) -> float:
 	var hw: float=data.w*0.5
