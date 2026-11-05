@@ -4,6 +4,8 @@ This update doubles geographic horizontal distances compared with the previous 1
 
 The full map texture covers 5760 game metres. The terrain/physics grid is now 483 × 483 at 12 m spacing, retaining local terrain detail across the enlarged island. Roads and settlement placements are rebuilt from the existing OSM extract. The town bake allows up to 1100 representative buildings; it does not reproduce every mapped building individually. Generic homes still share a family of models.
 
+Town render meshes, colliders, foundation metadata and night-light references are precomputed in `assets/baked/settlement.scn`. The game checks the world-data hash before using it and falls back to procedural building if stale. Rebuild with `tools/bake_settlement.gd` after changing the world; increment `settlement.gd`'s cache version and regenerate when changing town geometry/material generation. This removes town mesh construction from Web/mobile startup.
+
 ## Coverage inventory, 5 November 2026
 
 The named-place query returned 773 OSM elements. After excluding points beyond the modelled island/coast, nearby duplicates and the bar's real name (per the user's temporary-name request), **737 source-linked places** are included in `assets/geography/efate-places.json`. This is complete for that documented query and filtering rule, **not proof that every real place on Efate is mapped or currently operating**. Node positions are direct coordinates; way/relation coordinates are feature-centre points, not necessarily entrances.
@@ -34,7 +36,7 @@ Save version 2 gains `map_scale:10`. A save without that field is treated as 1:2
 
 1. Existing road/building data: `tools/download_osm_detail.ps1`, `node tools/process_geography.mjs`.
 2. Named-place survey: `tools/download_island_survey.ps1`, then `node tools/build_island_survey.mjs`. The generator also reads the separately mapped terminal in the detailed extract.
-3. Godot headless: `--script res://tools/bake_world.gd`.
+3. Godot headless: `--script res://tools/bake_world.gd`, then `--script res://tools/bake_settlement.gd`.
 4. Blender: `--background --python tools/blender_coastal_upgrade.py`.
 5. Import assets, run integration checks, export Web and use the original-filename publisher.
 
