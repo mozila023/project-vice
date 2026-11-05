@@ -142,6 +142,7 @@ func _ready() -> void:
 	navigation.update(0,true)
 	apply_preferences()
 	tell(story.l("Welcome to Sunshine. Your friend Luna is waiting outside to show you food and a place to sleep.","ยินดีต้อนรับสู่ Sunshine! Luna เพื่อนสาวรออยู่หน้าร้าน ไปคุยให้เธอพาไปรู้จักร้านอาหารและที่พักได้เลย"))
+	notice_time=0
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	field_hud=preload("res://scripts/life_hud.gd").new()
@@ -844,7 +845,7 @@ func blocked_ahead(node: CharacterBody3D,direction: Vector3) -> bool:
 
 func tell(value: String) -> void:
 	notice=value
-	notice_time=8
+	notice_time=3.5
 	if is_instance_valid(audio): audio.on_notice(value)
 
 func fishing_water() -> Vector3:

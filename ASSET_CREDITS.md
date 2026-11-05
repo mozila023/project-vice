@@ -40,3 +40,18 @@ Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/ch
 ### Boarding alignment
 
 The aircraft retains its source metre units (21.40m fuselage bounding length, 25.74m wingspan). Its display heading is applied before centring it and placing the wheels on the apron. `boarding_sequence.gd` samples the lower aft-door UV from the actual mesh; that one anchor determines the stairs, landing, passenger path and dolly camera. Six open metal treads rise 17.63cm each, with an 82cm clear tread width. The passenger faces the doorway, reaches the landing, then settles before the cut to the separate cabin scene. Eight fixed-time rendered captures check the full approach and climb rather than one representative frame.
+# Downloaded scene models — November 2026 cleanup
+
+All entries below are CC0. Optimized editable files are in `art/blender/optimized_*.blend`; runtime GLBs and measured bounds are in `assets/models/real_props/`.
+
+| Model | Creator | Source |
+|---|---|---|
+| Covered Car | MP | https://polyhaven.com/a/covered_car |
+| Modular Urban Apartments Facade | James Ray Cock | https://polyhaven.com/a/modular_urban_apartments_facade |
+| Overhead Crane | Timothy3D | https://polyhaven.com/a/overhead_crane |
+| Industrial Plastic Container | Galo Benivegna | https://polyhaven.com/a/industrial_pastic_container |
+| Rock Face 02 | Dario Barresi, Rico Cilliers | https://polyhaven.com/a/rock_face_02 |
+| Wooden Crate 01 | James Ray Cock | https://polyhaven.com/a/wooden_crate_01 |
+| Cargo container A, speedboat B, tugboat A, cargo ship C | Kenney | https://kenney.nl/assets/watercraft-kit |
+
+The facade modules were assembled into one- and two-storey interpreted buildings in Blender, with rain canopies, brackets, downpipes and entrance landings. They replace 18 existing generic lots (not surveyed replicas). The covered car is a parked prop; existing driveable road cars remain available. Boats are scenery with collision, not a new boat-driving feature. Poly Haven photographic materials remain on their props; Kenney vessels retain the kit's simpler style.

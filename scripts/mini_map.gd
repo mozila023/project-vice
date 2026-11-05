@@ -74,7 +74,6 @@ func _process(dt: float) -> void:
 
 func _draw() -> void:
 	draw_style_box(preload("res://scripts/ui_style.gd").panel(Color(0.035,0.07,0.09,0.94),10),Rect2(Vector2.ZERO,size))
-	draw_string(font,Vector2(12,211),game.story.l("MINIMAP · M / MAP","มินิแมป · M / แผนที่"),HORIZONTAL_ALIGNMENT_LEFT,-1,12,PAPER)
 
 func draw_local_map(canvas: Control) -> void:
 	var scale: float=MAP_SIZE/(radius()*2.0)

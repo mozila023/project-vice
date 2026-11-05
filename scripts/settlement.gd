@@ -2,7 +2,7 @@ extends Node3D
 ## Towns and villages from the baked placement list: corrugated-iron homes on concrete plinths,
 ## verandas, louvre windows and rain tanks, concrete shop blocks in Port Vila, power lines along the road.
 const CHUNK := 180.0
-const CACHE_VERSION := 1
+const CACHE_VERSION := 2
 const CACHE_PATH := "res://assets/baked/settlement.scn"
 var allow_cache := true
 var world: Node3D
@@ -19,6 +19,7 @@ var foundation_supports: Array[Dictionary] = []
 var support_batches := {}
 var pole_sites: Array[Vector3] = []
 var wire_spans: Array[Dictionary] = []
+var downloaded_buildings := 0
 
 const WALL_PAINTS := [Color("e4dfca"),Color("b5cdc0"),Color("d8c49d"),Color("ece9dc"),Color("9fc0c6"),Color("d8ab90"),Color("c5cfa8"),Color("e8d9b0")]
 const ROOF_PAINTS := [Color("8a9591"),Color("ab6147"),Color("6a8a87"),Color("a9aba5"),Color("875440"),Color("4f6f7a")]
@@ -98,7 +99,9 @@ func build() -> void:
 		var t := Transform3D(Basis(Vector3.UP,data.yaw),Vector3(data.x,base,data.z))
 		var chunk := Vector2i(floori(data.x/CHUNK),floori(data.z/CHUNK))
 		extra_boxes.clear()
-		if data.style==2: shop(chunk,t,data,rng)
+		if downloaded_buildings<18 and Vector2(data.x+600,data.z-650).length()<550 and data.w>=7 and data.d>=7 and clear_downloaded_plot(t,data):
+			downloaded_building(chunk,t,data)
+		elif data.style==2: shop(chunk,t,data,rng)
 		else: house(chunk,t,data,rng)
 		add_collider(t,data)
 	for chain in world.baked.poles:
@@ -173,7 +176,7 @@ func footing(data: Dictionary) -> float:
 func add_collider(t: Transform3D,data: Dictionary) -> void:
 	var body := StaticBody3D.new()
 	body.name="BuildingCollision"
-	var height: float=3.2*data.storeys+1.2
+	var height: float=6.25 if data.get("downloaded",false) else 3.2*data.storeys+1.2
 	if data.style==2:
 		add_box(body,Vector3(0,height*0.5,0),Vector3(data.w,height,data.d))
 	# Everything built onto the house collides too: veranda, rain tank, awning posts.
@@ -393,6 +396,25 @@ func window(chunk: Vector2i,t: Transform3D,side: int,along: float,half_depth: fl
 
 func house(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGenerator) -> void:
 	refined_house(chunk,t,data,rng)
+
+func downloaded_building(chunk: Vector2i,t: Transform3D,data: Dictionary) -> void:
+	var kind := "island_block" if data.style==2 else "island_home"
+	var node: Node3D=load("res://assets/models/real_props/"+kind+".glb").instantiate()
+	add_child(node)
+	var width := 12.0 if data.style==2 else 9.0
+	node.transform=t*Transform3D(Basis.from_scale(Vector3(data.w/width,1,data.d/width)),Vector3.ZERO)
+	for mesh in node.find_children("*","MeshInstance3D",true,false): mesh.visibility_range_end=220
+	if data.style!=2: extra_boxes.append([Vector3(0,1.625,0),Vector3(data.w,3.25,data.d)])
+	ground_support(chunk,t,Vector3.ZERO,Vector3(data.w,0,data.d),0,"DownloadedBuilding")
+	data["downloaded"]=true
+	downloaded_buildings+=1
+
+func clear_downloaded_plot(t: Transform3D,data: Dictionary) -> bool:
+	for x in [-.5,0,.5]:
+		for z in [-.5,0,.5]:
+			var p: Vector3=t*Vector3(x*data.w,0,z*data.d)
+			if world.is_on_road(p.x,p.z) or world.surface_height_at(p.x,p.z)<.15: return false
+	return true
 
 ## Triangle wound counter-clockwise seen from outside, UVs taken from its position in metres.
 func triangle(s: SurfaceTool,t: Transform3D,a: Vector3,b: Vector3,c: Vector3,color: Color) -> void:

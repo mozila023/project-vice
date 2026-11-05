@@ -5,7 +5,6 @@ var entries: Array = []
 var by_id := {}
 var featured := {}
 var nearby: Array = []
-var labels: Array[Label3D] = []
 var timer := 0.0
 var selected := ""
 var materials=preload("res://scripts/coastal_materials.gd").new()
@@ -20,30 +19,15 @@ func build(owner_game: Node3D) -> void:
 		var node: Node3D=game.landmarks.place(site.category,at,Vector2(site.size[0],site.size[1]),site.facing,"coastal_detail")
 		node.name=site.name.validate_node_name()
 		materials.polish(node)
+		if site.category=="waterfall":
+			for mesh in node.find_children("*","MeshInstance3D",true,false):
+				if mesh.name.to_lower().contains("sandstone"): mesh.hide()
+			for x in [-4.0,0.0,4.0]:
+				var rock: Node3D=preload("res://scripts/real_prop_assets.gd").place("rock_face",node,Vector3(x,-.15,-5),0,false)
+				for mesh in rock.find_children("*","MeshInstance3D",true,false): mesh.create_convex_collision()
 		featured[site.id]=node
-		var sign := Label3D.new()
-		node.add_child(sign)
-		sign.text=site.name
-		sign.font=load("res://assets/fonts/NotoSansThai.ttf")
-		sign.position=Vector3(0,2.65,site.size[1]/2+.23)
-		sign.font_size=40
-		sign.pixel_size=.006
-		sign.modulate=Color("f0dfb5")
-		sign.outline_modulate=Color("16372f")
-		sign.outline_size=8
-		sign.visibility_range_end=70
 		# Use the doorway/public landing as access; geographic pins remain unmodified in the atlas.
 		by_id[site.id]["access"]=node.to_global(Vector3(0,0,site.size[1]/2+1))
-	for i in range(8):
-		var label := Label3D.new()
-		add_child(label)
-		label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
-		label.font=load("res://assets/fonts/NotoSansThai.ttf")
-		label.font_size=30
-		label.pixel_size=.005
-		label.no_depth_test=false
-		label.visibility_range_end=32
-		labels.append(label)
 func at(entry: Dictionary) -> Vector3:
 	return Vector3(entry.at[0],game.world.surface_height_at(entry.at[0],entry.at[1]),entry.at[1])
 func target(id: String) -> Vector3:
@@ -83,18 +67,11 @@ func update(dt: float) -> void:
 		if distance<32: nearby.append({"entry":entry,"distance":distance})
 		if distance<12 and entry.id not in game.story.discovered:
 			game.story.discovered.append(entry.id)
-			if entry.featured: game.tell(game.story.l("Discovered: ","ค้นพบ: ")+entry.name)
 	nearby.sort_custom(func(a: Dictionary,b: Dictionary): return a.distance<b.distance)
-	for i in range(labels.size()):
-		labels[i].visible=i<nearby.size()
-		if i>=nearby.size(): continue
-		var entry: Dictionary=nearby[i].entry
-		labels[i].text=entry.name
-		labels[i].position=(entry.access if entry.has("access") else at(entry))+Vector3.UP*2.2
 func context() -> String:
 	for item in nearby:
 		var goal := target(item.entry.id)
-		if game.player.position.distance_to(goal)<3: return game.story.l("ABOUT THIS PLACE · ","รู้จักสถานที่ · ")+item.entry.name
+		if game.player.position.distance_to(goal)<3: return game.story.l("PLACE INFORMATION","ดูข้อมูลสถานที่")
 	return ""
 func interact() -> bool:
 	for item in nearby:

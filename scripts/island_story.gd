@@ -91,7 +91,6 @@ func update() -> void:
 	for place in PLACES:
 		if not place.id in discovered and Vector2(game.player.position.x,game.player.position.z).distance_to(place.at)<25:
 			discovered.append(place.id)
-			game.tell(l("Discovered: ","ค้นพบ: ")+l(place.id,place.th))
 func data() -> Dictionary:
 	var at: Vector3=game.luna.position
 	return {"map_scale":10,"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered.duplicate(),"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}

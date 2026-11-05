@@ -21,22 +21,8 @@ func build(owner_game: Node3D) -> void:
 	port_desk=port.position+Vector3(15,0,12)
 	bar_desk=bar.to_global(Vector3(0,0,2))
 	for offset in [Vector3(1,0,12),Vector3(6,0,12),Vector3(10,0,12)]:
-		var marker := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size=Vector3(.7,.8,.7)
-		marker.mesh=mesh
-		marker.position=port.position+offset+Vector3.UP*.4
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color=Color("a88a5d")
-		marker.material_override=mat
-		add_child(marker)
+		preload("res://scripts/real_prop_assets.gd").place("wooden_crate",self,port.position+offset)
 		manifests.append(port.position+offset)
-		var body := StaticBody3D.new()
-		marker.add_child(body)
-		var shape := CollisionShape3D.new()
-		shape.shape=BoxShape3D.new()
-		shape.shape.size=mesh.size
-		body.add_child(shape)
 	for x in [-4.5,0,4.5]:
 		var light := OmniLight3D.new()
 		bar.add_child(light)

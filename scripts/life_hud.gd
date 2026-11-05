@@ -163,12 +163,6 @@ func _draw() -> void:
 			var notice_y: float=270 if mobile else 98
 			card(Rect2(300,notice_y,w-652,70),Color(0.035,0.07,0.09,0.88))
 			paragraph(Vector2(318,notice_y+12),game.notice,w-690,14)
-		card(Rect2(24,h-66,810,44),Color(0.025,0.06,0.08,0.88))
-		text(Vector2(40,h-38),l("FISH %d   COOKED %d   COCONUT %d   WOOD %d   /   %d VATU","ปลา %d   ปลาย่าง %d   มะพร้าว %d   ไม้ %d   /   %d วาตู") % [game.fish,game.cooked_fish,game.coconuts,game.wood,game.coins],13)
-		if not mobile:
-			var hint: String="W gas · S brake / reverse · A D steer · Space handbrake · E get out · M map · Esc pause" if game.driving else "WASD walk · Shift run · E interact / drive · F cast / cancel · Q eat · Tab pack · M map · Esc pause · F7 touch preview"
-			if game.story.language=="th": hint="W เร่ง · S เบรก/ถอย · A D เลี้ยว · Space เบรกมือ · E ลงรถ · Tab กระเป๋า / เมนู" if game.driving else "WASD เดิน · Shift วิ่ง · E ใช้/ขับรถ · F ตกปลา · Q กิน · Tab กระเป๋า / เมนู · M แผนที่"
-			text(Vector2(32,h-76),hint,11,Color("b4c2be"))
 		if game.driving:
 			card(Rect2(w-170,h-92,150,72))
 			text(Vector2(w-154,h-48),"%d" % int(absf(game.driving.speed)*3.6),34,GOLD)
@@ -308,7 +302,7 @@ func draw_navigation() -> void:
 	draw_circle(Vector2(compass_x,center.y-1),3,GOLD)
 	# Fixed guidance stays readable when the camera moves behind buildings.
 	var at := Vector2(236,350) if mobile else Vector2(24,344)
-	card(Rect2(at,Vector2(196,84)),Color(0.035,0.07,0.09,0.93))
+	card(Rect2(at,Vector2(142,48)),Color(0.035,0.07,0.09,0.93))
 	var relative: float=wrapf(game.navigation.bearing()-game.yaw,-PI,PI)
 	var direction := Vector2(-sin(relative),-cos(relative))
 	var normal := Vector2(-direction.y,direction.x)
@@ -317,10 +311,8 @@ func draw_navigation() -> void:
 		icon("map-pin",arrow-Vector2(11,11),22,GOLD)
 	else:
 		draw_colored_polygon(PackedVector2Array([arrow+direction*12,arrow-direction*8+normal*7,arrow-direction*5,arrow-direction*8-normal*7]),GOLD)
-	text(at+Vector2(48,24),l("Arrived","ถึงจุดหมาย") if game.navigation.arrived else str(int(game.navigation.distance()))+l(" m"," ม."),17,GOLD)
-	text(at+Vector2(48,43),l("Follow road","ตามถนน") if game.navigation.road_route else l("Head to destination","มุ่งหน้าสู่จุดหมาย"),11)
-	var title: String=game.story.tracker_title()
-	text(at+Vector2(12,70),title.left(24)+("…" if title.length()>24 else ""),12)
+	text(at+Vector2(48,24),l("Here","ถึงแล้ว") if game.navigation.arrived else str(int(game.navigation.distance()))+l(" m"," ม."),17,GOLD)
+
 
 func draw_map() -> void:
 	var height := minf(size.y-330,340)

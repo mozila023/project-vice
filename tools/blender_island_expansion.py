@@ -53,10 +53,6 @@ box('Office',(15,1.5,6),(11,3,7),'cream',True)
 for x in [12,15,18]:box('Office window',(x,1.8,9.55),(2.1,1.3,.05),'glass')
 box('Blue sign',(15,3.18,9.6),(12,.65,.08),'blue')
 lettering('IFIRA PORT DEVELOPMENT SERVICES',(15,3.06,9.66),.28,'cream')
-for x,z,h,key in [(-16,-10,1.3,'red'),(-16,-10,3.9,'blue'),(-16,-4,1.3,'blue'),(-16,2,1.3,'green'),(-9,-9,1.3,'yellow')]:
-    box('Shipping container',(x,h,z),(6,2.6,2.45),key,True)
-    for rib in range(16):box('Container rib',(x-2.85+rib*.38,h,z+1.24),(.045,2.5,.035),'steel')
-    for xx in [-.8,.8]:box('Container door bar',(x+xx,h,z+1.3),(.055,2.3,.045),'cream')
 for x in [-23.3]:
     for z in [-13,-7,0,7,13]:
         cylinder('Mooring bollard',(x,.35,z),.25,.7,'steel');colliders.append({'center':(x,.35,z),'size':(.5,.7,.5)})
@@ -70,8 +66,6 @@ o=box('Lifting boom',(-2,4.5,10),(1.0,6,.8),'yellow');o.rotation_euler.x=.38
 box('Container spreader',(-2,6.9,12.1),(6,.25,1.0),'steel')
 for x in [-22,-10]:box('Quay crane tower',(x,5,12),(.6,10,.6),'yellow',True)
 box('Quay crane beam',(-16,9.8,12),(14,.5,.55),'yellow')
-for x in [-16.5,-15.5]:cylinder('Hoist cable',(x,6.8,12),.02,6,'steel')
-box('Crane hook',(-16,3.8,12),(1.8,.22,.4),'steel')
 # A small service boat slung beneath the gantry, as in the port reference.
 boat_path=os.path.join(ROOT,'assets/models/watercraft/boat_fishing.glb')
 before=set(bpy.data.objects)
@@ -120,6 +114,7 @@ lettering('EVENING NAKAMAL',(0,2.65,5.86),.38,'cream')
 shutters=bpy.data.objects.new('ClosedShutters',None);bpy.context.collection.objects.link(shutters)
 for x in [-4.7,0,4.7]:box('Closed serving shutter',(x,1.69,-.91),(4.45,1.4,.06),'roof',False,shutters)
 export('evening_nakamal',(None,shutters))
+if '--models-only' in __import__('sys').argv: raise SystemExit(0)
 clear()
 
 # Aerial hero: actual baked island height grid, ocean and instanced canopy.

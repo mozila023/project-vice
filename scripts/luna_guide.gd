@@ -26,15 +26,6 @@ func build(owner_game: Node3D) -> void:
 	visual=game.people.create(0,1.68)
 	body.add_child(visual)
 	visual.rotation.y=PI
-	var label := Label3D.new()
-	label.text="Luna"
-	label.position.y=1.95
-	label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size=38
-	label.pixel_size=.005
-	label.modulate=Color("b7e7d9")
-	label.visibility_range_end=45
-	body.add_child(label)
 	game.luna=body
 	game.villagers.append({"body":body,"visual":visual,"name":"Luna","guide":true})
 	last_position=body.position
@@ -61,7 +52,7 @@ func make_route() -> void:
 	grid.diagonal_mode=AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	grid.update()
 	var shape := CapsuleShape3D.new()
-	shape.radius=.55
+	shape.radius=.8
 	shape.height=1.75
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape=shape
@@ -123,9 +114,10 @@ func clear_ahead(direction: Vector3) -> bool:
 	if game.ground(end.x,end.z)<-.3: return false
 	var side := direction.cross(Vector3.UP)
 	for offset in [-.30,0,.30]:
-		var from: Vector3=body.position+Vector3.UP*.75+side*float(offset)
-		var query := PhysicsRayQueryParameters3D.create(from,from+direction*1.3,1|4|8,[body.get_rid()])
-		if not body.get_world_3d().direct_space_state.intersect_ray(query).is_empty(): return false
+		for height in [.25,.75]:
+			var from: Vector3=body.position+Vector3.UP*height+side*float(offset)
+			var query := PhysicsRayQueryParameters3D.create(from,from+direction*1.3,1|4|8,[body.get_rid()])
+			if not body.get_world_3d().direct_space_state.intersect_ray(query).is_empty(): return false
 	return true
 
 func update(dt: float) -> void:
