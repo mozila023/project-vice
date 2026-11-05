@@ -1,5 +1,9 @@
 # Asset sources and web rendering changes
 
+## Efate 1:10 and coastal upgrade
+
+`assets/models/coastal_detail/` contains original Blender-authored landmark templates and a shared architectural detail kit. Editable sources are `art/blender/coastal_*.blend`; generator: `tools/blender_coastal_upgrade.py`. Existing credited photographic materials are reused. New models are interpretations by place type, not surveyed replicas. Named-place data: © OpenStreetMap contributors, ODbL 1.0; every entry in `assets/geography/efate-places.json` retains its source URL. Coverage, limitations and reproduction are documented in [MAP_SCALE_10.md](MAP_SCALE_10.md).
+
 ## Downloaded for this overhaul
 
 - **Microsoft Rocketbox** — realistic rigged people and walking/idle animations. [Original repository](https://github.com/microsoft/Microsoft-Rocketbox), MIT. Selected `Female_Adult_01`, `Female_Adult_08`, `Male_Adult_01`, `Male_Adult_12`, plus female/male idle-breathe and neutral-walk clips. Licence in `assets/models/people/LICENSE.txt`. Textures are resized to 1024px body / 512px head and hair; animations are matched to the shared bone names. These are fictional cast members, not scans of Efate residents.
