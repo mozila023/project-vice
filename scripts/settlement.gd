@@ -7,6 +7,8 @@ var materials := {}
 var tools := {}
 var glass: StandardMaterial3D
 var lamps: Array[OmniLight3D] = []
+## Collision boxes for the parts of the building being built that stick out beyond its walls: [centre, size].
+var extra_boxes: Array = []
 
 const WALL_PAINTS := [Color("e4dfca"),Color("b5cdc0"),Color("d8c49d"),Color("ece9dc"),Color("9fc0c6"),Color("d8ab90"),Color("c5cfa8"),Color("e8d9b0")]
 const ROOF_PAINTS := [Color("8a9591"),Color("ab6147"),Color("6a8a87"),Color("a9aba5"),Color("875440"),Color("4f6f7a")]
@@ -79,10 +81,13 @@ func build() -> void:
 		var base: float=footing(data)
 		var t := Transform3D(Basis(Vector3.UP,data.yaw),Vector3(data.x,base,data.z))
 		var chunk := Vector2i(floori(data.x/CHUNK),floori(data.z/CHUNK))
+		extra_boxes.clear()
 		if data.style==2: shop(chunk,t,data,rng)
 		else: house(chunk,t,data,rng)
 		add_collider(t,data)
-	for chain in world.baked.poles: power_line(chain)
+	for chain in world.baked.poles:
+		power_line(chain)
+		pole_colliders(chain)
 	commit()
 	street_lamps()
 	world.night_listeners.append(on_night)
@@ -97,14 +102,28 @@ func footing(data: Dictionary) -> float:
 
 func add_collider(t: Transform3D,data: Dictionary) -> void:
 	var body := StaticBody3D.new()
+	var height: float=3.2*data.storeys+1.2
+	add_box(body,Vector3(0,height*0.5,0),Vector3(data.w,height,data.d))
+	# Everything built onto the house collides too: veranda, rain tank, awning posts.
+	for extra in extra_boxes: add_box(body,extra[0],extra[1])
+	add_child(body)
+	body.global_transform=t
+
+func add_box(body: StaticBody3D,centre: Vector3,size: Vector3) -> void:
 	var shape := CollisionShape3D.new()
 	var bounds := BoxShape3D.new()
-	var height: float=3.2*data.storeys+0.4
-	bounds.size=Vector3(data.w,height,data.d)
+	bounds.size=size
 	shape.shape=bounds
+	shape.position=centre
 	body.add_child(shape)
+
+## Power poles, on the trunk layer: they stop people and cars without catching the camera.
+func pole_colliders(chain: PackedVector3Array) -> void:
+	var body := StaticBody3D.new()
+	body.collision_layer=world.TREE_LAYER
+	body.collision_mask=0
+	for base in chain: add_box(body,base+Vector3.UP*3.7,Vector3(0.3,7.4,0.3))
 	add_child(body)
-	body.global_transform=Transform3D(t.basis,t.origin+Vector3.UP*height*0.5)
 
 func tool_for(chunk: Vector2i,key: String) -> SurfaceTool:
 	var id := Vector3i(chunk.x,chunk.y,materials.keys().find(key))
@@ -284,11 +303,13 @@ func house(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGene
 		quad(paint,t,Vector3(hx,low-0.02,hd+deck_d+0.35),Vector3(-hx,low-0.02,hd+deck_d+0.35),Vector3(-hx,high-0.02,hd+0.02),Vector3(hx,high-0.02,hd+0.02),[Vector2.ZERO,Vector2.ZERO,Vector2.ZERO,Vector2.ZERO],shade)
 		for x in [-vw*0.5+0.1,vw*0.5-0.1,-vw*0.17,vw*0.17]:
 			cube(wood,t,Vector3(x,(deck_y+low)*0.5,hd+deck_d-0.1),Vector3(0.11,low-deck_y,0.11),trim.darkened(0.1))
+		extra_boxes.append([Vector3(0,top*0.5,hd+(deck_d+0.9)*0.5),Vector3(vw+0.3,top,deck_d+0.9)])
 	# Rain tank and downpipe: nearly every Vanuatu home collects roof water.
 	if rng.randf()<0.7:
 		var tx: float=(hw+1.05)*(1.0 if rng.randf()<0.5 else -1.0)
 		cylinder(paint,t,Vector3(tx,0.0,-hd*0.35),0.85,2.1,Color(0.25,0.33,0.26) if rng.randf()<0.6 else Color(0.70,0.71,0.68))
 		cube(paint,t,Vector3(tx*0.93,lerpf(2.1,eave,0.5),-hd-over*0.5),Vector3(0.09,eave-2.1,0.09),Color(0.82,0.82,0.78))
+		extra_boxes.append([Vector3(tx,1.05,-hd*0.35),Vector3(1.7,2.1,1.7)])
 
 ## Triangle wound counter-clockwise seen from outside, UVs taken from its position in metres.
 func triangle(s: SurfaceTool,t: Transform3D,a: Vector3,b: Vector3,c: Vector3,color: Color) -> void:
@@ -361,6 +382,7 @@ func shop(chunk: Vector2i,t: Transform3D,data: Dictionary,rng: RandomNumberGener
 	var post := -hw+0.25
 	while post<=hw-0.2:
 		cube(paint,t,Vector3(post,1.45,hd+ad-0.12),Vector3(0.1,2.75,0.1),Color(0.44,0.45,0.44))
+		extra_boxes.append([Vector3(post,1.45,hd+ad-0.12),Vector3(0.2,2.75,0.2)])
 		post+=maxf(2.8,(w-0.5)/maxf(1.0,floorf((w-0.5)/3.6)))
 	# Upper floors: repeating windows and a slab line.
 	for floor_index in range(1,storeys):

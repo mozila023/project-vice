@@ -9,6 +9,9 @@ var camera: Camera3D
 var field_hud: Control
 var villagers: Array[Dictionary] = []
 var traffic: Array[Dictionary] = []
+var cars: Array[CharacterBody3D] = []
+var driving: CharacterBody3D
+var look_timer := 0.0
 var resources: Array[Dictionary] = []
 var boats: Array[Node3D] = []
 var health := 100.0
@@ -54,6 +57,12 @@ var materials := {}
 var smoothed_meshes := {}
 var props=preload("res://scripts/props.gd").new()
 const ACTORS := ["villager-man","villager-woman","villager-man","villager-woman"]
+const CAR_SCRIPT := preload("res://scripts/car.gd")
+## Everyone collides with the world and with cars. Villagers walk around each other by steering, not by blocking.
+const PLAYER_MASK := CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_TERRAIN|CAR_SCRIPT.LAYER_PEOPLE|CAR_SCRIPT.LAYER_CARS|CAR_SCRIPT.LAYER_TREES
+const VILLAGER_MASK := CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_TERRAIN|CAR_SCRIPT.LAYER_CARS|CAR_SCRIPT.LAYER_TREES
+## Parked cars free to drive: [near x, near z, model], at real settlements around the island.
+const PARKING := [[-505.0,128.0,"sedan"],[-470.0,170.0,"hatchback-sports"],[-254.0,438.0,"taxi"],[-290.0,290.0,"suv"],[-248.0,621.0,"van"],[106.0,-685.0,"truck"],[915.0,106.0,"suv"],[-849.0,-135.0,"sedan"]]
 
 func ground(x: float,z: float) -> float:
 	return world.height_at(x,z)
@@ -152,6 +161,7 @@ func capsule(body: CharacterBody3D) -> void:
 	collision.shape=shape
 	collision.position.y=0.88
 	body.add_child(collision)
+	body.collision_layer=CAR_SCRIPT.LAYER_PEOPLE
 	body.floor_snap_length=0.7
 	body.floor_max_angle=deg_to_rad(48)
 
@@ -162,6 +172,7 @@ func build_player() -> void:
 	spawn.y=ground(spawn.x,spawn.z)+0.3
 	player.position=spawn
 	capsule(player)
+	player.collision_mask=PLAYER_MASK
 	visual=model("res://assets/models/villager-man.glb",1.75)
 	player.add_child(visual)
 	visual.rotation.y=PI
@@ -172,6 +183,7 @@ func build_player() -> void:
 	arm.spring_length=5.5
 	arm.margin=0.25
 	arm.add_excluded_object(player.get_rid())
+	arm.collision_mask=CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_TERRAIN
 	camera=Camera3D.new()
 	arm.add_child(camera)
 	camera.current=true
@@ -264,28 +276,32 @@ func build_life() -> void:
 		body.name="Villager_%02d"%i
 		add_child(body)
 		capsule(body)
+		body.collision_mask=VILLAGER_MASK
 		var appearance := model("res://assets/models/"+ACTORS[i%ACTORS.size()]+".glb",rng.randf_range(1.6,1.85))
 		body.add_child(appearance)
 		appearance.rotation.y=PI
 		var points: Array[Vector3]=[]
 		if i==0:
-			for p in [Vector2(-508,135),Vector2(-500,142),Vector2(-512,145)]: points.append(Vector3(p.x,ground(p.x,p.y)+0.2,p.y))
+			# The fisher works around the cooking fire.
+			for p in [Vector2(-496,128),Vector2(-493,141),Vector2(-503,146)]: points.append(Vector3(p.x,ground(p.x,p.y)+0.2,p.y))
 		else:
+			# Each villager keeps their own line across the green, so they rarely meet head on.
 			var side := -1.0 if i%2==0 else 1.0
-			for z in [65.0,85.0,105.0,125.0,135.0]:
-				var x := -489+side*8
-				points.append(Vector3(x,ground(x,z)+0.15,z))
+			var x: float=-489.0+side*(2.0+(i%4)*2.0)
+			var offset: float=(i%5)*3.0
+			for z in [66.0,86.0,106.0,126.0,136.0]:
+				points.append(Vector3(x,ground(x,z+offset)+0.15,z+offset))
+			if i%3==0: points.reverse()
 		body.position=points[i%points.size()]
-		villagers.append({"body":body,"visual":appearance,"name":names[i],"points":points,"target":(i+1)%points.size(),"wait":rng.randf_range(0,4),"speed":rng.randf_range(0.8,1.3)})
+		villagers.append({"body":body,"visual":appearance,"name":names[i],"points":points,"target":(i+1)%points.size(),"wait":rng.randf_range(0,4),"speed":rng.randf_range(0.8,1.3),"check_at":body.position,"check_time":0.0})
 	traffic_curve=Curve3D.new()
 	for p in world.geography.get("traffic_route",[]):
 		traffic_curve.add_point(Vector3(p[0],maxf(0.75,ground(p[0],p[1])+0.2),p[1]))
 	traffic_curve.bake_interval=1.5
-	var car_paints := [Color("c9ccc9"),Color("f0efe9"),Color("a11f1a"),Color("1f3f66")]
 	for i in range(4):
-		var car: Node3D=props.vehicle(["sedan","van","truck"][i%3],car_paints[i])
-		add_child(car)
-		traffic.append({"node":car,"progress":12.0+i*36,"direction":1.0 if i%2==0 else -1.0,"speed":4.0+i*0.6})
+		var car: CharacterBody3D=spawn_car(["sedan","van","suv","truck"][i])
+		traffic.append({"node":car,"progress":12.0+i*36,"direction":1.0 if i%2==0 else -1.0,"speed":4.0+i*0.6,"lane":1.0 if i%2==0 else -1.0})
+	for spot in PARKING: park_car(spot[0],spot[1],spot[2])
 	var beach_x := -540.0
 	for i in range(2):
 		var boat: Node3D=props.boat(i==0)
@@ -326,6 +342,136 @@ func build_life() -> void:
 		node.position=Vector3(x,ground(x,z)+0.12,z)
 		node.rotation.z=PI/2
 		resources.append({"node":node,"kind":"wood","id":100+i,"collected":false})
+
+func spawn_car(kind: String) -> CharacterBody3D:
+	var car: CharacterBody3D=CAR_SCRIPT.new()
+	add_child(car)
+	car.setup(kind,world)
+	cars.append(car)
+	return car
+
+## Pulls a car up at the side of the mapped road nearest to a place, clear of buildings, poles and other cars.
+func park_car(near_x: float,near_z: float,kind: String) -> void:
+	var near := Vector2(near_x,near_z)
+	var best := 1e9
+	var best_at := Vector2.ZERO
+	var best_yaw := 0.0
+	for road in world.geography.roads:
+		if road.type=="runway": continue
+		var half: float=world.road_half(road.type)
+		var pts: Array=road.points
+		for i in range(pts.size()-1):
+			var a := Vector2(pts[i][0],pts[i][1])
+			var b := Vector2(pts[i+1][0],pts[i+1][1])
+			if a.distance_to(near)>140.0 and b.distance_to(near)>140.0: continue
+			var length: float=a.distance_to(b)
+			if length<0.01: continue
+			var dir: Vector2=(b-a)/length
+			var along := 0.0
+			while along<length:
+				var at: Vector2=a+dir*along
+				along+=4.0
+				for side in [-1.0,1.0]:
+					var spot: Vector2=at+Vector2(-dir.y,dir.x)*side*(half+1.6)
+					var distance: float=spot.distance_to(near)
+					if distance<best and parking_clear(spot):
+						best=distance
+						best_at=spot
+						best_yaw=atan2(dir.x,dir.y)
+	if best>=1e9: return
+	var car := spawn_car(kind)
+	car.position=Vector3(best_at.x,0,best_at.y)
+	car.rotation.y=best_yaw
+	car.settle(0.0,true)
+
+func parking_clear(spot: Vector2) -> bool:
+	if ground(spot.x,spot.y)<1.2 or inside_building(spot.x,spot.y): return false
+	if spot.distance_to(Vector2(spawn.x,spawn.z))<7.0: return false
+	for keep in world.KEEP_CLEAR:
+		if spot.distance_to(keep)<7.0: return false
+	for car in cars:
+		if spot.distance_to(Vector2(car.position.x,car.position.z))<8.0: return false
+	for chain in world.baked.poles:
+		for pole: Vector3 in chain:
+			if absf(pole.x-spot.x)<4.0 and absf(pole.z-spot.y)<4.0: return false
+	return true
+
+func nearest_car() -> CharacterBody3D:
+	var found: CharacterBody3D=null
+	var best := 1e9
+	for car in cars:
+		if absf(car.speed)>3.0: continue
+		var distance: float=car.position.distance_to(player.position)
+		if distance<car.half_length+1.6 and distance<best:
+			best=distance
+			found=car
+	return found
+
+func enter_car(car: CharacterBody3D) -> void:
+	if absf(car.speed)>3.0:
+		tell("Wait for the car to stop before getting in.")
+		return
+	cancel_fishing()
+	# A passing car stops being traffic once someone takes the wheel.
+	for i in range(traffic.size()-1,-1,-1):
+		if traffic[i].node==car: traffic.remove_at(i)
+	driving=car
+	player.visible=false
+	player.collision_layer=0
+	player.collision_mask=0
+	player.velocity=Vector3.ZERO
+	camera.get_parent().spring_length=8.0
+	look_timer=0.0
+	tell("W accelerate · S brake / reverse · A D steer · Space handbrake · E get out")
+
+func leave_car(forced := false) -> bool:
+	if driving==null: return true
+	if not forced and absf(driving.speed)>3.0:
+		tell("Slow down before getting out.")
+		return false
+	var f: Vector3=driving.forward()
+	var left := Vector3(f.z,0,-f.x)
+	var reach: float=driving.half_width+0.9
+	var at := Vector3.INF
+	for offset: Vector3 in [left*reach,-left*reach,-f*(driving.half_length+1.0),f*(driving.half_length+1.0)]:
+		var spot: Vector3=driving.position+offset
+		if ground(spot.x,spot.z)>-0.3 and standing_room(spot):
+			at=spot
+			break
+	if at==Vector3.INF:
+		if not forced:
+			tell("No room to open the door here.")
+			return false
+		at=driving.position
+	driving.speed=0.0
+	driving.velocity=Vector3.ZERO
+	driving=null
+	player.global_position=Vector3(at.x,ground(at.x,at.z)+0.3,at.z)
+	player.visible=true
+	player.collision_layer=CAR_SCRIPT.LAYER_PEOPLE
+	player.collision_mask=PLAYER_MASK
+	camera.get_parent().spring_length=5.5
+	return true
+
+func standing_room(spot: Vector3) -> bool:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var shape := CapsuleShape3D.new()
+	shape.height=1.75
+	shape.radius=0.3
+	query.shape=shape
+	query.transform=Transform3D(Basis.IDENTITY,Vector3(spot.x,ground(spot.x,spot.z)+1.05,spot.z))
+	query.collision_mask=CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_CARS|CAR_SCRIPT.LAYER_TREES
+	return get_world_3d().direct_space_state.intersect_shape(query,1).is_empty()
+
+func update_driving(dt: float,input: Vector2) -> void:
+	driving.drive(dt,-input.y,input.x,Input.is_action_pressed("jump"))
+	player.global_position=driving.position
+	if driving.bumped: tell("Crunch! Watch the road.")
+	# The camera swings back behind the car unless the player has just looked around.
+	look_timer=maxf(0.0,look_timer-dt)
+	if look_timer<=0.0 and absf(driving.speed)>1.0:
+		var f: Vector3=driving.forward()
+		yaw=lerp_angle(yaw,atan2(-f.x,-f.z),clampf(dt*2.5,0.0,1.0))
 
 func inside_building(x: float,z: float) -> bool:
 	for b in world.baked.buildings:
@@ -425,6 +571,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not blocked() and not field_hud.mobile:
 		yaw-=event.relative.x*0.003
 		pitch=clampf(pitch-event.relative.y*0.003,-0.95,0.65)
+		look_timer=1.5
 
 func blocked() -> bool:
 	return paused or panel!=""
@@ -443,17 +590,21 @@ func _physics_process(dt: float) -> void:
 		if day_time>=24: day_time-=24; days+=1
 		var input := Input.get_vector("left","right","forward","back")
 		if field_hud.mobile: input=(input+field_hud.move_vector).limit_length()
-		var moving := input.length()>0.1
+		var moving := input.length()>0.1 and driving==null
 		var sprint: bool=(Input.is_action_pressed("sprint") or field_hud.running) and stamina>1 and moving and fishing_state==""
-		var speed := 7.0 if sprint else 4.0
-		if fishing_state!="": speed=1.0
-		var direction := Basis(Vector3.UP,yaw)*Vector3(input.x,0,input.y)
-		player.velocity.x=direction.x*speed
-		player.velocity.z=direction.z*speed
-		player.velocity.y-=20*dt
-		if player.is_on_floor(): player.velocity.y=6.5 if Input.is_action_just_pressed("jump") else -0.1
-		player.move_and_slide()
-		if moving: player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
+		if driving:
+			update_driving(dt,input)
+		else:
+			var speed := 7.0 if sprint else 4.0
+			if fishing_state!="": speed=1.0
+			var direction := Basis(Vector3.UP,yaw)*Vector3(input.x,0,input.y)
+			player.velocity.x=direction.x*speed
+			player.velocity.z=direction.z*speed
+			player.velocity.y-=20*dt
+			if player.is_on_floor(): player.velocity.y=6.5 if Input.is_action_just_pressed("jump") else -0.1
+			player.move_and_slide()
+			if moving: player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
+		world.update_tree_collision(player.position)
 		stamina=clampf(stamina+(-17 if sprint else 13)*dt,0,100)
 		food=maxf(0,food-dt*0.045)
 		thirst=maxf(0,thirst-dt*(0.09 if sprint else 0.055))
@@ -462,6 +613,7 @@ func _physics_process(dt: float) -> void:
 		elif food>60 and thirst>60: health=minf(100,health+dt*0.15)
 		if player.position.y<-1.8: health=maxf(0,health-dt*10)
 		if health<=0:
+			leave_car(true)
 			player.position=spawn
 			player.velocity=Vector3.ZERO
 			health=75; food=50; thirst=50; energy=60
@@ -484,6 +636,8 @@ func update_villagers(dt: float) -> void:
 			npc.wait=maxf(0,npc.wait-dt)
 			body.velocity.x=0; body.velocity.z=0
 			play_animation(npc.visual,"idle")
+			npc.check_at=body.position
+			npc.check_time=0.0
 		else:
 			var goal: Vector3=npc.points[npc.target]
 			var delta := goal-body.position
@@ -491,10 +645,30 @@ func update_villagers(dt: float) -> void:
 			if delta.length()<1.2:
 				npc.target=(npc.target+1)%npc.points.size()
 				npc.wait=rng.randf_range(1.0,3.5)
-			body.velocity.x=delta.normalized().x*npc.speed
-			body.velocity.z=delta.normalized().z*npc.speed
-			if delta.length()>0.1: body.rotation.y=lerp_angle(body.rotation.y,atan2(-delta.x,-delta.z),dt*4)
+			var heading: Vector3=delta.normalized()
+			# Step around neighbours: ease away from anyone close and always pass on the right.
+			for other in villagers:
+				if other==npc: continue
+				var away: Vector3=body.position-other.body.position
+				away.y=0
+				var gap: float=away.length()
+				if gap<2.4 and gap>0.01:
+					var pressure: float=(2.4-gap)/2.4
+					heading+=away/gap*pressure*1.4
+					if heading.dot(-away)>0.0: heading+=Vector3(heading.z,0,-heading.x)*pressure*1.2
+			heading=heading.normalized()
+			body.velocity.x=heading.x*npc.speed
+			body.velocity.z=heading.z*npc.speed
+			if heading.length()>0.1: body.rotation.y=lerp_angle(body.rotation.y,atan2(-heading.x,-heading.z),dt*4)
 			play_animation(npc.visual,"walk",0.8)
+			# Blocked by something for two seconds: give up on this leg and head for the next point.
+			npc.check_time+=dt
+			if npc.check_time>=2.0:
+				if body.position.distance_to(npc.check_at)<0.5:
+					npc.target=(npc.target+1)%npc.points.size()
+					npc.wait=rng.randf_range(0.3,1.2)
+				npc.check_at=body.position
+				npc.check_time=0.0
 		body.velocity.y=-8
 		body.move_and_slide()
 
@@ -502,22 +676,36 @@ func update_traffic(dt: float) -> void:
 	var length := traffic_curve.get_baked_length()
 	if length<1: return
 	for car in traffic:
-		var node: Node3D=car.node
-		var stop := node.position.distance_to(player.position)<5
+		var node: CharacterBody3D=car.node
+		var center := traffic_curve.sample_baked(car.progress,true)
+		var tangent: Vector3=traffic_curve.sample_baked(minf(car.progress+1.0,length),true)-traffic_curve.sample_baked(maxf(car.progress-1.0,0.0),true)
+		tangent.y=0
+		tangent=tangent.normalized()
+		var direction: Vector3=tangent*car.direction
+		var stop: bool=blocked_ahead(node,direction)
 		for other in traffic:
 			if other==car: continue
 			if other.direction==car.direction and (other.progress-car.progress)*car.direction>0 and absf(other.progress-car.progress)<11: stop=true
 		if not stop: car.progress+=car.direction*car.speed*dt
 		if car.progress>length-1: car.progress=length-1; car.direction=-1.0
 		elif car.progress<1: car.progress=1; car.direction=1.0
-		var center := traffic_curve.sample_baked(car.progress,true)
-		var ahead := traffic_curve.sample_baked(clampf(car.progress+car.direction*2,0,length),true)
-		var direction := (ahead-center).normalized()
-		var side := direction.cross(Vector3.UP)*1.35
-		node.position=center+side
-		node.rotation.y=atan2(direction.x,direction.z)
-		for wheel in node.find_children("wheel*","Node3D",true,false):
-			if not stop: wheel.rotate_x(dt*car.speed*2.0)
+		# The right-hand lane, eased across at each end of the route so the turn is a U-turn, not a jump.
+		car.lane=move_toward(car.lane,car.direction,dt*0.45)
+		node.follow(center+tangent.cross(Vector3.UP)*car.lane*1.45,atan2(direction.x,direction.z),0.0 if stop else car.speed,dt)
+
+## True if the player or another car is in this car's lane within braking distance.
+func blocked_ahead(node: CharacterBody3D,direction: Vector3) -> bool:
+	if direction.length_squared()<0.5: return false
+	var targets: Array[Vector3]=[player.position]
+	for npc in villagers: targets.append(npc.body.position)
+	for other in cars:
+		if other!=node: targets.append(other.position)
+	for at in targets:
+		var offset: Vector3=at-node.position
+		offset.y=0
+		var along: float=offset.dot(direction)
+		if along>0.0 and along<node.half_length+6.0 and absf(offset.dot(Vector3(direction.z,0,-direction.x)))<1.9: return true
+	return false
 
 func tell(value: String) -> void:
 	notice=value
@@ -534,6 +722,7 @@ func fishing_water() -> Vector3:
 
 func cast_line() -> void:
 	if blocked(): return
+	if driving: tell("Get out of the car before fishing."); return
 	if fishing_state=="bite": reel(); return
 	if fishing_state!="": cancel_fishing(); tell("Line reeled in."); return
 	var point := fishing_water()
@@ -584,6 +773,7 @@ func cancel_fishing() -> void:
 	if is_instance_valid(line): line.mesh=null
 
 func nearby_context() -> String:
+	if driving: return "GET OUT" if absf(driving.speed)<=3.0 else ""
 	if fishing_state=="bite": return "REEL IN THE FISH"
 	if player.position.distance_to(camp_position)<3.5: return "COOK FISH / 1 raw fish + 1 driftwood"
 	if player.position.distance_to(well_position)<3.5: return "DRINK / REFILL AT THE WELL"
@@ -592,10 +782,12 @@ func nearby_context() -> String:
 		if npc.body.position.distance_to(player.position)<3: return "TALK / "+npc.name
 	for item in resources:
 		if not item.collected and item.node.position.distance_to(player.position)<2.5: return "COLLECT "+item.kind.to_upper()
+	if nearest_car(): return "DRIVE THIS CAR"
 	return ""
 
 func interact() -> void:
 	if blocked(): return
+	if driving: leave_car(); return
 	if fishing_state=="bite": reel(); return
 	if player.position.distance_to(camp_position)<3.5:
 		if fish>0 and wood>0:
@@ -625,6 +817,8 @@ func interact() -> void:
 			else: wood+=1
 			tell("Collected "+item.kind+".")
 			return
+	var car := nearest_car()
+	if car: enter_car(car); return
 	if fishing_state!="": cast_line()
 	else: tell("Explore the beach, meet a villager, or press F to fish beside the water.")
 
@@ -692,6 +886,7 @@ func load_game() -> void:
 	for item in resources:
 		item.collected=item.id in gathered
 		item.node.visible=not item.collected
+	leave_car(true)
 	player.position=loaded
 	player.velocity=Vector3.ZERO
 	cancel_fishing()

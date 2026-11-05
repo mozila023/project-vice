@@ -26,6 +26,7 @@ var land_density := PackedByteArray()
 var land_shops := PackedByteArray()
 var land_class := PackedByteArray()
 var rejected := {}
+var pole_points: Array[Vector3] = []
 
 func _initialize() -> void:
 	var started := Time.get_ticks_msec()
@@ -195,7 +196,10 @@ func to_pixel(x: float,z: float) -> Vector2:
 func bake_road_distance() -> void:
 	road_dist.resize(RES*RES)
 	road_dist.fill(1000.0)
-	for road in world.geography.get("roads",[]):
+	# The traffic route counts as a road too: it follows the raw mapped line, which can differ from the drawn one.
+	var lines: Array=world.geography.get("roads",[]).duplicate()
+	lines.append({"points":world.geography.get("traffic_route",[]),"type":"secondary"})
+	for road in lines:
 		var pts: Array=road.points
 		var half: float=world.road_half(road.type)
 		var shift: float=2.9-half
@@ -286,17 +290,34 @@ func land_at(x: float,z: float) -> int:
 	if cx<0 or cz<0 or cx>=LAND or cz>=LAND: return 0
 	return land_class[cz*LAND+cx]
 
+## The whole footprint plus the veranda or awning in front, not only its corners: a road can cross the middle of a lot.
 func lot_clear_of_roads(x: float,z: float,yaw: float,w: float,d: float) -> bool:
 	var basis := Basis(Vector3.UP,yaw)
-	for o in [Vector3(-w,0,-d),Vector3(w,0,-d),Vector3(-w,0,d),Vector3(w,0,d)]:
-		var c: Vector3=basis*(o*0.5)
-		if road_distance(x+c.x,z+c.z)<3.6: return false
+	var depth_back: float=-d*0.5
+	var depth_front: float=d*0.5+3.2
+	for ix in range(5):
+		for iz in range(5):
+			var c: Vector3=basis*Vector3(lerpf(-w*0.5,w*0.5,ix/4.0),0,lerpf(depth_back,depth_front,iz/4.0))
+			if road_distance(x+c.x,z+c.z)<3.5: return false
 	return true
+
+func hits_pole(x: float,z: float,yaw: float,w: float,d: float) -> bool:
+	for pole in pole_points:
+		if footprint_contains(x,z,yaw,w,d,pole.x,pole.z,1.0): return true
+	return false
+
+func footprint_contains(x: float,z: float,yaw: float,w: float,d: float,px: float,pz: float,margin: float) -> bool:
+	var ox: float=px-x
+	var oz: float=pz-z
+	var lx: float=ox*cos(yaw)-oz*sin(yaw)
+	var lz: float=ox*sin(yaw)+oz*cos(yaw)
+	return absf(lx)<w*0.5+margin and lz>-d*0.5-margin and lz<d*0.5+3.2+margin
 
 func try_building(p: Vector2,yaw: float,w: float,d: float,storeys: int,style: int,drive: float) -> bool:
 	var size: float=maxf(w,d)*0.62
 	var reason := ""
 	if not lot_clear_of_roads(p.x,p.y,yaw,w,d): reason="road"
+	elif hits_pole(p.x,p.y,yaw,w,d): reason="pole"
 	elif land_at(p.x,p.y) in [8,9]: reason="land"
 	elif not flat_enough(p.x,p.y,size): reason="slope"
 	elif not free_spot(p.x,p.y,size): reason="occupied"
@@ -312,12 +333,16 @@ func place_buildings() -> Array:
 		# West row stands clear of the tide line.
 		var x := -507.0 if i%2==0 else -464.0
 		var z := 86.0+floorf(i/2.0)*17.0
-		add_building(x,z,PI/2 if i%2==0 else -PI/2,10.0,8.5,1,i%2)
+		# The mapped Ring Road runs through the south end of this layout: those plots stay empty.
+		if lot_clear_of_roads(x,z,PI/2 if i%2==0 else -PI/2,10.0,8.5):
+			add_building(x,z,PI/2 if i%2==0 else -PI/2,10.0,8.5,1,i%2)
 	# Outer rows make Mele read as a lived-in village rather than a line of houses.
 	var outer := [[-541.0,80.0,PI/2],[-541.0,103.0,PI/2],[-541.0,126.0,PI/2],[-437.0,74.0,-PI/2],[-437.0,97.0,-PI/2],[-437.0,120.0,-PI/2],[-437.0,143.0,-PI/2],[-470.0,54.0,0.0],[-505.0,54.0,0.0],[-470.0,168.0,PI],[-440.0,168.0,PI],[-505.0,170.0,PI]]
 	for o in outer:
-		if flat_enough(o[0],o[1],7.0):
-			add_building(o[0],o[1],o[2],rng.randf_range(8.5,12.0),rng.randf_range(7.0,9.0),1,rng.randi_range(0,1))
+		var outer_w := rng.randf_range(8.5,12.0)
+		var outer_d := rng.randf_range(7.0,9.0)
+		if flat_enough(o[0],o[1],7.0) and lot_clear_of_roads(o[0],o[1],o[2],outer_w,outer_d):
+			add_building(o[0],o[1],o[2],outer_w,outer_d,1,rng.randi_range(0,1))
 	var poles: Array=[]
 	var vila := Vector2.ZERO
 	for place in world.geography.get("places",[]):
@@ -349,7 +374,13 @@ func place_buildings() -> Array:
 				if built and road.type in ["secondary","tertiary","unclassified"] and int(walked/34.0)!=int((walked+6.0)/34.0):
 					var q := p+normal*(half+2.2)
 					var h: float=world.height_at(q.x,q.y)
-					if h>0.6: chain.append(Vector3(q.x,h,q.y))
+					var clear: bool=h>0.6 and road_distance(q.x,q.y)>=4.2
+					# Mele's hand-placed houses are already standing at this point.
+					for house in buildings_near(q.x,q.y):
+						if footprint_contains(house.x,house.z,house.yaw,house.w,house.d,q.x,q.y,1.0): clear=false
+					if clear:
+						chain.append(Vector3(q.x,h,q.y))
+						pole_points.append(chain[-1])
 				elif not built and chain.size()>0:
 					if chain.size()>1: poles.append(chain)
 					chain=PackedVector3Array()

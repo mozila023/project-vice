@@ -129,6 +129,8 @@ func build() -> void:
 	create_ocean()
 	create_vegetation()
 	create_rocks()
+	index_trunks()
+	index_roads()
 	ground_cover=preload("res://scripts/ground_cover.gd").new()
 	ground_cover.world=self
 	add_child(ground_cover)
@@ -347,6 +349,7 @@ func create_terrain() -> void:
 	# One height-field body is far cheaper to create and query than per-chunk triangle meshes.
 	var body := StaticBody3D.new()
 	body.name="TerrainCollision"
+	body.collision_layer=16
 	var shape := HeightMapShape3D.new()
 	shape.map_width=n
 	shape.map_depth=n
@@ -499,6 +502,95 @@ func create_rocks() -> void:
 
 func road_half(type: String) -> float:
 	return ROAD_HALF.get(type,2.4)
+
+const ROAD_CELL := 20.0
+var road_grid := {}
+
+func index_roads() -> void:
+	for road in geography.get("roads",[]):
+		var half: float=road_half(road.type)
+		var pts: Array=road.points
+		for i in range(pts.size()-1):
+			var a := Vector2(pts[i][0],pts[i][1])
+			var b := Vector2(pts[i+1][0],pts[i+1][1])
+			var steps := maxi(1,ceili(a.distance_to(b)/(ROAD_CELL*0.5)))
+			var seen := {}
+			for k in range(steps+1):
+				var p := a.lerp(b,float(k)/steps)
+				var key := Vector2i(floori(p.x/ROAD_CELL),floori(p.y/ROAD_CELL))
+				for oz in range(-1,2):
+					for ox in range(-1,2):
+						var near := key+Vector2i(ox,oz)
+						if seen.has(near): continue
+						seen[near]=true
+						if not road_grid.has(near): road_grid[near]=[]
+						road_grid[near].append([a,b,half])
+
+## Whether a point is on the tarmac of a mapped road. Used to slow cars on rough ground.
+func is_on_road(x: float,z: float) -> bool:
+	var p := Vector2(x,z)
+	for segment in road_grid.get(Vector2i(floori(x/ROAD_CELL),floori(z/ROAD_CELL)),[]):
+		if Geometry2D.get_closest_point_to_segment(p,segment[0],segment[1]).distance_to(p)<=segment[2]+0.6: return true
+	return false
+
+## Tree and palm trunks collide, built only around the player: thousands of them would be slow to create at load.
+## They sit on their own layer so the camera arm passes through instead of jittering on every trunk.
+const TREE_CELL := 60.0
+const TREE_REACH := 2
+const TREE_LAYER := 8
+var trunk_groups := {}
+var trunk_bodies := {}
+var trunk_shape_tree: RID
+var trunk_shape_palm: RID
+var trunk_cell := Vector2i(1<<30,0)
+
+func index_trunks() -> void:
+	trunk_shape_tree=PhysicsServer3D.cylinder_shape_create()
+	PhysicsServer3D.shape_set_data(trunk_shape_tree,{"radius":0.45,"height":7.0})
+	trunk_shape_palm=PhysicsServer3D.cylinder_shape_create()
+	PhysicsServer3D.shape_set_data(trunk_shape_palm,{"radius":0.24,"height":7.0})
+	for chunk in baked.trees: group_trunks(chunk,true)
+	for chunk in baked.palms: group_trunks(chunk,false)
+
+func group_trunks(chunk: Dictionary,is_tree: bool) -> void:
+	var buffer: PackedFloat32Array=chunk.buffer
+	var visible_count: int=int(chunk.count*TIERS[tier].trees) if is_tree else chunk.count
+	for i in range(mini(chunk.count,maxi(visible_count,1))):
+		var at: int=i*16
+		# Row two of the atlas holds bushes, which the player can push through.
+		if is_tree and buffer[at+13]>0.5: continue
+		var p: Vector3=chunk.centre+Vector3(buffer[at+3],buffer[at+7],buffer[at+11])
+		var key := Vector2i(floori(p.x/TREE_CELL),floori(p.z/TREE_CELL))
+		if not trunk_groups.has(key): trunk_groups[key]=[]
+		trunk_groups[key].append([p,is_tree])
+
+func update_tree_collision(view: Vector3) -> void:
+	var cell := Vector2i(floori(view.x/TREE_CELL),floori(view.z/TREE_CELL))
+	if cell==trunk_cell: return
+	trunk_cell=cell
+	for key in trunk_bodies.keys():
+		if absi(key.x-cell.x)>TREE_REACH+1 or absi(key.y-cell.y)>TREE_REACH+1:
+			PhysicsServer3D.free_rid(trunk_bodies[key])
+			trunk_bodies.erase(key)
+	for oz in range(cell.y-TREE_REACH,cell.y+TREE_REACH+1):
+		for ox in range(cell.x-TREE_REACH,cell.x+TREE_REACH+1):
+			var key := Vector2i(ox,oz)
+			if trunk_bodies.has(key) or not trunk_groups.has(key): continue
+			var body: RID=PhysicsServer3D.body_create()
+			PhysicsServer3D.body_set_mode(body,PhysicsServer3D.BODY_MODE_STATIC)
+			PhysicsServer3D.body_set_space(body,get_world_3d().space)
+			PhysicsServer3D.body_set_collision_layer(body,TREE_LAYER)
+			PhysicsServer3D.body_set_collision_mask(body,0)
+			for entry in trunk_groups[key]:
+				var shape: RID=trunk_shape_tree if entry[1] else trunk_shape_palm
+				PhysicsServer3D.body_add_shape(body,shape,Transform3D(Basis.IDENTITY,entry[0]+Vector3.UP*3.5))
+			trunk_bodies[key]=body
+
+func _exit_tree() -> void:
+	for key in trunk_bodies: PhysicsServer3D.free_rid(trunk_bodies[key])
+	trunk_bodies.clear()
+	if trunk_shape_tree.is_valid(): PhysicsServer3D.free_rid(trunk_shape_tree)
+	if trunk_shape_palm.is_valid(): PhysicsServer3D.free_rid(trunk_shape_palm)
 
 func create_roads() -> void:
 	var road_material := ShaderMaterial.new()

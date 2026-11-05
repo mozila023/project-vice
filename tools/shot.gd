@@ -12,6 +12,7 @@ const POSES := {
 	"sea": [-531.0, 2.4, 188.0, 1.9, -0.08, 5.0, 16.5, false],
 	"boats": [-531.0, 1.8, 172.0, 1.2, -0.10, 6.0, 11.0, false],
 	"car": [0.0, 1.8, 0.0, 0.4, -0.10, 7.0, 10.5, false],
+	"driving": [0.0, 2.0, 0.0, 0.0, -0.16, 8.0, 10.5, true],
 	"town": [-254.0, 2.0, 438.0, 0.6, -0.03, 6.0, 10.5, false],
 	"road": [-300.0, 1.8, 380.0, 0.0, -0.04, 5.0, 14.0, false],
 	"hills": [-420.0, 3.0, 40.0, -0.9, 0.03, 5.0, 11.0, false],
@@ -41,8 +42,23 @@ func run() -> void:
 	var game: Node=current_scene
 	await process_frame
 	game.set_physics_process(false)
+	game.set_process_unhandled_input(false)
 	for pose_name in names:
 		var p: Array=(POSES[pose_name] as Array).duplicate()
+		if pose_name=="driving":
+			game.update_traffic(0.016)
+			var car=game.cars[4]
+			game.enter_car(car)
+			game.yaw=atan2(-car.forward().x,-car.forward().z)
+			game.pitch=p[4]
+			for step in range(120):
+				await physics_frame
+				game.update_driving(1.0/60.0,Vector2(0,-1))
+			var at: Vector3=car.position
+			p[0]=at.x
+			p[2]=at.z
+			p[3]=game.yaw
+			print("SHOT driving speed=",car.speed," heading=",car.rotation.y," camera_yaw=",game.yaw)
 		if pose_name=="car":
 			game.update_traffic(0.016)
 			var at: Vector3=game.traffic[int(Time.get_ticks_msec())%3].node.position

@@ -69,7 +69,14 @@ func _draw() -> void:
 			text(Vector2(371,114),game.notice,12)
 		card(Rect2(16,h-72,810,60),Color(0.025,0.08,0.09,0.7))
 		text(Vector2(24,h-24),"FISH %d   COOKED %d   COCONUT %d   WOOD %d   /   %d VATU" % [game.fish,game.cooked_fish,game.coconuts,game.wood,game.coins],13)
-		if not mobile: text(Vector2(24,h-48),"WASD walk · Shift run · F cast / cancel · E interact / reel · Q eat · Tab pack · M map · Esc pause · F7 touch preview",12)
+		if not mobile:
+			var hint: String="W gas · S brake / reverse · A D steer · Space handbrake · E get out · M map · Esc pause" if game.driving else "WASD walk · Shift run · E interact / drive · F cast / cancel · Q eat · Tab pack · M map · Esc pause · F7 touch preview"
+			text(Vector2(24,h-48),hint,12)
+		if game.driving:
+			card(Rect2(w-170,h-92,150,72))
+			text(Vector2(w-154,h-48),"%d" % int(absf(game.driving.speed)*3.6),34,GOLD)
+			text(Vector2(w-88,h-48),"km/h",14)
+			text(Vector2(w-154,h-30),"R" if game.driving.speed<-0.5 else "D",12)
 	if game.panel=="map": draw_map()
 	elif game.panel=="pack":
 		card(Rect2(w/2-250,h/2-150,500,310))
@@ -152,6 +159,7 @@ func _input(event: InputEvent) -> void:
 		elif role=="look" and not game.blocked():
 			game.yaw-=event.relative.x*0.004
 			game.pitch=clampf(game.pitch-event.relative.y*0.004,-0.95,0.65)
+			game.look_timer=1.5
 		get_viewport().set_input_as_handled()
 
 func activate(key: String,pressed: bool) -> void:
