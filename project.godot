@@ -1,0 +1,54 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Vanuatu Vice"
+run/main_scene="res://scenes/island.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.03, 0.09, 0.11, 1)
+config/icon="res://icon.svg"
+
+[autoload]
+
+MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/godot_mcp_toolkit/plugin.cfg")
+
+[mcp_toolkit]
+
+server/version="latest"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_s3tc_bptc=true
+textures/vram_compression/import_etc2_astc=true
+textures/default_filters/anisotropic_filtering_level=4
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=1
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/use_debanding=true
+environment/defaults/default_clear_color=Color(0.56, 0.72, 0.85, 1)

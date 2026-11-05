@@ -1,0 +1,25 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+tools/.cache/
+build/
+
+# Old Unity project and local copies, not part of the Godot game
+/app/
+/backups/
+/godot-mcp-toolkit-*.zip
+/addons/.godot_ai_update/
+*.lnk
+
+# Local tool state, logs and session history
+/.claude/settings.local.json
+/build-activity.log
+/craft.json
+/feed.json
+/usage.json
+/checks/
+/capture/
+/pinned/
+/investigation.cany/
+/reference/
