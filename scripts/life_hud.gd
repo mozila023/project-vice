@@ -10,6 +10,7 @@ var icons := {}
 var settings_view: Control
 var styles := {}
 var smoothed_health := 100.0
+var mini_map: Control
 const BAR_FILL := preload("res://assets/ui/bar_fill.png")
 const BAR_FRAME := preload("res://assets/ui/bar_border.png")
 const WHITE := Color("eef4e8")
@@ -24,6 +25,9 @@ func _ready() -> void:
 	font.fallbacks=[ThemeDB.fallback_font]
 	for key in ["heart-pulse","droplets","utensils","zap","compass","map-pin","plane","book-open","settings-2","backpack"]:
 		icons[key]=load("res://assets/ui/icons/"+key+".svg")
+	mini_map=preload("res://scripts/mini_map.gd").new()
+	mini_map.game=game
+	add_child(mini_map)
 
 func _process(_dt: float) -> void:
 	smoothed_health=lerpf(smoothed_health,game.health,clampf(_dt*7,0,1))
@@ -68,6 +72,7 @@ func buttons() -> Dictionary:
 	var w := size.x
 	var h := size.y
 	var values := {"pause":Rect2(w-70,20,50,46),"map":Rect2(w-158,20,80,46),"pack":Rect2(w-246,20,80,46),"journal":Rect2(w-350,20,96,46),"language":Rect2(w-438,20,80,46)}
+	if not game.blocked(): values["minimap"]=Rect2(24,236 if mobile else 108,196,224)
 	if game.paused:
 		values.merge({"save":Rect2(w/2-150,h/2+5,140,48),"load":Rect2(w/2+10,h/2+5,140,48),"settings":Rect2(w/2-150,h/2+65,140,48),"main_menu":Rect2(w/2+10,h/2+65,140,48),"resume":Rect2(w/2-150,h/2+125,300,48)})
 	elif game.panel=="talk":
@@ -152,6 +157,7 @@ func _draw() -> void:
 		text(Vector2(w/2-100,h/2-88),"ISLAND AT REST",25,GOLD)
 		text(Vector2(w/2-160,h/2-43),"Save your day, load, or return to the coast.",15)
 	for key in buttons():
+		if key=="minimap": continue
 		if not mobile and not game.blocked() and not key in ["journal","language"]: continue
 		var rect: Rect2=buttons()[key]
 		card(rect,Color(0.05,0.17,0.17,0.85))
@@ -206,7 +212,7 @@ func draw_navigation() -> void:
 	var goal: Vector3=game.navigation.next_point+Vector3.UP*2.2
 	var point: Vector2=game.camera.unproject_position(goal)
 	var behind: bool=game.camera.is_position_behind(goal)
-	var inset := Rect2(46,240 if mobile else 185,size.x-404,size.y-(465 if mobile else 410))
+	var inset := Rect2(244,240 if mobile else 185,size.x-602,size.y-(465 if mobile else 410))
 	var offscreen: bool=behind or not inset.has_point(point)
 	if offscreen:
 		var relative: float=wrapf(game.navigation.bearing()-game.yaw,-PI,PI)
@@ -257,7 +263,7 @@ func _input(event: InputEvent) -> void:
 		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if mobile else Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		for key in buttons():
-			if not mobile and not game.blocked() and not key in ["journal","language"]: continue
+			if not mobile and not game.blocked() and not key in ["journal","language","minimap"]: continue
 			if buttons()[key].has_point(event.position):
 				activate(key,true)
 				get_viewport().set_input_as_handled()
@@ -315,7 +321,7 @@ func activate(key: String,pressed: bool) -> void:
 		"main_menu":
 			release_all()
 			get_tree().change_scene_to_file("res://scenes/front_end.tscn")
-		"map": game.panel="" if game.panel=="map" else "map"; release_all()
+		"map", "minimap": game.panel="" if game.panel=="map" else "map"; release_all()
 		"pack": game.panel="" if game.panel=="pack" else "pack"; release_all()
 		"close": game.panel=""; release_all()
 		"save": game.save_game()

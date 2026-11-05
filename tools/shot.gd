@@ -50,9 +50,12 @@ func run() -> void:
 	await process_frame
 	game.set_physics_process(false)
 	game.set_process_unhandled_input(false)
+	game.field_hud.set_process_input(false)
+	if root.focus_exited.is_connected(game.on_focus_lost): root.focus_exited.disconnect(game.on_focus_lost)
 	for pose_name in names:
 		var p: Array=(POSES[pose_name] as Array).duplicate()
 		game.panel=""
+		game.paused=false
 		game.field_hud.mobile=pose_name in ["mobile_hud","mobile_drive"]
 		if pose_name in ["journal_th","journal_en","island_th","talk_th"]:
 			game.story.language="en" if pose_name=="journal_en" else "th"

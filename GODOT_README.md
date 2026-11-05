@@ -8,6 +8,8 @@ The game opens on a New Game / Continue / Settings menu. New Game plays a skippa
 
 An optional six-chapter TH/EN story and an independent discovery journal cover Mele, Port Vila, Port Havannah and Eton. Relaxed exploration is the default; survival mode can be enabled in the journal. Press J for the journal, L for TH/EN, E to interact/drive, F to fish, and M for the map. See [ISLAND_STORY.md](ISLAND_STORY.md) for island research sources and mission details.
 
+The north-up minimap centres on the player, shows facing direction, nearby roads/villagers and the tracked quest route, and points to off-map goals at its edge. It zooms out when driving. Tap it or press M for the full map. It reuses the existing atlas at 10Hz, with separate desktop/mobile placement to keep touch controls clear.
+
 Open `project.godot` with Godot 4.7 and press F6 on `scenes/island.tscn`, or F5 for the main scene.
 
 The previous Unity project is retained locally in `app/`. The current Godot game focuses on peaceful exploration, fishing, cooking, village life and an optional recovery story. Downloaded assets and their licences are documented in `ASSET_CREDITS.md`.
