@@ -123,28 +123,23 @@ func build_scene() -> void:
 	tarmac.uv1_scale=Vector3(35,35,35)
 	floor.material_override=tarmac
 	for i in range(14): box(apron,Vector3(-18,0.025,-65+i*10),Vector3(0.3,0.03,5),Color("e6d3a2"))
-	box(apron,Vector3(-32,4,-28),Vector3(36,8,18),Color("c2c4be"))
-	for i in range(10): box(apron,Vector3(-47+i*3.3,4.5,-18.9),Vector3(2.5,3,0.1),Color("466570"))
+	var apron_props: Node3D=preload("res://assets/models/aircraft/airport_apron_props.glb").instantiate()
+	apron.add_child(apron_props)
 	boarding=preload("res://scripts/boarding_sequence.gd").new()
 	boarding.name="Boarding"
 	apron.add_child(boarding)
 	boarding.build(plane)
-	# A separate compact interior shot; its window is a real opening, not a still image.
-	cabin=Node3D.new()
+	# A separate compact interior shot sculpted in Blender; its window is a real opening, not a still image.
+	cabin=preload("res://assets/models/aircraft/aircraft_cabin.glb").instantiate()
+	cabin.name="Cabin"
 	add_child(cabin)
-	box(cabin,Vector3(0,0,0),Vector3(4,0.15,8),Color("4b545b"))
-	box(cabin,Vector3(0,2.8,0),Vector3(4,0.15,8),Color("e4e0d4"))
-	for z in [-3.0,-1.5,0.0,1.5,3.0]:
-		box(cabin,Vector3(-1.8,1.3,z),Vector3(0.2,2.8,0.35),Color("ddd9ce"))
-		if z<3.0: window_panel(z+0.75)
-		for x in [-1.0,1.0]:
-			box(cabin,Vector3(x,0.65,z),Vector3(0.75,0.18,0.65),Color("344853"))
-			box(cabin,Vector3(x,1.15,z+0.3),Vector3(0.75,1.0,0.18),Color("344853"))
-			box(cabin,Vector3(x,1.55,z+0.18),Vector3(0.42,0.22,0.12),Color("c4bba6"))
-	box(cabin,Vector3(-1.85,0.5,0),Vector3(0.22,1.0,8),Color("ddd9ce"))
-	box(cabin,Vector3(-1.85,2.55,0),Vector3(0.22,0.55,8),Color("ddd9ce"))
-	box(cabin,Vector3(-5.3,0.0,-0.4),Vector3(7,0.12,1.3),Color("c2c9c7"))
-	box(cabin,Vector3(-8.5,0.25,-0.4),Vector3(0.12,0.6,1.3),Color("536c78"))
+	for mesh: MeshInstance3D in cabin.find_children("*","MeshInstance3D",true,false):
+		for i in range(mesh.mesh.get_surface_count()):
+			var mat=mesh.get_active_material(i)
+			if mat is StandardMaterial3D:
+				mat=mat.duplicate()
+				mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+				mesh.set_surface_override_material(i,mat)
 	clouds=Node3D.new()
 	add_child(clouds)
 	var cloud_mat := material(Color("e6e7e2"),1)

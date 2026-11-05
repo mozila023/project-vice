@@ -355,41 +355,16 @@ func build_life() -> void:
 	well_position=Vector3(-475,ground(-475,110),110)
 	camp_position=Vector3(-500,ground(-500,136),136)
 	shelter_position=Vector3(-455,ground(-455,130),130)
-	# A communal well, cooking circle and sheltered sleeping mat.
-	var well := CSGCylinder3D.new()
-	well.radius=0.9
-	well.height=1.0
-	well.sides=12
-	well.material=material("well",Color("989a84"))
+	# Blender-authored communal well, cooking campfire circle and sheltered bamboo sleeping pavilion.
+	var well: Node3D=preload("res://assets/models/props/village_well.glb").instantiate()
 	add_child(well)
-	well.position=well_position+Vector3.UP*0.5
-	var ring := TorusMesh.new()
-	ring.inner_radius=0.42
-	ring.outer_radius=0.68
-	var fire := MeshInstance3D.new()
-	fire.mesh=ring
-	fire.material_override=material("stones",Color("6d756a"))
-	add_child(fire)
-	fire.position=camp_position+Vector3.UP*0.15
-	for i in range(3):
-		var log_mesh := MeshInstance3D.new()
-		var log_shape := CylinderMesh.new()
-		log_shape.top_radius=0.10
-		log_shape.bottom_radius=0.13
-		log_shape.height=1.1
-		log_shape.radial_segments=7
-		log_mesh.mesh=log_shape
-		log_mesh.material_override=material("timber",Color("67503b"))
-		add_child(log_mesh)
-		log_mesh.position=camp_position+Vector3.UP*0.2
-		log_mesh.rotation=Vector3(PI/2,i*PI/3,0)
-	var mat_mesh := MeshInstance3D.new()
-	var mat_shape := BoxMesh.new()
-	mat_shape.size=Vector3(1,0.12,2)
-	mat_mesh.mesh=mat_shape
-	mat_mesh.material_override=material("mat",Color("9f9366"))
-	add_child(mat_mesh)
-	mat_mesh.position=shelter_position+Vector3.UP*0.3
+	well.position=well_position
+	var fire_pit: Node3D=preload("res://assets/models/props/campfire_pit.glb").instantiate()
+	add_child(fire_pit)
+	fire_pit.position=camp_position
+	var shelter: Node3D=preload("res://assets/models/props/island_shelter.glb").instantiate()
+	add_child(shelter)
+	shelter.position=shelter_position
 	build_fire()
 	var names := ["Malia / Fisher","Jonas / Market","Lina","David","Ana","Peter","Sera","Thomas","Rose","Ben","Mary","Paul"]
 	for i in range(12):
@@ -432,38 +407,27 @@ func build_life() -> void:
 		boat.position=Vector3(beach_x-i*10,0,165+i*9)
 		boat.rotation.y=0.8+i*0.5
 		boats.append(boat)
+	var coconut_scene: PackedScene=preload("res://assets/models/props/coconut.glb")
+	var driftwood_scene: PackedScene=preload("res://assets/models/props/driftwood.glb")
 	for i in range(18):
 		var x := -490+rng.randf_range(-12,35)
 		var z := rng.randf_range(95,150)
 		if ground(x,z)<1 or inside_building(x,z): continue
-		var coconut := MeshInstance3D.new()
-		var shape := SphereMesh.new()
-		shape.radius=0.14
-		shape.height=0.3
-		shape.radial_segments=8
-		shape.rings=4
-		coconut.mesh=shape
-		coconut.material_override=material("coconut",Color("836446"))
+		var coconut: Node3D=coconut_scene.instantiate()
 		add_child(coconut)
-		coconut.position=Vector3(x,ground(x,z)+0.16,z)
+		coconut.position=Vector3(x,ground(x,z),z)
+		coconut.rotation.y=rng.randf()*TAU
 		resources.append({"node":coconut,"kind":"coconut","id":i,"collected":false})
 	for i in range(8):
-		var node := MeshInstance3D.new()
-		var shape := CylinderMesh.new()
-		shape.top_radius=0.08
-		shape.bottom_radius=0.12
-		shape.height=1.2
-		shape.radial_segments=6
-		node.mesh=shape
-		node.material_override=material("timber",Color("67503b"))
+		var node: Node3D=driftwood_scene.instantiate()
 		add_child(node)
 		var x := rng.randf_range(-505,-485)
 		var z := rng.randf_range(120,145)
 		while inside_building(x,z):
 			x=rng.randf_range(-505,-485)
 			z=rng.randf_range(120,145)
-		node.position=Vector3(x,ground(x,z)+0.12,z)
-		node.rotation.z=PI/2
+		node.position=Vector3(x,ground(x,z),z)
+		node.rotation.y=rng.randf()*TAU
 		resources.append({"node":node,"kind":"wood","id":100+i,"collected":false})
 
 func spawn_car(kind: String) -> CharacterBody3D:

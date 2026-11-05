@@ -14,7 +14,7 @@ The north-up minimap centres on the player, shows facing direction, nearby roads
 
 Open `project.godot` with Godot 4.7 and press F6 on `scenes/island.tscn`, or F5 for the main scene.
 
-The previous Unity project is retained locally in `app/`. The current Godot game focuses on peaceful exploration, fishing, cooking, village life and an optional recovery story. Downloaded assets and their licences are documented in `ASSET_CREDITS.md`.
+The current Godot game focuses on peaceful exploration, fishing, cooking, village life and an optional recovery story. Custom 3D landmarks, watercraft, spa interior furniture, aircraft cabin, and smoothed vehicle meshes are authored in Blender 5.2; downloaded assets and their licences are documented in `ASSET_CREDITS.md`.
 
 Map data: roads, land use and building density come from OpenStreetMap (© OpenStreetMap contributors, ODbL). To rebuild: `tools/download_osm_detail.ps1`, `node tools/process_geography.mjs`, then run `tools/clean_textures.gd` (only if wall textures change) and `tools/bake_world.gd` with `godot --headless --path . --script`, followed by `godot --headless --path . --import`. The game map is 1:20, so streets are generalised and one game building stands for many mapped ones.
 

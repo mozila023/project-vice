@@ -125,19 +125,23 @@ func build() -> void:
 	label("THAI MASSAGE · NAIL · SPA",Vector3(0,2.84,4.435),32,0.003,Color("516e56"))
 	box("blue",Vector3(4.9,1.65,4.3),Vector3(1.7,1.4,0.05))
 	label("SUNSHINE\nWelcome / ยินดีต้อนรับ\nPort Vila · Seaside",Vector3(4.9,1.67,4.34),30,0.0034,Color("f0d8a4"))
-	# Furniture follows the photographed nail salon: black steel, pale timber, cream seating.
-	for x in [-4.7,-2.8]: display_shelf(Vector3(x,0,2.9))
-	for z in [-1.5,1.25]: manicure_table(Vector3(3.5,0,z))
-	box("cream",Vector3(-3.8,0.52,-2.8),Vector3(3.6,1.04,0.75),true)
-	box("wood",Vector3(-3.8,1.06,-2.8),Vector3(3.75,0.07,0.85))
+	# Furniture follows the photographed nail salon: sculpted in Blender (black steel, pale timber, cream seating).
+	var furn_scene: PackedScene=load("res://assets/models/props/spa_furniture.glb")
+	if furn_scene!=null:
+		var furn: Node3D=furn_scene.instantiate()
+		furn.name="SpaBlenderFurniture"
+		add_child(furn)
+		for m: MeshInstance3D in furn.find_children("*","MeshInstance3D",true,false):
+			m.visibility_range_end=180
+	for x in [-4.7,-2.8]: collider_only(Vector3(x,0.26,2.9),Vector3(1.35,0.5,0.4))
+	for z in [-1.5,1.25]:
+		collider_only(Vector3(3.5,0.76,z),Vector3(1.65,0.07,0.7))
+		for cz in [-0.9,0.9]: collider_only(Vector3(3.5,0.46,z+cz),Vector3(0.6,0.12,0.52))
+	collider_only(Vector3(-3.8,0.52,-2.8),Vector3(3.6,1.04,0.75))
 	label("Sunshine\nWellness & Spa",Vector3(-3.8,2.0,-4.13),48,0.004,Color("a7803c"))
 	# Back treatment corner is a gameplay interpretation, not a claim about the real floor plan.
 	box("cream",Vector3(0,1.28,-2.85),Vector3(0.08,2.56,2.7),true)
-	box("wood",Vector3(2.6,0.6,-2.9),Vector3(2.0,0.12,0.8),true)
-	box("cream",Vector3(2.6,0.72,-2.9),Vector3(2.0,0.14,0.8))
-	box("green",Vector3(2.8,0.82,-2.9),Vector3(1.05,0.04,0.82))
-	for x in [1.85,3.35]: box("steel",Vector3(x,0.29,-2.9),Vector3(0.08,0.58,0.55))
-	for at in [Vector3(-5.4,0,-3.5),Vector3(5.25,0,3.55)]: plant(at)
+	collider_only(Vector3(2.6,0.6,-2.9),Vector3(2.0,0.12,0.8))
 	build_ramp()
 	offset=Vector3.ZERO
 	build_frontage()
@@ -150,33 +154,13 @@ func build() -> void:
 		add_child(node)
 	batches.clear()
 
-func display_shelf(at: Vector3) -> void:
-	for x in [-0.65,0.65]: box("steel",at+Vector3(x,1.05,0),Vector3(0.035,2.1,0.4))
-	for y in [0.15,0.7,1.25,1.8]:
-		box("wood",at+Vector3(0,y,0),Vector3(1.4,0.035,0.42))
-		for i in range(9):
-			var key: String=["pink","red","violet","gold","green"][i%5]
-			cylinder(key,at+Vector3(-0.53+i*0.13,y+0.09,0.04),0.035,0.13)
-			cylinder("cream",at+Vector3(-0.53+i*0.13,y+0.18,0.04),0.022,0.05)
-	box("wood",at+Vector3(0,0.26,0),Vector3(1.35,0.5,0.4),true)
-
-func manicure_table(at: Vector3) -> void:
-	box("wood",at+Vector3(0,0.76,0),Vector3(1.65,0.07,0.7),true)
-	for x in [-0.72,0.72]:
-		for z in [-0.26,0.26]: box("steel",at+Vector3(x,0.36,z),Vector3(0.04,0.72,0.04))
-	for z in [-0.9,0.9]:
-		box("cream",at+Vector3(0,0.46,z),Vector3(0.6,0.12,0.52),true)
-		box("cream",at+Vector3(0,0.75,z+signf(z)*0.23),Vector3(0.6,0.58,0.06))
-		for x in [-0.23,0.23]: box("frame",at+Vector3(x,0.22,z),Vector3(0.035,0.44,0.36))
-	box("pink",at+Vector3(0,0.808,0),Vector3(0.85,0.012,0.5))
-	box("cream",at+Vector3(0.3,0.9,0),Vector3(0.3,0.18,0.24))
-	cylinder("cream",at+Vector3(-0.5,0.95,0.15),0.08,0.3)
-
-func plant(at: Vector3) -> void:
-	cylinder("wood",at+Vector3(0,0.22,0),0.22,0.44)
-	for i in range(6):
-		var angle := i*TAU/6
-		box("green",at+Vector3(sin(angle)*0.18,0.7+i*0.05,cos(angle)*0.18),Vector3(0.12,0.5,0.16))
+func collider_only(at: Vector3,size: Vector3) -> void:
+	var shape := CollisionShape3D.new()
+	var bounds := BoxShape3D.new()
+	bounds.size=size
+	shape.shape=bounds
+	shape.position=at+offset
+	body.add_child(shape)
 
 func build_ramp() -> void:
 	# The game compresses Efate 1:20; keep this doorway at human scale and bridge the grade.
@@ -222,10 +206,6 @@ func build_frontage() -> void:
 		var at := Vector3(x,0,4.1)
 		at.y=world.height_at((transform*at).x,(transform*at).z)-floor_height+0.035
 		append("grout",plane,Transform3D(Basis.IDENTITY,at))
-	for x in [-7.8,-6.8,-5.8]:
-		var pot_world: Vector3=transform*Vector3(x,0,5.4)
-		var pot_y: float=world.height_at(pot_world.x,pot_world.z)-floor_height-0.02
-		plant(Vector3(x,pot_y,5.4))
 	# Existing atlas keeps the added shade tree cheap on mobile. Its species is approximate.
 	var tree_world: Vector3=transform*Vector3(-3.8,0,4.0)
 	var tree_y: float=world.height_at(tree_world.x,tree_world.z)-floor_height-0.08

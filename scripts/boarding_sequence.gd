@@ -40,12 +40,17 @@ func build(aircraft: Node3D) -> void:
 		var x: float=door.x+side*(WIDTH*0.5-0.04)
 		beam("Stringer",Vector3(x,0.06,base_z),Vector3(x,door.y-0.05,entry.z-LANDING*0.5),0.055,0.10,metal)
 		beam("Handrail",Vector3(x,0.87,base_z),Vector3(x,door.y+0.87,entry.z-LANDING*0.5),0.035,0.035,rail)
+		beam("MidRail",Vector3(x,0.46,base_z),Vector3(x,door.y+0.46,entry.z-LANDING*0.5),0.024,0.024,rail)
 		beam("LandingRail",Vector3(x,door.y+0.87,entry.z-LANDING*0.5),Vector3(x,door.y+0.87,entry.z+LANDING*0.4),0.035,0.035,rail)
+		beam("LandingMidRail",Vector3(x,door.y+0.46,entry.z-LANDING*0.5),Vector3(x,door.y+0.46,entry.z+LANDING*0.4),0.024,0.024,rail)
 		for i in [0,step_count/2,step_count-1]:
 			var at := Vector3(x,(i+1)*rise,base_z+(i+0.5)*RUN)
 			beam("RailPost",at,at+Vector3.UP*0.87,0.03,0.03,rail)
 		beam("LandingSupport",Vector3(x,0.025,entry.z),Vector3(x,door.y-0.025,entry.z),0.055,0.055,metal)
+		beam("DiagBrace",Vector3(x,0.12,base_z+0.35),Vector3(x,door.y-0.08,entry.z),0.032,0.032,metal)
 		box("FootPad",Vector3(x,0.02,base_z),Vector3(0.18,0.04,0.3),tread)
+		box("CasterWheel",Vector3(x,0.08,entry.z),Vector3(0.08,0.16,0.16),tread)
+		box("SafetyBumper",Vector3(x,door.y,entry.z+LANDING*0.48),Vector3(0.12,0.09,0.09),surface(Color("d6a228"),0.55))
 	# A visible open doorway, sized for the human cast. The shot cuts on the
 	# landing before the actor crosses the exterior shell into the separate cabin.
 	var opening := MeshInstance3D.new()

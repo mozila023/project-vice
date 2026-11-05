@@ -50,14 +50,17 @@ func setup(model_kind: String,world_node: Node3D,paint_index := 0) -> void:
 	# The kit's cars are all proportioned alike, so scale by length and let height follow.
 	var scale_factor: float=4.7/maxf(bounds.size.z,0.01)
 	model.scale=Vector3.ONE*scale_factor
-	var paints := [Color("c2c8c8"),Color("23434e"),Color("a7a295"),Color("61423a"),Color("d1c7ad"),Color("333c44")]
+	var paints := [Color("c8cecf"),Color("1f4252"),Color("b2aca0"),Color("6a3d34"),Color("d6ccb4"),Color("2c363e")]
 	for mesh: MeshInstance3D in model.find_children("*","MeshInstance3D",true,false):
 		var source=mesh.material_override
 		if source is StandardMaterial3D and source.resource_name in ["white","blue"]:
 			var paint: StandardMaterial3D=source.duplicate()
-			paint.albedo_color=Color("c8ae62") if kind=="taxi" else paints[paint_index%paints.size()]
-			paint.metallic=0.35
-			paint.roughness=0.3
+			paint.albedo_color=Color("d2b456") if kind=="taxi" else paints[paint_index%paints.size()]
+			paint.metallic=0.38
+			paint.roughness=0.24
+			paint.clearcoat_enabled=true
+			paint.clearcoat=0.75
+			paint.clearcoat_roughness=0.12
 			mesh.material_override=paint
 	for node in model.find_children("wheel-*","Node3D",true,false):
 		if node.name.contains("left") or node.name.contains("right"):
