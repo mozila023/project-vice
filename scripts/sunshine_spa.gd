@@ -100,7 +100,7 @@ func build() -> void:
 	body.name="WalkableSalon"
 	body.collision_layer=1
 	add_child(body)
-	box("plaster",Vector3(0,-0.28,0),Vector3(12.4,0.5,8.9),true)
+	box("plaster",Vector3(0,-0.88,0),Vector3(12.4,1.7,8.9),true)
 	box("tile",Vector3(0,-0.015,0),Vector3(12,0.03,8.5),true)
 	# Fine grout, cream tiles and aluminium window frames visible in the reference.
 	for x in range(-6,7): box("grout",Vector3(x,0.004,0),Vector3(0.008,0.003,8.5))
@@ -119,7 +119,7 @@ func build() -> void:
 	box("plaster",Vector3(0,3.04,4.25),Vector3(12.3,0.42,0.2))
 	box("roof",Vector3(0,3.32,0),Vector3(12.9,0.18,9.3),true)
 	box("cream",Vector3(0,2.88,5.0),Vector3(12.8,0.1,1.6))
-	for x in [-6.1,6.1]: box("frame",Vector3(x,1.43,5.55),Vector3(0.09,2.85,0.09),true)
+	for x in [-6.1,6.1]: box("frame",Vector3(x,0.93,5.55),Vector3(0.09,3.85,0.09),true)
 	box("cream",Vector3(0,3.02,4.39),Vector3(7.0,0.66,0.06))
 	label(TITLE,Vector3(0,3.06,4.435),64,0.003,Color("a7803c"))
 	label("THAI MASSAGE · NAIL · SPA",Vector3(0,2.84,4.435),32,0.003,Color("516e56"))
@@ -184,6 +184,7 @@ func build_ramp() -> void:
 	var end := Vector3(0,0,5.6)+offset
 	var world_end: Vector3=transform*end
 	end.y=world.height_at(world_end.x,world_end.z)-floor_height+0.025
+	box("plaster",Vector3(0,end.y*0.5-0.45,4.95),Vector3(2.08,absf(end.y)+0.85,1.25),false)
 	var vertices := PackedVector3Array([Vector3(-1.05,0,4.65)+offset,Vector3(1.05,0,4.65)+offset,end+Vector3(-1.05,0,0),end+Vector3(1.05,0,0)])
 	var mesh := ArrayMesh.new()
 	var arrays := []
@@ -201,12 +202,12 @@ func build_frontage() -> void:
 	# Observed frontage: white rendered boundary, right-hand two-track driveway,
 	# horizontal timber screen and a tall shade tree in front of a low glazed salon.
 	for entry in [[-2.75,12.5],[8.1,2.2]]:
-		box("plaster",Vector3(entry[0],0.65,6.5),Vector3(entry[1],1.55,0.22),true)
+		box("plaster",Vector3(entry[0],0.025,6.5),Vector3(entry[1],2.8,0.22),true)
 	for x in [-9.0,3.5,7.0,9.2]:
-		box("plaster",Vector3(x,0.9,6.5),Vector3(0.36,2.05,0.36),true)
+		box("plaster",Vector3(x,0.275,6.5),Vector3(0.36,3.3,0.36),true)
 		box("cream",Vector3(x,1.96,6.5),Vector3(0.48,0.09,0.48))
 	# Entry narrows visually along the screen; the 3.1m gap stays fully passable.
-	box("plaster",Vector3(3.5,0.34,5.3),Vector3(0.18,0.88,2.4),true)
+	box("plaster",Vector3(3.5,-0.16,5.3),Vector3(0.18,1.88,2.4),true)
 	for y in range(7): box("wood",Vector3(3.5,0.87+y*0.125,5.3),Vector3(0.07,0.105,2.4),true)
 	box("cream",Vector3(3.5,1.84,5.7),Vector3(0.13,0.48,1.4))
 	# Rotate the entrance sign to face the street, as seen in the reference.
@@ -221,13 +222,18 @@ func build_frontage() -> void:
 		var at := Vector3(x,0,4.1)
 		at.y=world.height_at((transform*at).x,(transform*at).z)-floor_height+0.035
 		append("grout",plane,Transform3D(Basis.IDENTITY,at))
-	for x in [-7.8,-6.8,-5.8]: plant(Vector3(x,0,5.4))
+	for x in [-7.8,-6.8,-5.8]:
+		var pot_world: Vector3=transform*Vector3(x,0,5.4)
+		var pot_y: float=world.height_at(pot_world.x,pot_world.z)-floor_height-0.02
+		plant(Vector3(x,pot_y,5.4))
 	# Existing atlas keeps the added shade tree cheap on mobile. Its species is approximate.
+	var tree_world: Vector3=transform*Vector3(-3.8,0,4.0)
+	var tree_y: float=world.height_at(tree_world.x,tree_world.z)-floor_height-0.08
 	var tree := MeshInstance3D.new()
 	tree.name="FrontShadeTree"
 	tree.mesh=preload("res://scripts/flora.gd").new().cross_card()
 	tree.material_override=world.card_near
-	tree.position=Vector3(-3.8,0,4.0)
+	tree.position=Vector3(-3.8,tree_y,4.0)
 	tree.scale=Vector3(11,12,11)
 	add_child(tree)
 	# Trunk collision is separate from the alpha cards and outside the door/driveway.
@@ -236,5 +242,5 @@ func build_frontage() -> void:
 	shape.radius=0.22
 	shape.height=4.8
 	trunk.shape=shape
-	trunk.position=Vector3(-3.8,2.4,4.0)
+	trunk.position=Vector3(-3.8,tree_y+2.4,4.0)
 	body.add_child(trunk)

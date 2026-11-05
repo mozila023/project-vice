@@ -29,6 +29,10 @@ var front_wheels: Array[Node3D] = []
 var all_wheels: Array[Node3D] = []
 var wheel_spin := 0.0
 var wheel_rest := {}
+var wheel_pos := {}
+var wheel_offset := {}
+var axle_x := 0.93
+var axle_z := 1.36
 
 func setup(model_kind: String,world_node: Node3D,paint_index := 0) -> void:
 	kind=model_kind
@@ -59,11 +63,16 @@ func setup(model_kind: String,world_node: Node3D,paint_index := 0) -> void:
 		if node.name.contains("left") or node.name.contains("right"):
 			all_wheels.append(node)
 			wheel_rest[node]=node.basis
+			wheel_pos[node]=node.position
+			wheel_offset[node]=0.0
 			if node.name.contains("front"): front_wheels.append(node)
 	# +Z is forward everywhere in the game: turn the model round if its front wheels point the other way.
 	if not front_wheels.is_empty() and front_wheels[0].position.z<0.0:
 		flip=-1.0
 		model.rotation.y=PI
+	if not all_wheels.is_empty():
+		axle_x=absf(all_wheels[0].position.x)*scale_factor
+		axle_z=absf(all_wheels[0].position.z)*scale_factor
 	var centre: Vector3=bounds.get_center()*scale_factor
 	model.position=Vector3(-centre.x*flip,-bounds.position.y*scale_factor,-centre.z*flip)
 	half_length=bounds.size.z*scale_factor*0.5
@@ -117,6 +126,7 @@ func drive(dt: float,throttle: float,turn: float,handbrake: bool) -> void:
 	var nose_height: float=world.height_at(nose.x,nose.z)
 	if absf(speed)>0.01 and (nose_height<-0.25 or nose_height-world.height_at(position.x,position.z)>MAX_CLIMB*reach): speed=0.0
 	velocity=forward()*speed
+	velocity.y=0.0
 	var before: float=speed
 	move_and_slide()
 	bumped=get_slide_collision_count()>0
@@ -133,27 +143,44 @@ func follow(at: Vector3,heading: float,moving_speed: float,dt: float) -> void:
 	settle(dt,false)
 	spin_wheels(dt)
 
-## Sits the car on the terrain and leans the body to match the slope under it.
+func surface_at(x: float,z: float) -> float:
+	return world.surface_height_at(x,z) if world.has_method("surface_height_at") else world.height_at(x,z)
+
+## Sits the car on the terrain and leans the body to match the 4-wheel contact plane, with per-wheel suspension travel.
 func settle(dt: float,instant: bool) -> void:
 	var f: Vector3=forward()
 	var left := Vector3(f.z,0,-f.x)
-	var ahead: Vector3=position+f*half_length
-	var behind: Vector3=position-f*half_length
-	var port: Vector3=position+left*half_width
-	var starboard: Vector3=position-left*half_width
-	var h_front: float=world.height_at(ahead.x,ahead.z)
-	var h_back: float=world.height_at(behind.x,behind.z)
-	var h_left: float=world.height_at(port.x,port.z)
-	var h_right: float=world.height_at(starboard.x,starboard.z)
-	position.y=maxf((h_front+h_back+h_left+h_right)*0.25,world.height_at(position.x,position.z))+0.1
-	var pitch: float=atan2(h_back-h_front,half_length*2.0)
-	var roll: float=atan2(h_left-h_right,half_width*2.0)
-	var blend: float=1.0 if instant else clampf(dt*8.0,0.0,1.0)
+	var fl: Vector3=position+f*axle_z+left*axle_x
+	var fr: Vector3=position+f*axle_z-left*axle_x
+	var bl: Vector3=position-f*axle_z+left*axle_x
+	var br: Vector3=position-f*axle_z-left*axle_x
+	var h_fl: float=surface_at(fl.x,fl.z)
+	var h_fr: float=surface_at(fr.x,fr.z)
+	var h_bl: float=surface_at(bl.x,bl.z)
+	var h_br: float=surface_at(br.x,br.z)
+	var h_front: float=(h_fl+h_fr)*0.5
+	var h_back: float=(h_bl+h_br)*0.5
+	var h_left: float=(h_fl+h_bl)*0.5
+	var h_right: float=(h_fr+h_br)*0.5
+	var pitch: float=atan2(h_back-h_front,maxf(axle_z*2.0,0.5))
+	var roll: float=atan2(h_left-h_right,maxf(axle_x*2.0,0.5))
+	var blend: float=1.0 if instant else clampf(dt*10.0,0.0,1.0)
 	tilt.rotation.x=lerpf(tilt.rotation.x,pitch,blend)
 	tilt.rotation.z=lerpf(tilt.rotation.z,roll,blend)
+	# Slight tire compression (-0.015 m) so rubber meets the road/ground with no air gap.
+	position.y=(h_fl+h_fr+h_bl+h_br)*0.25-0.015
+	for wheel in all_wheels:
+		var rest_p: Vector3=wheel_pos[wheel]
+		wheel.position=rest_p
+		var wp: Vector3=wheel.global_position
+		var target_y: float=surface_at(wp.x,wp.z)+rest_p.y-0.012
+		var delta_y: float=clampf(target_y-wp.y,-0.12,0.12)
+		wheel_offset[wheel]=lerpf(float(wheel_offset.get(wheel,0.0)),delta_y,blend)
+		wheel.position.y=rest_p.y+wheel_offset[wheel]
 
 func spin_wheels(dt: float) -> void:
 	wheel_spin=fmod(wheel_spin+speed/0.33*dt*flip,TAU)
 	for wheel in all_wheels:
 		var turned: float=steer if wheel in front_wheels else 0.0
 		wheel.basis=Basis(Vector3.UP,turned)*Basis(Vector3.RIGHT,wheel_spin)*wheel_rest[wheel]
+		wheel.position.y=(wheel_pos[wheel] as Vector3).y+float(wheel_offset.get(wheel,0.0))

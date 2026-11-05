@@ -25,7 +25,9 @@ func create(index: int,height := 1.75) -> Node3D:
 		if not clips.has(key): clips[key]=retarget(gender,name,skeleton)
 		library.add_animation(name,clips[key])
 	library.add_animation("sprint",clips[kind+"walk"])
-	library.add_animation("holding-both",clips[kind+"idle"])
+	var hold_key: String=kind+"holding-both"
+	if not clips.has(hold_key): clips[hold_key]=holding_pose(clips[kind+"idle"])
+	library.add_animation("holding-both",clips[hold_key])
 	player.add_animation_library("",library)
 	player.play("idle")
 	var bounds := AABB()
@@ -82,6 +84,70 @@ func retarget(gender: String,name: String,target: Skeleton3D) -> Animation:
 		for key in range(animation.track_get_key_count(track)):
 			var value: Quaternion=animation.track_get_key_value(track,key)
 			animation.track_set_key_value(track,key,value.normalized())
+	ground_feet(animation,target)
 	animation.loop_mode=Animation.LOOP_LINEAR
 	source.free()
 	return animation
+
+func bone_origin(target: Skeleton3D,idx: int) -> Vector3:
+	var t := Transform3D.IDENTITY
+	var cur := idx
+	while cur>=0:
+		t=target.get_bone_pose(cur)*t
+		cur=target.get_bone_parent(cur)
+	return t.origin
+
+## Rebuilds the root pelvis vertical curve from the leg rotations so the supporting foot
+## stays planted at y=0 throughout every stride instead of pedalling in mid-air.
+func ground_feet(animation: Animation,target: Skeleton3D) -> void:
+	var root_idx: int=target.find_bone("Bip01")
+	var l_foot: int=target.find_bone("Bip01 L Foot")
+	var l_toe: int=target.find_bone("Bip01 L Toe0")
+	var r_foot: int=target.find_bone("Bip01 R Foot")
+	var r_toe: int=target.find_bone("Bip01 R Toe0")
+	if root_idx<0 or l_foot<0 or l_toe<0 or r_foot<0 or r_toe<0: return
+	var rest_origin: Vector3=target.get_bone_rest(root_idx).origin
+	var mapped: Array[Dictionary]=[]
+	for track in range(animation.get_track_count()):
+		if animation.track_get_type(track)!=Animation.TYPE_ROTATION_3D: continue
+		var bone: String=String(animation.track_get_path(track).get_subname(0))
+		var idx: int=target.find_bone(bone)
+		if idx>=0: mapped.append({"track":track,"bone":idx})
+	var pos_track: int=animation.add_track(Animation.TYPE_POSITION_3D)
+	animation.track_set_path(pos_track,NodePath("Skeleton3D:Bip01"))
+	var samples := 24
+	for i in range(samples+1):
+		var t: float=animation.length*float(i)/float(samples)
+		target.set_bone_pose_position(root_idx,rest_origin)
+		for entry in mapped:
+			target.set_bone_pose_rotation(entry.bone,animation.rotation_track_interpolate(entry.track,t))
+		var ly: float=minf(bone_origin(target,l_toe).y-0.002,bone_origin(target,l_foot).y-0.096)
+		var ry: float=minf(bone_origin(target,r_toe).y-0.002,bone_origin(target,r_foot).y-0.096)
+		var support: float=minf(ly,ry)
+		animation.position_track_insert_key(pos_track,t,rest_origin-Vector3(0,support+0.008,0))
+	target.reset_bone_poses()
+
+## Two-handed fishing stance derived from the avatar's idle clip.
+func holding_pose(idle_clip: Animation) -> Animation:
+	var clip: Animation=idle_clip.duplicate(true)
+	var overrides := {
+		"Bip01 R UpperArm":Quaternion.from_euler(Vector3(-0.35,-0.10,-0.48)),
+		"Bip01 L UpperArm":Quaternion.from_euler(Vector3(0.35,0.10,-0.44)),
+	}
+	var direct := {
+		"Bip01 R Forearm":Quaternion(0,0,-0.64,0.768).normalized(),
+		"Bip01 L Forearm":Quaternion(0,0,-0.58,0.815).normalized(),
+	}
+	for track in range(clip.get_track_count()):
+		if clip.track_get_type(track)!=Animation.TYPE_ROTATION_3D: continue
+		var bone: String=String(clip.track_get_path(track).get_subname(0))
+		if overrides.has(bone):
+			var delta: Quaternion=overrides[bone]
+			for k in range(clip.track_get_key_count(track)):
+				var base_q: Quaternion=clip.track_get_key_value(track,k)
+				clip.track_set_key_value(track,k,(base_q*delta).normalized())
+		elif direct.has(bone):
+			var target_q: Quaternion=direct[bone]
+			for k in range(clip.track_get_key_count(track)):
+				clip.track_set_key_value(track,k,target_q)
+	return clip

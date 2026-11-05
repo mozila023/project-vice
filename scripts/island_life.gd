@@ -44,9 +44,13 @@ var fishing_timer := 0.0
 var cast_origin := Vector3.ZERO
 var fishing_spot := Vector3.ZERO
 var fire_light: OmniLight3D
-var bobber: MeshInstance3D
+var bobber: Node3D
+var bobber_ring: MeshInstance3D
 var line: MeshInstance3D
-var rod: MeshInstance3D
+var rod: Node3D
+var rod_tip: Node3D
+var reel_crank: Node3D
+var cast_anim := 0.0
 var well_position := Vector3.ZERO
 var camp_position := Vector3.ZERO
 var shelter_position := Vector3.ZERO
@@ -187,20 +191,22 @@ func smooth_shading(node: MeshInstance3D) -> void:
 func capsule(body: CharacterBody3D) -> void:
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
-	shape.height=1.75
+	shape.height=1.74
 	shape.radius=0.3
 	collision.shape=shape
-	collision.position.y=0.88
+	collision.position.y=0.87
 	body.add_child(collision)
 	body.collision_layer=CAR_SCRIPT.LAYER_PEOPLE
-	body.floor_snap_length=0.7
-	body.floor_max_angle=deg_to_rad(48)
+	body.floor_snap_length=0.85
+	body.floor_max_angle=deg_to_rad(50)
+	body.floor_constant_speed=true
+	body.floor_stop_on_slope=true
 
 func build_player() -> void:
 	player=CharacterBody3D.new()
 	player.name="IslandResident"
 	add_child(player)
-	spawn.y=ground(spawn.x,spawn.z)+0.3
+	spawn.y=ground(spawn.x,spawn.z)+0.05
 	player.position=spawn
 	player.rotation.y=PI
 	capsule(player)
@@ -223,30 +229,113 @@ func build_player() -> void:
 	camera.near=0.25
 	camera.far=7000
 	camera.fov=66
-	rod=MeshInstance3D.new()
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius=0.008
-	cylinder.bottom_radius=0.023
-	cylinder.height=2.8
-	cylinder.radial_segments=6
-	rod.mesh=cylinder
-	rod.material_override=material("rod",Color("6b5130"))
+	build_fishing_gear()
+
+func rod_part(parent: Node3D,mesh: Mesh,mat: Material,at: Vector3,rot := Vector3.ZERO) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	node.mesh=mesh
+	node.material_override=mat
+	node.position=at
+	node.rotation=rot
+	parent.add_child(node)
+	return node
+
+func build_fishing_gear() -> void:
+	rod=Node3D.new()
+	rod.name="FishingRod"
 	player.add_child(rod)
-	rod.position=Vector3(0.32,1.6,-0.9)
-	rod.rotation.x=-0.65
+	rod.position=Vector3(0.02,1.08,-0.24)
+	rod.rotation=Vector3(-0.78,0.0,0.0)
 	rod.visible=false
-	bobber=MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius=0.07
-	sphere.height=0.14
-	sphere.radial_segments=8
-	sphere.rings=4
-	bobber.mesh=sphere
-	bobber.material_override=material("float",Color("e79b46"))
+	var cork_mat := material("rod_cork",Color("c69c6d"))
+	var dark_mat := material("rod_dark",Color("26292c"))
+	var metal_mat := material("rod_metal",Color("b7c0c4"))
+	metal_mat.metallic=0.65
+	metal_mat.roughness=0.32
+	var blank_mat := material("rod",Color("5c4228"))
+	blank_mat.roughness=0.45
+	var tip_mat := material("rod_tip_wrap",Color("d65238"))
+	# Cork butt grip, reel seat and foregrip held by both hands.
+	var grip := CylinderMesh.new()
+	grip.top_radius=0.017; grip.bottom_radius=0.019; grip.height=0.38; grip.radial_segments=10
+	rod_part(rod,grip,cork_mat,Vector3(0,0.04,0))
+	var butt := SphereMesh.new()
+	butt.radius=0.021; butt.height=0.042; butt.radial_segments=10; butt.rings=5
+	rod_part(rod,butt,dark_mat,Vector3(0,-0.15,0))
+	var seat := CylinderMesh.new()
+	seat.top_radius=0.016; seat.bottom_radius=0.017; seat.height=0.12; seat.radial_segments=10
+	rod_part(rod,seat,dark_mat,Vector3(0,0.28,0))
+	var fore := CylinderMesh.new()
+	fore.top_radius=0.014; fore.bottom_radius=0.016; fore.height=0.11; fore.radial_segments=10
+	rod_part(rod,fore,cork_mat,Vector3(0,0.39,0))
+	# Spinning reel mounted beneath the reel seat.
+	var stem := BoxMesh.new()
+	stem.size=Vector3(0.012,0.04,0.055)
+	rod_part(rod,stem,metal_mat,Vector3(0,0.27,0.035))
+	var spool := CylinderMesh.new()
+	spool.top_radius=0.028; spool.bottom_radius=0.030; spool.height=0.065; spool.radial_segments=12
+	rod_part(rod,spool,dark_mat,Vector3(0,0.27,0.072),Vector3(0.22,0,0))
+	var spool_trim := CylinderMesh.new()
+	spool_trim.top_radius=0.031; spool_trim.bottom_radius=0.031; spool_trim.height=0.028; spool_trim.radial_segments=12
+	rod_part(rod,spool_trim,metal_mat,Vector3(0,0.28,0.075),Vector3(0.22,0,0))
+	reel_crank=Node3D.new()
+	reel_crank.position=Vector3(0.032,0.265,0.068)
+	rod.add_child(reel_crank)
+	var crank_arm := BoxMesh.new()
+	crank_arm.size=Vector3(0.018,0.008,0.055)
+	rod_part(reel_crank,crank_arm,metal_mat,Vector3(0.008,0,0.022))
+	var knob := CylinderMesh.new()
+	knob.top_radius=0.008; knob.bottom_radius=0.008; knob.height=0.024; knob.radial_segments=8
+	rod_part(reel_crank,knob,dark_mat,Vector3(0.02,0,0.046),Vector3(0,0,PI*0.5))
+	# Three-section tapered rod blank with subtle forward curve and 4 line guides.
+	var sections := [
+		[0.013,0.0095,0.75,Vector3(0,0.81,0.0),0.0],
+		[0.0095,0.006,0.72,Vector3(0,1.53,0.022),0.06],
+		[0.006,0.0028,0.68,Vector3(0,2.21,0.088),0.13],
+	]
+	for seg in sections:
+		var blank := CylinderMesh.new()
+		blank.bottom_radius=seg[0]; blank.top_radius=seg[1]; blank.height=seg[2]; blank.radial_segments=8
+		rod_part(rod,blank,blank_mat,seg[3],Vector3(seg[4],0,0))
+	var tip_wrap := CylinderMesh.new()
+	tip_wrap.bottom_radius=0.004; tip_wrap.top_radius=0.0032; tip_wrap.height=0.09; tip_wrap.radial_segments=8
+	rod_part(rod,tip_wrap,tip_mat,Vector3(0,2.50,0.125),Vector3(0.13,0,0))
+	for g in [[0.65,0.018,0.016],[1.15,0.020,0.013],[1.72,0.045,0.010],[2.25,0.102,0.008]]:
+		var ring := TorusMesh.new()
+		ring.outer_radius=g[2]; ring.inner_radius=g[2]*0.65; ring.rings=8; ring.ring_segments=6
+		rod_part(rod,ring,metal_mat,Vector3(0,g[0],g[1]),Vector3(PI*0.5,0,0))
+	rod_tip=Node3D.new()
+	rod_tip.name="RodTip"
+	rod_tip.position=Vector3(0,2.54,0.135)
+	rod.add_child(rod_tip)
+	# Two-tone red & white fishing float with antenna and water ripple ring.
+	bobber=Node3D.new()
+	bobber.name="Bobber"
 	add_child(bobber)
 	bobber.visible=false
+	var float_red := material("float_red",Color("dc3b2a"))
+	var float_white := material("float_white",Color("f4f1e6"))
+	var top_half := SphereMesh.new()
+	top_half.radius=0.065; top_half.height=0.11; top_half.radial_segments=10; top_half.rings=5
+	rod_part(bobber,top_half,float_red,Vector3(0,0.035,0))
+	var bot_half := SphereMesh.new()
+	bot_half.radius=0.062; bot_half.height=0.10; bot_half.radial_segments=10; bot_half.rings=5
+	rod_part(bobber,bot_half,float_white,Vector3(0,-0.025,0))
+	var antenna := CylinderMesh.new()
+	antenna.top_radius=0.005; antenna.bottom_radius=0.008; antenna.height=0.14; antenna.radial_segments=6
+	rod_part(bobber,antenna,float_red,Vector3(0,0.12,0))
+	var ripple_mesh := TorusMesh.new()
+	ripple_mesh.inner_radius=0.11; ripple_mesh.outer_radius=0.14; ripple_mesh.rings=12; ripple_mesh.ring_segments=6
+	var ripple_mat := StandardMaterial3D.new()
+	ripple_mat.albedo_color=Color(0.88,0.95,0.98,0.55)
+	ripple_mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	ripple_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	materials["ripple"]=ripple_mat
+	bobber_ring=rod_part(bobber,ripple_mesh,ripple_mat,Vector3(0,-0.02,0))
+	var line_mat := material("line",Color("e8e7d5"))
+	line_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 	line=MeshInstance3D.new()
-	line.material_override=material("line",Color("dddcc5"))
+	line.material_override=line_mat
 	add_child(line)
 
 func play_animation(actor: Node3D,clip: String,speed := 1.0) -> void:
@@ -333,6 +422,8 @@ func build_life() -> void:
 	for i in range(4):
 		var car: CharacterBody3D=spawn_car(["sedan","van","suv","truck"][i])
 		traffic.append({"node":car,"progress":12.0+i*36,"direction":1.0 if i%2==0 else -1.0,"speed":4.0+i*0.6,"lane":1.0 if i%2==0 else -1.0})
+	update_traffic(0.0)
+	for entry in traffic: entry.node.settle(0.0,true)
 	for spot in PARKING: park_car(spot[0],spot[1],spot[2])
 	var beach_x := -540.0
 	for i in range(2):
@@ -632,12 +723,16 @@ func _physics_process(dt: float) -> void:
 			var speed := 7.0 if sprint else 4.0
 			if fishing_state!="": speed=1.0
 			var direction := Basis(Vector3.UP,yaw)*Vector3(input.x,0,input.y)
+			var jumping: bool=player.is_on_floor() and Input.is_action_just_pressed("jump")
 			player.velocity.x=direction.x*speed
 			player.velocity.z=direction.z*speed
 			player.velocity.y-=20*dt
-			if player.is_on_floor(): player.velocity.y=6.5 if Input.is_action_just_pressed("jump") else -0.1
+			if player.is_on_floor(): player.velocity.y=6.5 if jumping else -2.5
 			player.move_and_slide()
-			if moving: player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
+			if not jumping and player.velocity.y<=0.0: player.apply_floor_snap()
+			if moving and fishing_state=="": player.rotation.y=lerp_angle(player.rotation.y,yaw-atan2(input.x,-input.y),dt*12)
+			var g_h: float=ground(player.position.x,player.position.z)
+			visual.position.y=world.road_surface_offset(player.position.x,player.position.z) if absf(player.position.y-g_h)<0.08 else 0.0
 		world.update_tree_collision(player.position)
 		stamina=clampf(stamina+(-17 if sprint else 13)*dt,0,100)
 		food=maxf(0,food-dt*0.045) if not story.relaxed else food
@@ -653,7 +748,8 @@ func _physics_process(dt: float) -> void:
 			health=75; food=50; thirst=50; energy=60
 			cancel_fishing()
 			tell("The villagers helped you back to your shelter. Eat and drink before exploring.")
-		play_animation(visual,"holding-both" if fishing_state!="" else ("sprint" if sprint else ("walk" if moving else "idle")))
+		var anim_speed := 1.0 if fishing_state!="" else (1.85 if sprint else (1.35 if moving else 1.0))
+		play_animation(visual,"holding-both" if fishing_state!="" else ("sprint" if sprint else ("walk" if moving else "idle")),anim_speed)
 		update_fishing(dt)
 		update_villagers(dt)
 		update_traffic(dt)
@@ -696,7 +792,7 @@ func update_villagers(dt: float) -> void:
 			body.velocity.x=heading.x*npc.speed
 			body.velocity.z=heading.z*npc.speed
 			if heading.length()>0.1: body.rotation.y=lerp_angle(body.rotation.y,atan2(-heading.x,-heading.z),dt*4)
-			play_animation(npc.visual,"walk",0.8)
+			play_animation(npc.visual,"walk",npc.speed/1.25)
 			# Blocked by something for two seconds: give up on this leg and head for the next point.
 			npc.check_time+=dt
 			if npc.check_time>=2.0:
@@ -707,6 +803,9 @@ func update_villagers(dt: float) -> void:
 				npc.check_time=0.0
 		body.velocity.y=-8
 		body.move_and_slide()
+		body.apply_floor_snap()
+		var npc_gh: float=ground(body.position.x,body.position.z)
+		npc.visual.position.y=world.road_surface_offset(body.position.x,body.position.z) if absf(body.position.y-npc_gh)<0.08 else 0.0
 
 func update_traffic(dt: float) -> void:
 	var length := traffic_curve.get_baked_length()
@@ -749,16 +848,16 @@ func tell(value: String) -> void:
 
 func fishing_water() -> Vector3:
 	var origin := player.position
-	for r in [4.0,7.0,10.0,14.0]:
-		for step in range(12):
-			var angle := yaw+step*TAU/12
-			var point: Vector3 = origin+Vector3(-sin(angle),0,-cos(angle))*r
-			if ground(point.x,point.z)<-0.5: return Vector3(point.x,0.04,point.z)
+	for r in [6.0,9.0,12.0,15.0,4.0]:
+		for step in [0,1,-1,2,-2,3,-3,4,-4,5,-5,6]:
+			var angle: float=yaw+step*TAU/12.0
+			var point: Vector3=origin+Vector3(-sin(angle),0,-cos(angle))*r
+			if ground(point.x,point.z)<-0.45: return Vector3(point.x,0.03,point.z)
 	return Vector3.INF
 
 func cast_line() -> void:
 	if blocked(): return
-	if driving: tell("Get out of the car before fishing."); return
+	if driving: tell("Get out of the car before casting."); return
 	if fishing_state=="bite": reel(); return
 	if fishing_state!="": cancel_fishing(); tell("Line reeled in."); return
 	var point := fishing_water()
@@ -769,6 +868,9 @@ func cast_line() -> void:
 	cast_origin=player.position
 	fishing_state="waiting"
 	fishing_timer=rng.randf_range(3.0,6.5)
+	cast_anim=0.38
+	var to_water: Vector3=point-player.position
+	player.rotation.y=atan2(-to_water.x,-to_water.z)
 	bobber.position=point
 	bobber.visible=true
 	rod.visible=true
@@ -779,11 +881,38 @@ func update_fishing(dt: float) -> void:
 	if player.position.distance_to(cast_origin)>2.5:
 		cancel_fishing(); tell("You moved too far from your fishing line."); return
 	fishing_timer-=dt
-	bobber.position.y=0.06+sin(elapsed*3)*0.03-(0.1 if fishing_state=="bite" else 0.0)
+	cast_anim=maxf(0.0,cast_anim-dt)
+	var to_water: Vector3=fishing_spot-player.position
+	player.rotation.y=lerp_angle(player.rotation.y,atan2(-to_water.x,-to_water.z),clampf(dt*8.0,0.0,1.0))
+	var bite := fishing_state=="bite"
+	# Rod cast whip & fish-bite tug animation.
+	var cast_swing: float=sin(cast_anim/0.38*PI)*0.45 if cast_anim>0.0 else 0.0
+	var bite_tug: float=(0.18+sin(elapsed*18.0)*0.09+cos(elapsed*29.0)*0.04) if bite else sin(elapsed*2.2)*0.018
+	rod.rotation=Vector3(-0.78-bite_tug+cast_swing,sin(elapsed*7.5)*0.03 if bite else 0.0,0.0)
+	if is_instance_valid(reel_crank): reel_crank.rotation.x=fmod(elapsed*(14.0 if bite else 1.5),TAU)
+	# Float bobbing, bite plunge and expanding water ripple ring.
+	var bob_y: float=0.04+sin(elapsed*3.2)*0.022-(0.08+absf(sin(elapsed*16.0))*0.06 if bite else 0.0)
+	var plunge_xz := Vector2(sin(elapsed*14.0),cos(elapsed*19.0))*(0.06 if bite else 0.008)
+	bobber.position=Vector3(fishing_spot.x+plunge_xz.x,bob_y,fishing_spot.z+plunge_xz.y)
+	bobber.rotation=Vector3(sin(elapsed*(13.0 if bite else 2.5))*(0.28 if bite else 0.06),0,cos(elapsed*(11.0 if bite else 2.1))*(0.28 if bite else 0.06))
+	if is_instance_valid(bobber_ring):
+		var pulse: float=fmod(elapsed*(2.6 if bite else 0.9),1.0)
+		var ring_s: float=lerpf(0.7,2.4 if bite else 1.45,pulse)
+		bobber_ring.scale=Vector3(ring_s,1.0,ring_s)
+		bobber_ring.position.y=-bob_y+0.015
+	# Smooth catenary fishing line from the rod tip to the bobber top.
+	var tip_pos: Vector3=rod_tip.global_position if is_instance_valid(rod_tip) else (rod.global_position+Vector3.UP*1.0)
+	var end_pos: Vector3=bobber.global_position+Vector3.UP*0.09
+	var sag: float=0.12 if bite else 0.55
 	var mesh := ImmediateMesh.new()
-	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
-	mesh.surface_add_vertex(rod.global_position+Vector3.UP*1.0)
-	mesh.surface_add_vertex(bobber.position)
+	mesh.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
+	var segments := 12
+	for i in range(segments+1):
+		var u: float=float(i)/float(segments)
+		var pt: Vector3=tip_pos.lerp(end_pos,u)
+		pt.y-=sin(u*PI)*sag
+		if bite: pt.y+=sin(u*TAU*2.0+elapsed*28.0)*0.015
+		mesh.surface_add_vertex(pt)
 	mesh.surface_end()
 	line.mesh=mesh
 	if fishing_timer<=0:

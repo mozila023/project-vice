@@ -540,6 +540,23 @@ func is_on_road(x: float,z: float) -> bool:
 		if Geometry2D.get_closest_point_to_segment(p,segment[0],segment[1]).distance_to(p)<=segment[2]+0.6: return true
 	return false
 
+## Visual thickness of the road mesh (+0.10m on tarmac, tapering across the shoulder to 0 off-road).
+func road_surface_offset(x: float,z: float) -> float:
+	if height_at(x,z)<0.3: return 0.0
+	var p := Vector2(x,z)
+	var best := 0.0
+	for segment in road_grid.get(Vector2i(floori(x/ROAD_CELL),floori(z/ROAD_CELL)),[]):
+		var d: float=Geometry2D.get_closest_point_to_segment(p,segment[0],segment[1]).distance_to(p)
+		var half: float=segment[2]
+		if d<=half+ROAD_SHOULDER:
+			var w: float=1.0-smoothstep(half,half+ROAD_SHOULDER,d)
+			best=maxf(best,0.10*w)
+	return best
+
+## Rendered surface height (terrain plus road mesh thickness when on a road).
+func surface_height_at(x: float,z: float) -> float:
+	return height_at(x,z)+road_surface_offset(x,z)
+
 ## Tree and palm trunks collide, built only around the player: thousands of them would be slow to create at load.
 ## They sit on their own layer so the camera arm passes through instead of jittering on every trunk.
 const TREE_CELL := 60.0
