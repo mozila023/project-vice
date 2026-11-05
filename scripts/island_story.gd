@@ -79,9 +79,24 @@ func target() -> Vector3:
 	for place in PLACES:
 		if place.id==tracked_place: return Vector3(place.at.x,game.ground(place.at.x,place.at.y),place.at.y)
 	if stage==4: return Vector3(DESTINATION.x,game.ground(DESTINATION.x,DESTINATION.z),DESTINATION.z)
-	if stage==2: return game.camp_position
-	if stage==1: return Vector3(-534,0,165)
+	if stage==2:
+		if game.fish<=0: return Vector3(-534,0,165)
+		if game.wood<=0: return nearest_wood()
+		return game.camp_position
+	if stage==1 and game.fish<3: return Vector3(-534,0,165)
+	if stage==3 and game.wood<3: return nearest_wood()
 	return game.villagers[0].body.position
+
+func nearest_wood() -> Vector3:
+	var found: Vector3=game.villagers[0].body.position
+	var best := INF
+	for item in game.resources:
+		if item.kind!="wood" or item.collected: continue
+		var distance: float=game.player.position.distance_to(item.node.position)
+		if distance<best:
+			best=distance
+			found=item.node.position
+	return found
 
 func advance() -> void:
 	if stage>=6: return

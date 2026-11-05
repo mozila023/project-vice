@@ -13,6 +13,8 @@ var cars: Array[CharacterBody3D] = []
 var driving: CharacterBody3D
 var look_timer := 0.0
 var story=preload("res://scripts/island_story.gd").new()
+var navigation=preload("res://scripts/island_navigation.gd").new()
+var people=preload("res://scripts/real_people.gd").new()
 var resources: Array[Dictionary] = []
 var boats: Array[Node3D] = []
 var health := 100.0
@@ -70,6 +72,8 @@ func ground(x: float,z: float) -> float:
 
 func _ready() -> void:
 	story.game=self
+	story.language=Preferences.language
+	story.relaxed=Preferences.relaxed
 	rng.seed=745
 	for action in ["forward","back","left","right","sprint","jump"]:
 		if not InputMap.has_action(action): InputMap.add_action(action)
@@ -86,6 +90,9 @@ func _ready() -> void:
 	add_child(settlement)
 	settlement.build()
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
+	navigation.build(self)
+	navigation.update(0,true)
+	apply_preferences()
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	field_hud=preload("res://scripts/life_hud.gd").new()
@@ -94,6 +101,22 @@ func _ready() -> void:
 	# Browsers refuse pointer lock without a click: on the web it is requested on the first click instead.
 	if not OS.has_feature("web"): Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if field_hud.mobile else Input.MOUSE_MODE_CAPTURED
 	get_tree().root.focus_exited.connect(on_focus_lost)
+	if Preferences.launch=="continue":
+		load_game()
+		Preferences.launch="new"
+		apply_preferences()
+
+func apply_preferences() -> void:
+	story.language=Preferences.language
+	story.relaxed=Preferences.relaxed
+	world.auto_quality=Preferences.quality<0
+	world.tier=world.detect_tier() if Preferences.quality<0 else Preferences.quality
+	world.apply_tier()
+
+func switch_language() -> void:
+	story.language="en" if story.language=="th" else "th"
+	Preferences.language=story.language
+	Preferences.save()
 
 func material(key: String,color: Color) -> StandardMaterial3D:
 	if materials.has(key): return materials[key]
@@ -175,7 +198,7 @@ func build_player() -> void:
 	player.position=spawn
 	capsule(player)
 	player.collision_mask=PLAYER_MASK
-	visual=model("res://assets/models/villager-man.glb",1.75)
+	visual=people.create(1,1.75)
 	player.add_child(visual)
 	visual.rotation.y=PI
 	pivot=Node3D.new()
@@ -279,8 +302,7 @@ func build_life() -> void:
 		add_child(body)
 		capsule(body)
 		body.collision_mask=VILLAGER_MASK
-		var appearance := model("res://assets/models/"+ACTORS[i%ACTORS.size()]+".glb",rng.randf_range(1.6,1.85))
-		preload("res://scripts/villager_wardrobe.gd").dress(appearance,i)
+		var appearance := people.create(i,rng.randf_range(1.6,1.85))
 		body.add_child(appearance)
 		appearance.rotation.y=PI
 		var points: Array[Vector3]=[]
@@ -349,7 +371,7 @@ func build_life() -> void:
 func spawn_car(kind: String) -> CharacterBody3D:
 	var car: CharacterBody3D=CAR_SCRIPT.new()
 	add_child(car)
-	car.setup(kind,world)
+	car.setup(kind,world,cars.size())
 	cars.append(car)
 	return car
 
@@ -560,7 +582,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_M: panel="" if panel=="map" else "map"; field_hud.release_all()
 			KEY_TAB: panel="" if panel=="pack" else "pack"; field_hud.release_all()
 			KEY_J: panel="" if panel=="journal" else "journal"; field_hud.release_all()
-			KEY_L: story.language="en" if story.language=="th" else "th"
+			KEY_L: switch_language()
 			KEY_E:
 				if not blocked(): interact()
 			KEY_F:
@@ -574,8 +596,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and not blocked() and not field_hud.mobile:
 		Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseMotion and not blocked() and not field_hud.mobile:
-		yaw-=event.relative.x*0.003
-		pitch=clampf(pitch-event.relative.y*0.003,-0.95,0.65)
+		yaw-=event.relative.x*0.003*Preferences.sensitivity
+		pitch=clampf(pitch-event.relative.y*0.003*Preferences.sensitivity,-0.95,0.65)
 		look_timer=1.5
 
 func blocked() -> bool:
@@ -629,6 +651,7 @@ func _physics_process(dt: float) -> void:
 		update_villagers(dt)
 		update_traffic(dt)
 		story.update()
+		navigation.update(dt)
 		for i in range(boats.size()):
 			boats[i].position.y=sin(elapsed*0.8+i)*0.04-0.24
 			boats[i].rotation.z=sin(elapsed*0.7+i)*0.015

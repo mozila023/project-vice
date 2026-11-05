@@ -230,7 +230,7 @@ func create_lighting() -> void:
 	environment.glow_bloom=0.02
 	environment.glow_hdr_threshold=1.2
 	environment.glow_blend_mode=Environment.GLOW_BLEND_MODE_SOFTLIGHT
-	environment.adjustment_saturation=1.06
+	environment.adjustment_saturation=0.97
 	environment.adjustment_contrast=1.04
 	world.environment=environment
 	add_child(world)
@@ -277,7 +277,7 @@ func update_daylight(hour: float,force := false) -> void:
 	fill.global_transform=Transform3D(Basis.looking_at(-bounce,Vector3.UP),Vector3.ZERO)
 	fill.light_color=Color(0.86,0.92,0.82).lerp(Color(1.0,0.76,0.58),low)
 	fill.light_energy=0.22*day
-	environment.ambient_light_energy=lerpf(0.55,1.12,day)
+	environment.ambient_light_energy=lerpf(0.55,0.86,day)
 	environment.background_energy_multiplier=1.0
 	var haze := Color(0.68,0.80,0.90).lerp(Color(0.93,0.66,0.46),low*day).lerp(Color(0.025,0.04,0.075),night)
 	environment.fog_light_color=haze

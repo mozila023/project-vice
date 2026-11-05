@@ -1,7 +1,7 @@
 extends CharacterBody3D
 ## One car, in any of three roles: parked, following the traffic route, or driven by the player.
 ## Handling is arcade rather than simulated: it stays predictable on the coarse terrain and cheap on phones.
-## Models: Kenney Car Kit (CC0).
+## Road car: Innerscene, CC0, consolidated to 20 material batches.
 const LAYER_WORLD := 1
 const LAYER_PEOPLE := 2
 const LAYER_CARS := 4
@@ -30,7 +30,7 @@ var all_wheels: Array[Node3D] = []
 var wheel_spin := 0.0
 var wheel_rest := {}
 
-func setup(model_kind: String,world_node: Node3D) -> void:
+func setup(model_kind: String,world_node: Node3D,paint_index := 0) -> void:
 	kind=model_kind
 	world=world_node
 	name=kind.capitalize().replace(" ","")
@@ -40,12 +40,21 @@ func setup(model_kind: String,world_node: Node3D) -> void:
 	wall_min_slide_angle=0.0
 	tilt=Node3D.new()
 	add_child(tilt)
-	var model: Node3D=load("res://assets/models/car/"+kind+".glb").instantiate()
+	var model: Node3D=preload("res://assets/models/vehicles/road_car.scn").instantiate()
 	tilt.add_child(model)
 	var bounds := measure(model)
 	# The kit's cars are all proportioned alike, so scale by length and let height follow.
-	var scale_factor: float=LENGTHS.get(kind,4.5)/maxf(bounds.size.z,0.01)
+	var scale_factor: float=4.7/maxf(bounds.size.z,0.01)
 	model.scale=Vector3.ONE*scale_factor
+	var paints := [Color("c2c8c8"),Color("23434e"),Color("a7a295"),Color("61423a"),Color("d1c7ad"),Color("333c44")]
+	for mesh: MeshInstance3D in model.find_children("*","MeshInstance3D",true,false):
+		var source=mesh.material_override
+		if source is StandardMaterial3D and source.resource_name in ["white","blue"]:
+			var paint: StandardMaterial3D=source.duplicate()
+			paint.albedo_color=Color("c8ae62") if kind=="taxi" else paints[paint_index%paints.size()]
+			paint.metallic=0.35
+			paint.roughness=0.3
+			mesh.material_override=paint
 	for node in model.find_children("wheel-*","Node3D",true,false):
 		if node.name.contains("left") or node.name.contains("right"):
 			all_wheels.append(node)

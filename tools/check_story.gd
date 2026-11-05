@@ -14,15 +14,16 @@ func run() -> void:
 	var g=current_scene
 	g.set_physics_process(false)
 	await physics_frame
-	check(g.story.language=="th" and g.story.relaxed,"Thai and relaxed exploration are defaults")
+	var preferences: Node=root.get_node("Preferences")
+	check(g.story.language==preferences.language and g.story.relaxed==preferences.relaxed,"saved language and play style apply on entry")
 	check(g.field_hud.font.has_char(0x0E01) and g.field_hud.font.has_char(0x0E49),"bundled font contains Thai consonants and tone marks")
 	var outfits := {}
 	for npc in g.villagers:
 		for mesh in npc.visual.find_children("*","MeshInstance3D",true,false):
 			for s in range(mesh.mesh.get_surface_count()):
 				var fabric=mesh.get_surface_override_material(s)
-				if fabric!=null and fabric.albedo_texture!=null: outfits[fabric.albedo_texture.get_image().get_pixel(5,5).to_html()]=true
-	check(outfits.size()>=8,"villagers have independent varied clothing materials")
+				if fabric!=null and fabric.albedo_texture!=null: outfits[fabric.albedo_texture.resource_path]=true
+	check(outfits.size()>=8,"villagers use varied realistic clothing and face textures")
 	g.active_villager="Jonas / Market"
 	g.panel="talk"
 	g.trade("story")

@@ -1,0 +1,24 @@
+# Asset sources and web rendering changes
+
+## Downloaded for this overhaul
+
+- **Microsoft Rocketbox** — realistic rigged people and walking/idle animations. [Original repository](https://github.com/microsoft/Microsoft-Rocketbox), MIT. Selected `Female_Adult_01`, `Female_Adult_08`, `Male_Adult_01`, `Male_Adult_12`, plus female/male idle-breathe and neutral-walk clips. Licence in `assets/models/people/LICENSE.txt`. Textures are resized to 1024px body / 512px head and hair; animations are matched to the shared bone names. These are fictional cast members, not scans of Efate residents.
+- **Innerscene original unbranded sedan** — [source and CC0 dedication](https://www.innerscene.com/tools/library/3d-parts/sedan-car-42109739). The GLB's own copyright metadata also records CC0. Its separately editable parts are consolidated into material batches and four animated wheel pivots with `tools/bake_sedan.gd`. The vehicle fleet shares this realistic sedan exterior in different paint colours; it no longer depicts separate van/truck/SUV body types.
+- **Cesium Air** — [original CesiumGS sample](https://github.com/CesiumGS/cesium/tree/main/Apps/SampleData/models/CesiumAir), distributed with the Cesium repository's Apache 2.0 licence, retained in `assets/models/aircraft/LICENSE.txt`. Model materials are adjusted for the game's lighting.
+- **Kenney UI Pack – Adventure** — [source](https://kenney.nl/assets/ui-pack-adventure), CC0. Downloaded from Kenney's OpenGameArt distribution after the direct server returned HTML. Selected bar frame/fill sprites; licence in `assets/ui/KENNEY-LICENSE.txt`.
+- **Lucide** — [source](https://github.com/lucide-icons/lucide), ISC with MIT notice for inherited Feather icons. Twelve interface icons; strokes changed to white for in-game tinting. Full notices in `assets/ui/icons/LICENSE.txt`.
+
+The aircraft cabin and boarding stairs are code-authored geometry, not a downloaded realistic cabin model. The arrival shot uses the same actual terrain and sky as the playable island. Sound is a small synthesized engine loop. No video is downloaded.
+
+## Existing environment assets
+
+The island already uses downloaded photographic ground, plaster, wood, iron and asphalt textures, a photographic sky, and baked foliage atlases. The overhaul keeps these shared assets and tones down ambient fill and saturation. It targets a more natural visual direction in Godot's Compatibility renderer. It does not implement PC-class AAA features such as ray-traced lighting or high-density scanned environments.
+
+## Web/mobile budget
+
+- Texture reuse, shared character animation clips, vehicle material batching, streamed tree collision and distance culling.
+- Auto, low, balanced and high quality settings; auto remains the default.
+- Excludes the unused 23MB Kenney download catalogue from exports.
+- New menu, opening, HUD, compass, road guidance and settings use engine-native scenes and small assets.
+
+Validation scripts: `tools/check_frontend.gd`, `tools/check_story.gd`, `tools/check_driving.gd`. Native-render screenshots can be reproduced with `tools/shot_front.gd` and `tools/shot.gd`. Native FPS does not establish performance on physical phones.

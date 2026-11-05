@@ -87,6 +87,7 @@ func run() -> void:
 		game.pivot.position=Vector3(p[0],maxf(ground,0.0)+p[1],p[2])
 		game.pivot.rotation=Vector3(p[4],p[3],0)
 		game.camera.get_parent().spring_length=p[5]
+		game.navigation.update(0,true)
 		game.day_time=p[6]
 		game.field_hud.visible=p[7]
 		if game.has_method("sync_daylight"): game.sync_daylight(true)
