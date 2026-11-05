@@ -18,6 +18,7 @@ var island_env_resource: Environment
 var front_env_resource: Environment
 var traveler: Node3D
 var front_sun: DirectionalLight3D
+var boarding: Node3D
 var view: Control
 var ambience: AudioStreamPlayer
 const SHOTS := [7.5,16.0,25.0]
@@ -101,13 +102,11 @@ func build_scene() -> void:
 	add_child(plane)
 	var model: Node3D=preload("res://assets/models/aircraft/Cesium_Air.glb").instantiate()
 	plane.add_child(model)
-	var bound := bounds(model)
-	var factor := 18.0/maxf(bound.size.x,maxf(bound.size.z,0.01))
-	model.scale=Vector3.ONE*factor
-	model.position=-bound.get_center()*factor
-	model.position.y=-bound.position.y*factor
-	# The sample's fuselage runs along X. Face it down the apron.
-	if bound.size.x>bound.size.z: model.rotation.y=PI/2
+	# Keep the asset's metre units. Its longest horizontal axis is the wingspan,
+	# not the fuselage. Centre only after applying the display heading.
+	model.rotation.y=PI/2
+	var bound := bounds(plane)
+	model.position=Vector3(-bound.get_center().x,-bound.position.y,-bound.get_center().z)
 	for mesh: MeshInstance3D in model.find_children("*","MeshInstance3D",true,false):
 		for i in range(mesh.mesh.get_surface_count()):
 			var mat=mesh.get_active_material(i)
@@ -126,12 +125,10 @@ func build_scene() -> void:
 	for i in range(14): box(apron,Vector3(-18,0.025,-65+i*10),Vector3(0.3,0.03,5),Color("e6d3a2"))
 	box(apron,Vector3(-32,4,-28),Vector3(36,8,18),Color("c2c4be"))
 	for i in range(10): box(apron,Vector3(-47+i*3.3,4.5,-18.9),Vector3(2.5,3,0.1),Color("466570"))
-	# A boarding stair and its simple railings alongside the cabin.
-	for i in range(9):
-		box(apron,Vector3(3.6,0.08+i*0.15,6.0-i*0.6),Vector3(1.0,0.16+i*0.3,0.62),Color("d7d7cd"))
-	for side in [-1.0,1.0]:
-		var rail=box(apron,Vector3(3.6+side*0.55,1.7,3.6),Vector3(0.05,0.05,5.4),Color("dadbd1"))
-		rail.rotation.x=0.24
+	boarding=preload("res://scripts/boarding_sequence.gd").new()
+	boarding.name="Boarding"
+	apron.add_child(boarding)
+	boarding.build(plane)
 	# A separate compact interior shot; its window is a real opening, not a still image.
 	cabin=Node3D.new()
 	add_child(cabin)
@@ -208,7 +205,7 @@ func build_scene() -> void:
 	ambience.stream=audio
 	traveler=preload("res://scripts/real_people.gd").new().create(1,1.75)
 	add_child(traveler)
-	traveler.rotation.y=PI
+	traveler.rotation.y=0
 	# Reuse the game's real terrain for the arrival shot, without a second simultaneous environment.
 	front_environment.environment=null
 	island=preload("res://scripts/tropical_world.gd").new()
@@ -286,13 +283,17 @@ func set_intro_pose(at: float) -> void:
 	if shot==0:
 		plane.position=Vector3.ZERO
 		plane.rotation=Vector3.ZERO
-		var t: float=clampf(at/SHOTS[0],0,1) if screen=="intro" else 0.0
-		camera.position=Vector3(11-3*t,3.4+0.3*t,14-3*t) if screen=="intro" else Vector3(-16,4.5,18)
-		camera.look_at(Vector3(2.8,1.8,1.2) if screen=="intro" else Vector3(0,2,0))
-		traveler.position=Vector3(3.6,0.1,6.8).lerp(Vector3(3.6,1.45,1.3),t)
-		traveler.visible=screen=="intro" and t<0.94
+		var framing: Dictionary=boarding.camera_pose(at)
+		camera.position=framing.position if screen=="intro" else Vector3(-23,6.2,25)
+		camera.look_at(framing.target if screen=="intro" else Vector3(0,2.5,0))
+		var pose: Dictionary=boarding.pose(at)
+		traveler.position=pose.position
+		traveler.rotation.y=pose.yaw
+		traveler.visible=screen=="intro"
 		var animation: AnimationPlayer=traveler.find_child("AnimationPlayer",true,false)
-		if animation and animation.current_animation!="walk": animation.play("walk")
+		if animation:
+			if animation.current_animation!=pose.clip: animation.play(pose.clip)
+			animation.seek(fmod(pose.animation_time,animation.get_animation(pose.clip).length),true)
 	elif shot==1:
 		camera.position=Vector3(-0.2,1.65,0.75)
 		camera.look_at(Vector3(-9,1.48,0.75))
@@ -313,7 +314,7 @@ func _process(dt: float) -> void:
 		set_intro_pose(intro_time+dt)
 		if intro_time>=SHOTS[2]: arrive()
 	elif screen=="menu":
-		camera.position=Vector3(-16+sin(clock*0.05)*1.5,4.5,18)
-		camera.look_at(Vector3(0,2,0))
+		camera.position=Vector3(-23+sin(clock*0.05)*1.5,6.2,25)
+		camera.look_at(Vector3(0,2.5,0))
 	if loading and ResourceLoader.load_threaded_get_status("res://scenes/island.tscn")==ResourceLoader.THREAD_LOAD_LOADED:
 		get_tree().change_scene_to_packed(ResourceLoader.load_threaded_get("res://scenes/island.tscn"))
