@@ -1,12 +1,12 @@
 {
     "features":  [
                      "realistic people and cars",
-                     "new HUD",
+                     "mobile HUD",
                      "quest road navigation",
                      "New Game and Settings",
                      "flight introduction",
                      "TH/EN"
                  ],
-    "pack_bytes":  73836748,
-    "commit":  "f1db33cea95ba761f97f95494521bc32d32cace5"
+    "pack_bytes":  73837308,
+    "commit":  "90a839a2693e9dd6031bc63f8bdbe9b398a7777a"
 }
