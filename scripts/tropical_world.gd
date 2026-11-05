@@ -2,18 +2,18 @@ extends Node3D
 ## Efate, rendered for WebGL2 and phones: one Compatibility-renderer look on every platform,
 ## scaled by a quality tier. Heavy data is baked by tools/bake_world.gd so loading stays short.
 const COAST := [Vector2(-.16,.92),Vector2(.12,.96),Vector2(.35,.84),Vector2(.52,.86),Vector2(.57,.65),Vector2(.72,.52),Vector2(.73,.29),Vector2(.94,.02),Vector2(.88,-.36),Vector2(.69,-.48),Vector2(.74,-.77),Vector2(.47,-.9),Vector2(.06,-.96),Vector2(-.06,-.85),Vector2(-.28,-.91),Vector2(-.41,-.71),Vector2(-.55,-.78),Vector2(-.49,-.55),Vector2(-.29,-.42),Vector2(-.36,-.21),Vector2(-.58,-.18),Vector2(-.78,-.32),Vector2(-.91,-.25),Vector2(-.78,.01),Vector2(-.79,.27),Vector2(-.68,.43),Vector2(-.65,.66),Vector2(-.43,.82),Vector2(-.27,.77)]
-const TOWN := Vector2(-489,141)
+const TOWN := Vector2(-978,282)
 const GRID_STEP := 12.0
-const GRID_N := 243
-const GRID_MIN := -1452.0
+const GRID_N := 483
+const GRID_MIN := -2892.0
 const BAKED := "res://assets/baked/"
 ## Gameplay spots: well, cooking fire, shelter, spawn. Nothing is placed on these.
-const KEEP_CLEAR := [Vector2(-475,110),Vector2(-500,136),Vector2(-455,130),Vector2(-514,144)]
+const KEEP_CLEAR := [Vector2(-950,220),Vector2(-1000,272),Vector2(-910,260),Vector2(-1028,288)]
 ## low, medium, high
 const TIERS := [
-	{"scale":0.72,"shadow":55.0,"splits":false,"msaa":0,"glow":false,"near":85.0,"palm":55.0,"trees":0.55,"ground":1,"far_terrain":420.0,"buildings":420.0},
-	{"scale":0.88,"shadow":80.0,"splits":false,"msaa":1,"glow":false,"near":130.0,"palm":80.0,"trees":0.8,"ground":2,"far_terrain":560.0,"buildings":560.0},
-	{"scale":1.0,"shadow":120.0,"splits":true,"msaa":2,"glow":true,"near":190.0,"palm":115.0,"trees":1.0,"ground":3,"far_terrain":760.0,"buildings":800.0},
+	{"scale":0.72,"shadow":55.0,"splits":false,"msaa":0,"glow":false,"near":85.0,"palm":55.0,"trees":0.55,"ground":1,"far_terrain":420.0,"buildings":300.0,"forest_far":1100.0},
+	{"scale":0.88,"shadow":80.0,"splits":false,"msaa":1,"glow":false,"near":130.0,"palm":80.0,"trees":0.8,"ground":2,"far_terrain":560.0,"buildings":500.0,"forest_far":1800.0},
+	{"scale":1.0,"shadow":120.0,"splits":true,"msaa":2,"glow":true,"near":190.0,"palm":115.0,"trees":1.0,"ground":3,"far_terrain":760.0,"buildings":800.0,"forest_far":3000.0},
 ]
 const MSAA_LEVELS := [Viewport.MSAA_DISABLED,Viewport.MSAA_2X,Viewport.MSAA_4X]
 ## Half width of the tarmac in metres for each mapped road class.
@@ -59,13 +59,13 @@ func _init() -> void:
 	noise.seed=1847
 	noise.frequency=0.0035
 	noise.fractal_octaves=4
-	for p in COAST: coast_world.append(Vector2(p.x*940,-p.y*1050))
+	for p in COAST: coast_world.append(Vector2(p.x*1880,-p.y*2100))
 	rng.seed=4702
 	geography=JSON.parse_string(FileAccess.get_file_as_string("res://assets/geography/efate-game-map.json"))
 	coast_field=FileAccess.get_file_as_bytes("res://assets/geography/coast-distance.bin").to_float32_array()
 
 func coast_distance(p: Vector2) -> float:
-	var uv := ((p+Vector2(1440,1440))/12).clamp(Vector2.ZERO,Vector2(239.999,239.999))
+	var uv := ((p+Vector2(2880,2880))/24).clamp(Vector2.ZERO,Vector2(239.999,239.999))
 	var x := floori(uv.x)
 	var z := floori(uv.y)
 	var a := lerpf(coast_field[z*241+x],coast_field[z*241+x+1],uv.x-x)
@@ -74,16 +74,16 @@ func coast_distance(p: Vector2) -> float:
 
 ## Source terrain function, used only while baking.
 func raw_height(x: float,z: float) -> float:
-	var p := Vector2(x,z)
-	var edge := coast_distance(p)
-	if edge<0: return -0.5-minf(-edge*0.1,32)
-	var radius := Vector2(x/900.0,z/1100.0).length()
+	var p := Vector2(x,z)/2.0
+	var edge := coast_distance(Vector2(x,z))/2.0
+	if edge<0: return (-0.5-minf(-edge*0.1,32))*2.0
+	var radius := Vector2(p.x/900.0,p.y/1100.0).length()
 	var hill := pow(maxf(0,1-radius),1.55)*185
-	var detail := noise.get_noise_2d(x,z)*33+absf(noise.get_noise_2d(x+710,z-150))*22
-	var town_flat := smoothstep(115.0,235.0,p.distance_to(TOWN))
+	var detail := noise.get_noise_2d(p.x,p.y)*33+absf(noise.get_noise_2d(p.x+710,p.y-150))*22
+	var town_flat := smoothstep(115.0,235.0,p.distance_to(TOWN/2.0))
 	var inland := 3.5+maxf(0,hill+detail)*town_flat
 	var shelf := lerpf(-0.45,3.1,smoothstep(0.0,32.0,edge))
-	return shelf+maxf(0,inland-3.1)*smoothstep(32.0,180.0,edge)
+	return (shelf+maxf(0,inland-3.1)*smoothstep(32.0,180.0,edge))*2.0
 
 ## Exact surface of the rendered terrain mesh, so anything placed on it sits flush.
 func height_at(x: float,z: float) -> float:
@@ -108,9 +108,9 @@ func encode_elevation(h: float) -> float:
 	return 0.5-0.5*sqrt(minf(-h,33.0)/33.0)
 
 func surface_class(x: float,z: float) -> int:
-	var cell := 2880.0/720
-	var ix := int((x+1440.0)/cell)
-	var iz := int((z+1440.0)/cell)
+	var cell := 5760.0/720
+	var ix := int((x+2880.0)/cell)
+	var iz := int((z+2880.0)/cell)
 	if ix<0 or iz<0 or ix>=720 or iz>=720 or surface.is_empty(): return 0
 	return surface[iz*720+ix]
 
@@ -168,6 +168,7 @@ func apply_tier() -> void:
 		match entry.kind:
 			"tree": entry.node.visibility_range_end=q.near+175.0
 			"palm": entry.node.visibility_range_end=q.palm+40.0
+			"tree_far": entry.node.visibility_range_end=q.forest_far
 			"terrain_hi": entry.node.visibility_range_end=q.far_terrain
 			"terrain_lo": entry.node.visibility_range_begin=q.far_terrain
 			"rock": entry.node.visibility_range_end=q.near+120.0
@@ -218,11 +219,11 @@ func create_lighting() -> void:
 	environment.ambient_light_source=Environment.AMBIENT_SOURCE_SKY
 	environment.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode=Environment.TONE_MAPPER_ACES
-	environment.tonemap_exposure=1.0
+	environment.tonemap_exposure=0.94
 	environment.tonemap_white=7.0
 	environment.fog_enabled=true
 	environment.fog_mode=Environment.FOG_MODE_EXPONENTIAL
-	environment.fog_density=0.00032
+	environment.fog_density=0.00018
 	environment.fog_sky_affect=0.0
 	environment.fog_sun_scatter=0.15
 	environment.glow_intensity=0.35
@@ -239,7 +240,8 @@ func create_lighting() -> void:
 	sun.shadow_enabled=true
 	sun.shadow_opacity=0.86
 	sun.shadow_blur=2.0
-	sun.shadow_normal_bias=1.4
+	sun.shadow_normal_bias=0.55
+	sun.shadow_bias=0.04
 	# Shadows melt away with distance and across cascades rather than ending at a visible line.
 	sun.directional_shadow_blend_splits=true
 	sun.directional_shadow_fade_start=0.7
@@ -276,8 +278,8 @@ func update_daylight(hour: float,force := false) -> void:
 	var bounce := Vector3(-sun_dir.x,maxf(absf(sun_dir.y)*0.35,0.2),-sun_dir.z).normalized()
 	fill.global_transform=Transform3D(Basis.looking_at(-bounce,Vector3.UP),Vector3.ZERO)
 	fill.light_color=Color(0.86,0.92,0.82).lerp(Color(1.0,0.76,0.58),low)
-	fill.light_energy=0.22*day
-	environment.ambient_light_energy=lerpf(0.55,0.86,day)
+	fill.light_energy=0.28*day
+	environment.ambient_light_energy=lerpf(0.48,0.66,day)
 	environment.background_energy_multiplier=1.0
 	var haze := Color(0.68,0.80,0.90).lerp(Color(0.93,0.66,0.46),low*day).lerp(Color(0.025,0.04,0.075),night)
 	environment.fog_light_color=haze
@@ -327,10 +329,10 @@ func create_terrain() -> void:
 	# Two detail levels per 240 m chunk; deep seabed that can never show is skipped.
 	var n := GRID_N
 	var shared_rock := false
-	for cz in range(-6,6):
-		for cx in range(-6,6):
-			var base_x := (cx+6)*20+1
-			var base_z := (cz+6)*20+1
+	for cz in range(-12,12):
+		for cx in range(-12,12):
+			var base_x := (cx+12)*20+1
+			var base_z := (cz+12)*20+1
 			var highest := -1000.0
 			for z in range(21):
 				for x in range(21):
@@ -432,7 +434,7 @@ func multimesh_node(mesh: Mesh,chunk: Dictionary,material: Material) -> MultiMes
 	for i in range(chunk.count):
 		var placement := mm.get_instance_transform(i)
 		var p: Vector3=chunk.centre+placement.origin
-		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/island_landmarks.gd").reserved(p.x,p.z,1.5)):
+		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/island_landmarks.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/place_sites.gd").reserved(p.x,p.z,1.5)):
 			placement.basis=Basis(Vector3.ZERO,Vector3.ZERO,Vector3.ZERO)
 			mm.set_instance_transform(i,placement)
 	var node := MultiMeshInstance3D.new()
@@ -460,12 +462,14 @@ func create_vegetation() -> void:
 		tree_nodes.append({"mm":near_node.multimesh,"count":chunk.count})
 		var far_node := multimesh_node(card,chunk,card_far)
 		far_node.name="TreesFar"
+		range_nodes.append({"node":far_node,"kind":"tree_far"})
 		far_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		tree_nodes.append({"mm":far_node.multimesh,"count":chunk.count})
 	for chunk in baked.palm_far:
 		tree_count+=chunk.count
 		var far_node := multimesh_node(card,chunk,card_far)
 		far_node.name="PalmsFar"
+		range_nodes.append({"node":far_node,"kind":"tree_far"})
 		far_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for chunk in baked.palms:
 		var node := multimesh_node(palm,chunk,null)
@@ -595,7 +599,7 @@ func group_trunks(chunk: Dictionary,is_tree: bool) -> void:
 		# Row two of the atlas holds bushes, which the player can push through.
 		if is_tree and buffer[at+13]>0.5: continue
 		var p: Vector3=chunk.centre+Vector3(buffer[at+3],buffer[at+7],buffer[at+11])
-		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/island_landmarks.gd").reserved(p.x,p.z,1.5)): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/elluk_restaurant.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/seaside_inn.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/island_landmarks.gd").reserved(p.x,p.z,1.5) or preload("res://scripts/place_sites.gd").reserved(p.x,p.z,1.5)): continue
 		var key := Vector2i(floori(p.x/TREE_CELL),floori(p.z/TREE_CELL))
 		if not trunk_groups.has(key): trunk_groups[key]=[]
 		trunk_groups[key].append([p,is_tree])

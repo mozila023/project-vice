@@ -11,7 +11,7 @@ uniform float night = 0.0;
 varying vec3 world_pos;
 
 float elevation(vec2 p) {
-	vec2 uv = p/2880.0+0.5;
+	vec2 uv = p/5760.0+0.5;
 	if (uv.x<0.0 || uv.y<0.0 || uv.x>1.0 || uv.y>1.0) return -33.0;
 	float r = texture(data_map,uv).r;
 	if (r>=0.5) return (r-0.5)*16.0;
@@ -39,8 +39,8 @@ void fragment() {
 	vec3 n2 = texture(normal_tex,p*0.021-TIME*flow.yx*1.1+0.31).rgb;
 	vec3 n3 = texture(normal_tex,p*0.0035+TIME*flow*0.25).rgb;
 	vec2 wave = (n1.xy-0.5)*mix(0.25,1.0,detail)*(1.0-smoothstep(150.0,700.0,dist));
-	wave += (n2.xy-0.5)*1.0*(1.0-smoothstep(600.0,2500.0,dist)*0.6);
-	wave += (n3.xy-0.5)*0.7;
+	wave += (n2.xy-0.5)*0.55*(1.0-smoothstep(600.0,2500.0,dist)*0.6);
+	wave += (n3.xy-0.5)*0.32;
 	// Sheltered shallows lie flatter than open water.
 	wave *= mix(0.42,1.0,smoothstep(0.2,6.0,depth));
 	NORMAL_MAP = vec3(wave*0.5+0.5,1.0);
@@ -48,7 +48,7 @@ void fragment() {
 
 	// Colour by water column: clear turquoise over sand, through teal, to deep ocean blue.
 	// Water itself reflects little: these are deliberately dark, sky reflection adds the rest.
-	vec3 shallow = vec3(0.045,0.36,0.34);
+	vec3 shallow = vec3(0.055,0.31,0.29);
 	vec3 mid = vec3(0.006,0.15,0.22);
 	vec3 deep = vec3(0.002,0.022,0.075);
 	vec3 water = mix(shallow,mid,smoothstep(0.5,5.0,depth));
@@ -59,13 +59,13 @@ void fragment() {
 	vec4 fn2 = texture(noise_tex,p*0.33-TIME*vec2(0.01,0.007));
 	float lace = smoothstep(0.24,0.8,fn2.g*0.6+fn.r*0.55);
 	float run = sin(depth*11.0-TIME*0.9+fn.r*9.0)*0.5+0.5;
-	float shore = (1.0-smoothstep(0.02,0.24,depth))*(0.25+run*0.75)*lace;
+	float shore = (1.0-smoothstep(0.02,0.18,depth))*(0.18+run*0.65)*lace;
 	float foam = clamp(shore,0.0,1.0)*(1.0-smoothstep(500.0,1400.0,dist)*0.8);
 
 	float view_fresnel = pow(1.0-clamp(dot(NORMAL,VIEW),0.0,1.0),4.0);
 	ALBEDO = mix(water*mix(1.0,0.5,night),vec3(0.93,0.96,0.95)*mix(1.0,0.3,night),foam);
 	EMISSION = vec3(0.004,0.012,0.028)*night;
-	ROUGHNESS = mix(0.075,0.72,foam);
+	ROUGHNESS = mix(0.13,0.72,foam);
 	SPECULAR = 0.34;
 	METALLIC = 0.0;
 	// Clear at the waterline so the seabed shows; opaque with depth and at grazing angles.

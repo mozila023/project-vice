@@ -81,7 +81,7 @@ func draw_local_map(canvas: Control) -> void:
 	var center := Vector2.ONE*MAP_SIZE*0.5
 	var player := Vector2(game.player.position.x,game.player.position.z)
 	canvas.draw_rect(Rect2(Vector2.ZERO,Vector2.ONE*MAP_SIZE),Color("26434c"))
-	canvas.draw_texture_rect(game.world.map_texture,Rect2(center-(player+Vector2.ONE*1440.0)*scale,Vector2.ONE*2880.0*scale),false,Color(0.85,0.9,0.86))
+	canvas.draw_texture_rect(game.world.map_texture,Rect2(center-(player+Vector2.ONE*2880.0)*scale,Vector2.ONE*5760.0*scale),false,Color(0.85,0.9,0.86))
 	var world_area := Rect2(player-Vector2.ONE*radius(),Vector2.ONE*radius()*2.0)
 	for road in roads:
 		if not road.bounds.intersects(world_area): continue

@@ -6,6 +6,8 @@ var sunshine: Node3D
 var restaurant: Node3D
 var hotel: Node3D
 var landmarks: Node3D
+var places=preload("res://scripts/island_places.gd").new()
+var coastal_details: Node3D
 var population=preload("res://scripts/island_population.gd").new()
 var quests=preload("res://scripts/island_quests.gd").new()
 var luna: CharacterBody3D
@@ -68,8 +70,8 @@ var cast_anim := 0.0
 var well_position := Vector3.ZERO
 var camp_position := Vector3.ZERO
 var shelter_position := Vector3.ZERO
-var village_center := Vector3(-489,0,141)
-var spawn := Vector3(-229.08243,5,433.20744)
+var village_center := Vector3(-978,0,282)
+var spawn := Vector3(preload("res://scripts/sunshine_spa.gd").SPAWN.x,5,preload("res://scripts/sunshine_spa.gd").SPAWN.y)
 var rng := RandomNumberGenerator.new()
 var model_cache := {}
 var active_villager := ""
@@ -85,7 +87,7 @@ const CAR_SCRIPT := preload("res://scripts/car.gd")
 const PLAYER_MASK := CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_TERRAIN|CAR_SCRIPT.LAYER_PEOPLE|CAR_SCRIPT.LAYER_CARS|CAR_SCRIPT.LAYER_TREES
 const VILLAGER_MASK := CAR_SCRIPT.LAYER_WORLD|CAR_SCRIPT.LAYER_TERRAIN|CAR_SCRIPT.LAYER_CARS|CAR_SCRIPT.LAYER_TREES
 ## Parked cars free to drive: [near x, near z, model], at real settlements around the island.
-const PARKING := [[-505.0,128.0,"sedan"],[-470.0,170.0,"hatchback-sports"],[-254.0,438.0,"taxi"],[-290.0,290.0,"suv"],[-248.0,621.0,"van"],[106.0,-685.0,"truck"],[915.0,106.0,"suv"],[-849.0,-135.0,"sedan"]]
+const PARKING := [[-1010.0,256.0,"sedan"],[-940.0,340.0,"hatchback-sports"],[-508.0,876.0,"taxi"],[-580.0,580.0,"suv"],[-496.0,1242.0,"van"],[212.0,-1370.0,"truck"],[1830.0,212.0,"suv"],[-1698.0,-270.0,"sedan"]]
 
 func ground(x: float,z: float) -> float:
 	return world.height_at(x,z)
@@ -125,6 +127,11 @@ func _ready() -> void:
 	landmarks=preload("res://scripts/island_landmarks.gd").new()
 	add_child(landmarks)
 	landmarks.build(self)
+	add_child(places)
+	places.build(self)
+	coastal_details=preload("res://scripts/coastal_details.gd").new()
+	add_child(coastal_details)
+	coastal_details.build(self)
 	print("PROFILE town ",Time.get_ticks_msec()-t0); build_player(); build_life(); print("PROFILE life ",Time.get_ticks_msec()-t0)
 	audio=preload("res://scripts/island_audio.gd").new()
 	audio.game=self
@@ -384,9 +391,9 @@ func play_animation(actor: Node3D,clip: String,speed := 1.0) -> void:
 		animator.speed_scale=speed
 
 func build_life() -> void:
-	well_position=Vector3(-475,ground(-475,110),110)
-	camp_position=Vector3(-500,ground(-500,136),136)
-	shelter_position=Vector3(-455,ground(-455,130),130)
+	well_position=Vector3(-950,ground(-950,220),220)
+	camp_position=Vector3(-1000,ground(-1000,272),272)
+	shelter_position=Vector3(-910,ground(-910,260),260)
 	# Blender-authored communal well, cooking campfire circle and sheltered bamboo sleeping pavilion.
 	var well: Node3D=preload("res://assets/models/props/village_well.glb").instantiate()
 	add_child(well)
@@ -414,18 +421,18 @@ func build_life() -> void:
 	update_traffic(0.0)
 	for entry in traffic: entry.node.settle(0.0,true)
 	for spot in PARKING: park_car(spot[0],spot[1],spot[2])
-	var beach_x := -540.0
+	var beach_x := -1080.0
 	for i in range(2):
 		var boat: Node3D=props.boat(i==0)
 		add_child(boat)
-		boat.position=Vector3(beach_x-i*10,0,165+i*9)
+		boat.position=Vector3(beach_x-i*10,0,330+i*9)
 		boat.rotation.y=0.8+i*0.5
 		boats.append(boat)
 	var coconut_scene: PackedScene=preload("res://assets/models/props/coconut.glb")
 	var driftwood_scene: PackedScene=preload("res://assets/models/props/driftwood.glb")
 	for i in range(18):
-		var x := -490+rng.randf_range(-12,35)
-		var z := rng.randf_range(95,150)
+		var x := -980+rng.randf_range(-24,70)
+		var z := rng.randf_range(190,300)
 		if ground(x,z)<1 or inside_building(x,z): continue
 		var coconut: Node3D=coconut_scene.instantiate()
 		add_child(coconut)
@@ -436,11 +443,11 @@ func build_life() -> void:
 	for i in range(8):
 		var node: Node3D=driftwood_scene.instantiate()
 		add_child(node)
-		var x := rng.randf_range(-505,-485)
-		var z := rng.randf_range(120,145)
+		var x := rng.randf_range(-1010,-970)
+		var z := rng.randf_range(240,290)
 		while inside_building(x,z):
-			x=rng.randf_range(-505,-485)
-			z=rng.randf_range(120,145)
+			x=rng.randf_range(-1010,-970)
+			z=rng.randf_range(240,290)
 		node.position=Vector3(x,ground(x,z),z)
 		node.rotation.y=rng.randf()*TAU
 		prop_physics.ground_on(node,"driftwood",world)
@@ -740,6 +747,7 @@ func _physics_process(dt: float) -> void:
 		update_villagers(dt)
 		update_traffic(dt)
 		story.update()
+		places.update(dt)
 		navigation.update(dt)
 		for i in range(boats.size()):
 			boats[i].position.y=sin(elapsed*0.8+i)*0.04-0.24
@@ -852,6 +860,10 @@ func cast_line() -> void:
 	if blocked(): return
 	if driving: tell("Get out of the car before casting."); return
 	if fishing_state=="bite": reel(); return
+	if places.interact():
+		field_hud.release_all()
+		Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+		return
 	if fishing_state!="":
 		cancel_fishing()
 		if is_instance_valid(audio): audio.play_sfx("ui_close",1.1,-4.0)
@@ -960,6 +972,7 @@ func cancel_fishing() -> void:
 
 func nearby_context() -> String:
 	if landmarks.context()!="": return landmarks.context()
+	if places.context()!="": return places.context()
 	if is_instance_valid(luna) and player.position.distance_to(luna.position)<3: return story.l("TALK TO LUNA","คุยกับ Luna")
 	if restaurant_inside(): return story.l("PAD THAI · EAT / SELL INGREDIENTS","PAD THAI · กินข้าว / ขายวัตถุดิบ")
 	if hotel.contains(player.position): return story.l("SEASIDE INN · SLEEP UNTIL MORNING","SEASIDE INN · นอนพักถึงเช้า")
@@ -1127,28 +1140,29 @@ func service(option: String) -> void:
 		tell(story.l("08:00 · A fresh morning at Seaside Inn.","08:00 · ตื่นรับวันใหม่ที่ Seaside Inn พร้อมพลังเต็มแล้ว"))
 		get_tree().create_timer(1.2).timeout.connect(func(): resting=false)
 
-func save_game() -> void:
+func save_game(path := "user://efate_life_save.json") -> void:
 	var gathered := []
 	for item in resources:
 		if item.collected: gathered.append(item.id)
-	var data := {"version":2,"position":[player.position.x,player.position.y,player.position.z],"health":health,"food":food,"thirst":thirst,"energy":energy,"stamina":stamina,"fish":fish,"cooked_fish":cooked_fish,"coconuts":coconuts,"wood":wood,"coins":coins,"friendship":friendship,"delivered_fish":delivered_fish,"days":days,"day_time":day_time,"gathered":gathered}
+	var data := {"version":2,"map_scale":10,"position":[player.position.x,player.position.y,player.position.z],"health":health,"food":food,"thirst":thirst,"energy":energy,"stamina":stamina,"fish":fish,"cooked_fish":cooked_fish,"coconuts":coconuts,"wood":wood,"coins":coins,"friendship":friendship,"delivered_fish":delivered_fish,"days":days,"day_time":day_time,"gathered":gathered}
 	data["story"]=story.data()
-	var file := FileAccess.open("user://efate_life_save.json",FileAccess.WRITE)
+	var file := FileAccess.open(path,FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(data))
 		tell("Island life saved.")
 	else: tell("Save failed. Please check available storage.")
 
-func load_game() -> void:
-	if not FileAccess.file_exists("user://efate_life_save.json"): tell("No island-life save yet."); return
-	var data = JSON.parse_string(FileAccess.get_file_as_string("user://efate_life_save.json"))
+func load_game(path := "user://efate_life_save.json") -> void:
+	if not FileAccess.file_exists(path): tell("No island-life save yet."); return
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not data is Dictionary or data.get("version")!=2: tell("This save cannot be loaded."); return
 	var p = data.get("position")
 	if not p is Array or p.size()!=3: return
 	for v in p:
 		if not (v is int or v is float) or not is_finite(float(v)): return
 	var loaded := Vector3(float(p[0]),float(p[1]),float(p[2]))
-	if absf(loaded.x)>1400 or absf(loaded.z)>1400 or ground(loaded.x,loaded.z)<-0.4: return
+	loaded=preload("res://scripts/map_coordinates.gd").migrate_position(loaded,int(data.get("map_scale",20)))
+	if absf(loaded.x)>2800 or absf(loaded.z)>2800 or ground(loaded.x,loaded.z)<-0.4: return
 	loaded.y=maxf(loaded.y,ground(loaded.x,loaded.z)+0.25)
 	for key in ["health","food","thirst","energy","stamina"]:
 		var value = data.get(key,100)
@@ -1160,7 +1174,10 @@ func load_game() -> void:
 	for key in ["fish","cooked_fish","coconuts","wood","coins","friendship","delivered_fish"]: set(key,clampi(int(data.get(key,0)),0,99999))
 	days=clampi(int(data.get("days",1)),1,99999)
 	day_time=clampf(float(data.get("day_time",8)),0,23.999)
-	story.restore(data.get("story",{}))
+	var story_data=data.get("story",{})
+	if story_data is Dictionary:
+		story_data["map_scale"]=data.get("map_scale",20)
+	story.restore(story_data)
 	var gathered = data.get("gathered",[])
 	if not gathered is Array: gathered=[]
 	for item in resources:
@@ -1170,4 +1187,30 @@ func load_game() -> void:
 	player.position=loaded
 	player.velocity=Vector3.ZERO
 	cancel_fishing()
+	resolve_loaded_positions.call_deferred()
 	tell("Welcome back to your island life.")
+
+func clear_saved_position(body: CharacterBody3D,at: Vector3) -> Vector3:
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape=body.get_child(0).shape
+	query.collision_mask=1|4|8
+	query.exclude=[body.get_rid()]
+	query.transform=Transform3D(Basis.IDENTITY,at+Vector3.UP*.9)
+	var space := body.get_world_3d().direct_space_state
+	if space.intersect_shape(query,1).is_empty(): return at
+	# Rebuilt plots may now occupy an old save's exact spot. Move to the nearest free ground, retaining all progress.
+	for radius in [1.0,2.0,4.0,8.0,16.0,24.0]:
+		for angle in range(16):
+			var candidate: Vector3=at+Vector3(cos(angle*TAU/16)*radius,0,sin(angle*TAU/16)*radius)
+			candidate.y=world.surface_height_at(candidate.x,candidate.z)+.06
+			if candidate.y<.02: continue
+			query.transform.origin=candidate+Vector3.UP*.9
+			if space.intersect_shape(query,1).is_empty(): return candidate
+	return spawn
+
+func resolve_loaded_positions() -> void:
+	await get_tree().physics_frame
+	player.position=clear_saved_position(player,player.position)
+	luna.position=clear_saved_position(luna,luna.position)
+	guide.clear_path()
+	population.refresh()

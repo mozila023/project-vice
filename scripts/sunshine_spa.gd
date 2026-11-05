@@ -2,10 +2,10 @@ extends Node3D
 ## Site verified against the user-supplied Plus Code and the linked business website.
 ## Interior follows the site's salon photograph; frontage follows the Google Maps
 ## exterior photo. Unseen elevations/dimensions are interpreted. See SUNSHINE_SPA.md.
-const SITE := Vector2(-223.78243,441.00744)
+const SITE := Vector2(-447.56486,882.01488)
 const ADDRESS := "785C+68 · Seaside · Port Vila · Vanuatu"
 const TITLE := "Sunshine Wellness & Spa"
-const SPAWN := Vector2(-229.08243,433.20744)
+const SPAWN := SITE+Vector2(-5.3,-7.8)
 var world: Node3D
 var batches := {}
 var materials := {}

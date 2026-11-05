@@ -1,6 +1,6 @@
 extends RefCounted
 ## Residents have homes and working hours. Only nearby residents consume animation/physics time.
-const ZONES := [["Mele",-489,141],["Port Vila",-254,438],["Sunshine",-230,432],["Ifira Port",-290,520],["Pango",-374,643],["Eton",1059,488],["Port Havannah",-462,-533],["Emua",106,-685],["Mangaliliu",-849,-135],["East coast",915,106]]
+const ZONES := [["Mele",-978,282],["Port Vila",-508,876],["Sunshine",-460,864],["Ifira Port",-580,1040],["Pango",-748,1286],["Eton",2118,976],["Port Havannah",-924,-1066],["Emua",212,-1370],["Mangaliliu",-1698,-270],["East coast",1830,212]]
 var game: Node3D
 var records: Array[Dictionary] = []
 var timer := 0.0

@@ -34,7 +34,7 @@ func progress(id := -1) -> String:
 func ready(id: int) -> bool:
 	return [manifests.size()==3,greetings.size()==3,bar_greet and bar_story,meal_delivered][id]
 func target() -> Vector3:
-	var at := Vector2(-285.41613,558.31335)
+	var at := Vector2(-570.83226,1116.6267)
 	match selected:
 		0:
 			for i in range(3):

@@ -1,6 +1,6 @@
 extends Node3D
 ## Front elevation follows the three user supplied March 2025 reference photographs.
-const SITE := Vector2(-285.41613,558.31335)
+const SITE := Vector2(-570.83226,1116.6267)
 const LATITUDE := -17.763097
 const LONGITUDE := 168.3091479
 const STAIR_TOP := 7.8

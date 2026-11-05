@@ -30,6 +30,10 @@ func build(owner_game: Node3D) -> void:
 			for step in range(count+1): samples.append(a.lerp(b,float(step)/count))
 		for sample_index in range(samples.size()):
 			var p: Vector2=samples[sample_index]
+			# Match rendered roads: submerged source segments are not walkable links.
+			if game.world.surface_height_at(p.x,p.y)<.02:
+				previous=-1
+				continue
 			var tangent: Vector2=(samples[mini(sample_index+1,samples.size()-1)]-samples[maxi(0,sample_index-1)]).normalized()
 			var key := Vector2i(roundi(p[0]*10),roundi(p[1]*10))
 			if not ids.has(key):

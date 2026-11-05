@@ -59,6 +59,7 @@ func build_cell(key: Vector2i) -> void:
 		var x := origin.x+rng.randf()*CELL
 		var z := origin.z+rng.randf()*CELL
 		if preload("res://scripts/sunshine_spa.gd").reserved(x,z,0.4): continue
+		if preload("res://scripts/elluk_restaurant.gd").reserved(x,z,.4) or preload("res://scripts/seaside_inn.gd").reserved(x,z,.4) or preload("res://scripts/island_landmarks.gd").reserved(x,z,.4) or preload("res://scripts/place_sites.gd").reserved(x,z,.4): continue
 		var kind: int=world.surface_class(x,z)
 		var roll := rng.randf()
 		var entry: Array

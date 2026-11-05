@@ -24,7 +24,7 @@ $html=$html.Replace('<head>',('<head>'+"`n"+'<meta name="game-source-commit" con
 [IO.File]::WriteAllText($htmlPath,$html,[Text.UTF8Encoding]::new($false))
 $version=@{commit=$source;pack='index.pck';pack_bytes=(Get-Item -LiteralPath (Join-Path $deployRoot 'index.pck')).Length}
 [IO.File]::WriteAllText((Join-Path $deployRoot 'version.json'),($version|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
-foreach($name in @('ASSET_CREDITS.md','ELLUK_UPDATE.md','MODEL_REFINEMENT.md','ISLAND_EXPANSION.md')){Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $deployRoot -Force}
+foreach($name in @('ASSET_CREDITS.md','ELLUK_UPDATE.md','MODEL_REFINEMENT.md','ISLAND_EXPANSION.md','MAP_SCALE_10.md')){Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $deployRoot -Force}
 $previousIndex=$env:GIT_INDEX_FILE
 try {
     git -C $projectRoot fetch origin gh-pages

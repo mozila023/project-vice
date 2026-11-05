@@ -1,11 +1,13 @@
 extends RefCounted
-const START := Vector2(-230.5,431.8)
+const START := preload("res://scripts/sunshine_spa.gd").SPAWN+Vector2(-1.4,-1.4)
 var game: Node3D
 var body: CharacterBody3D
 var visual: Node3D
 var route := PackedVector3Array()
 var waypoint := 0
 var destination := Vector3.INF
+var planned_goal := Vector3.INF
+var route_retry := 0.0
 var waiting := false
 var stuck := 0.0
 var last_position := Vector3.ZERO
@@ -43,13 +45,17 @@ func goal() -> Vector3:
 
 func make_route() -> void:
 	destination=goal()
+	planned_goal=destination
+	route_retry=2.0
 	route=PackedVector3Array()
 	# Plan around actual building/cars/trunk collision, including the restaurant's rear wall.
 	var grid := AStarGrid2D.new()
 	var from := Vector2i(roundi(body.position.x/2),roundi(body.position.z/2))
 	var to := Vector2i(roundi(destination.x/2),roundi(destination.z/2))
-	var low := Vector2i(mini(from.x,to.x)-11,mini(from.y,to.y)-11)
-	var high := Vector2i(maxi(from.x,to.x)+11,maxi(from.y,to.y)+11)
+	# The 1:10 hotel leg bends around the harbour; a narrow rectangle would cut across water.
+	var margin := 85 if game.story.stage==3 else 20
+	var low := Vector2i(mini(from.x,to.x)-margin,mini(from.y,to.y)-margin)
+	var high := Vector2i(maxi(from.x,to.x)+margin,maxi(from.y,to.y)+margin)
 	grid.region=Rect2i(low,high-low+Vector2i.ONE)
 	grid.cell_size=Vector2.ONE*2
 	grid.diagonal_mode=AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
@@ -66,21 +72,33 @@ func make_route() -> void:
 		for z in range(low.y,high.y+1):
 			var at := Vector3(x*2,game.world.surface_height_at(x*2,z*2),z*2)
 			query.transform=Transform3D(Basis.IDENTITY,at+Vector3.UP*.94)
-			if at.y<-.3 or not space.intersect_shape(query,1).is_empty(): grid.set_point_solid(Vector2i(x,z))
+			if at.y<.02 or not space.intersect_shape(query,1).is_empty(): grid.set_point_solid(Vector2i(x,z))
 	grid.set_point_solid(from,false)
-	grid.set_point_solid(to,false)
-	var path := grid.get_id_path(from,to)
+	# A shore-side porch may cover the nearest ground cell. Choose a genuinely open public approach.
+	var candidates: Array[Vector2i] = []
+	for dx in range(-8,9):
+		for dz in range(-8,9):
+			var candidate := to+Vector2i(dx,dz)
+			if grid.region.has_point(candidate) and not grid.is_point_solid(candidate): candidates.append(candidate)
+	candidates.sort_custom(func(a: Vector2i,b: Vector2i): return a.distance_squared_to(to)<b.distance_squared_to(to))
+	var path: Array[Vector2i] = []
+	for candidate in candidates:
+		path=grid.get_id_path(from,candidate)
+		if path.size()>1:
+			destination=Vector3(candidate.x*2,game.world.surface_height_at(candidate.x*2,candidate.y*2),candidate.y*2)
+			break
 	for i in range(1,path.size()):
 		if i<path.size()-1 and path[i]-path[i-1]==path[i+1]-path[i]: continue
 		var at := Vector3(path[i].x*2,0,path[i].y*2)
 		at.y=game.world.surface_height_at(at.x,at.z)
 		route.append(at)
-	route.append(destination)
+	if path.size()>1: route.append(destination)
 	waypoint=0
 	stuck=0
 
 func clear_path() -> void:
 	destination=Vector3.INF
+	planned_goal=Vector3.INF
 	route.clear()
 	waiting=false
 
@@ -111,13 +129,19 @@ func clear_ahead(direction: Vector3) -> bool:
 	return true
 
 func update(dt: float) -> void:
+	route_retry=maxf(0,route_retry-dt)
 	var touring: bool=game.story.stage in [1,3]
 	var gap: float=Vector2(body.position.x-game.player.position.x,body.position.z-game.player.position.z).length()
 	if gap>15: waiting=true
 	elif gap<10: waiting=false
 	var direction := Vector3.ZERO
 	if touring and not waiting:
-		if route.is_empty() or destination.distance_to(goal())>1: make_route()
+		if (route.is_empty() and route_retry<=0) or planned_goal.distance_to(goal())>1: make_route()
+		if route.is_empty():
+			body.velocity=Vector3(0,-2.5,0)
+			body.move_and_slide()
+			game.play_animation(visual,"idle")
+			return
 		while waypoint<route.size()-1 and Vector2(body.position.x-route[waypoint].x,body.position.z-route[waypoint].z).length()<1.0: waypoint+=1
 		if body.position.distance_to(destination)<1.4:
 			if gap<8: game.story.arrive()

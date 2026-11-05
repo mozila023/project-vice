@@ -9,15 +9,15 @@ var discovered: Array[String] = []
 var tracked_place := ""
 var game: Node3D
 const PLACES := [
-	{"id":"Ifira Port","at":Vector2(-312.35762,519.93177),"th":"Ifira Port","en":"The island supply line: public quay cargo lists and port office, 07–18.","fact_th":"เส้นทางเสบียงของเกาะ ตรวจรายการสินค้าบนลานสาธารณะ สำนักงาน 07–18 น."},
-	{"id":"Evening Nakamal","at":Vector2(-373.6553,628.97706),"th":"Evening Nakamal","en":"Temporary game name. An evening community gathering place, 16–23.","fact_th":"ชื่อชั่วคราวในเกม ศาลาพบปะชุมชนยามเย็น เปิด 16–23 น."},
-	{"id":"Mele","at":Vector2(-489,141),"th":"เมเล","en":"Your home base beside Mele Bay. Greet your hosts and ask before entering homes or gardens.","fact_th":"ฐานพักริมอ่าวเมเล ทักทายเจ้าบ้านและขออนุญาตก่อนเข้าบ้านหรือสวนของผู้อื่น"},
-	{"id":"Port Vila","at":Vector2(-254,438),"th":"พอร์ตวิลา","en":"Port Vila is on Efate. Its markets are a place to discover local produce and food such as laplap.","fact_th":"พอร์ตวิลาตั้งอยู่บนเอฟาเต ตลาดเป็นแหล่งพบผลผลิตและอาหารท้องถิ่น เช่น ลัป ลัป"},
-	{"id":"Port Havannah","at":Vector2(-462,-533),"th":"พอร์ตฮาวานนาห์","en":"Havannah Harbour lies northwest of Port Vila, with trips to nearby Moso and Lelepa islands.","fact_th":"อ่าวฮาวานนาห์อยู่ทางตะวันตกเฉียงเหนือของพอร์ตวิลา มีเส้นทางไปเกาะโมโซและเลเลปา"},
-	{"id":"Eton","at":Vector2(1059,488),"th":"อีตัน","en":"Eton is on Efate's east coast. Its beach area is known for white sand and a freshwater inlet.","fact_th":"อีตันอยู่ชายฝั่งตะวันออกของเอฟาเต บริเวณชายหาดมีทรายขาวและทางน้ำจืดไหลมาบรรจบทะเล"},
-	{"id":"Sunshine Wellness & Spa","at":Vector2(-223.78243,441.00744),"th":"Sunshine Wellness & Spa","en":"785C+68, Seaside. Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007). Frontage and salon follow Maps/shop photos.","fact_th":"785C+68 ซีไซด์ Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007) ด้านหน้าและห้องทำเล็บอ้างอิงภาพ Maps/เว็บร้าน"},
-	{"id":"PAD THAI @ELLUK","at":Vector2(-285.41613,558.31335),"th":"PAD THAI @ELLUK","en":"Elluk Road. Verified Maps pin; raised frontage, timber stairs and orange elephant signs follow supplied photos.","fact_th":"ถนน Elluk พิกัดตาม Maps หน้าร้านยกสูง บันไดไม้ และป้ายสีส้มลายช้างอ้างอิงรูปที่ส่งมา"},
-	{"id":"Seaside Inn","at":Vector2(-199,506),"th":"โรงแรม Seaside Inn","en":"A fictional playable inn: sleep until morning for 10 vatu. Luna will show you the entrance.","fact_th":"โรงแรมสมมติในเกม นอนถึงเช้าราคา 10 วาตู Luna จะพาไปรู้จักทางเข้า"}
+	{"id":"Ifira Port","at":Vector2(-624.71524,1039.86354),"th":"Ifira Port","en":"The island supply line: public quay cargo lists and port office, 07–18.","fact_th":"เส้นทางเสบียงของเกาะ ตรวจรายการสินค้าบนลานสาธารณะ สำนักงาน 07–18 น."},
+	{"id":"Evening Nakamal","at":Vector2(-747.3106,1257.95412),"th":"Evening Nakamal","en":"Temporary game name. An evening community gathering place, 16–23.","fact_th":"ชื่อชั่วคราวในเกม ศาลาพบปะชุมชนยามเย็น เปิด 16–23 น."},
+	{"id":"Mele","at":Vector2(-978,282),"th":"เมเล","en":"Your home base beside Mele Bay. Greet your hosts and ask before entering homes or gardens.","fact_th":"ฐานพักริมอ่าวเมเล ทักทายเจ้าบ้านและขออนุญาตก่อนเข้าบ้านหรือสวนของผู้อื่น"},
+	{"id":"Port Vila","at":Vector2(-508,876),"th":"พอร์ตวิลา","en":"Port Vila is on Efate. Its markets are a place to discover local produce and food such as laplap.","fact_th":"พอร์ตวิลาตั้งอยู่บนเอฟาเต ตลาดเป็นแหล่งพบผลผลิตและอาหารท้องถิ่น เช่น ลัป ลัป"},
+	{"id":"Port Havannah","at":Vector2(-924,-1066),"th":"พอร์ตฮาวานนาห์","en":"Havannah Harbour lies northwest of Port Vila, with trips to nearby Moso and Lelepa islands.","fact_th":"อ่าวฮาวานนาห์อยู่ทางตะวันตกเฉียงเหนือของพอร์ตวิลา มีเส้นทางไปเกาะโมโซและเลเลปา"},
+	{"id":"Eton","at":Vector2(2118,976),"th":"อีตัน","en":"Eton is on Efate's east coast. Its beach area is known for white sand and a freshwater inlet.","fact_th":"อีตันอยู่ชายฝั่งตะวันออกของเอฟาเต บริเวณชายหาดมีทรายขาวและทางน้ำจืดไหลมาบรรจบทะเล"},
+	{"id":"Sunshine Wellness & Spa","at":Vector2(-447.56486,882.01488),"th":"Sunshine Wellness & Spa","en":"785C+68, Seaside. Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007). Frontage and salon follow Maps/shop photos.","fact_th":"785C+68 ซีไซด์ Maps: Sunshine Thai Massage Spa & Nail (Sea Oak 2007) ด้านหน้าและห้องทำเล็บอ้างอิงภาพ Maps/เว็บร้าน"},
+	{"id":"PAD THAI @ELLUK","at":Vector2(-570.83226,1116.6267),"th":"PAD THAI @ELLUK","en":"Elluk Road. Verified Maps pin; raised frontage, timber stairs and orange elephant signs follow supplied photos.","fact_th":"ถนน Elluk พิกัดตาม Maps หน้าร้านยกสูง บันไดไม้ และป้ายสีส้มลายช้างอ้างอิงรูปที่ส่งมา"},
+	{"id":"Seaside Inn","at":Vector2(-398,1012),"th":"โรงแรม Seaside Inn","en":"A fictional playable inn: sleep until morning for 10 vatu. Luna will show you the entrance.","fact_th":"โรงแรมสมมติในเกม นอนถึงเช้าราคา 10 วาตู Luna จะพาไปรู้จักทางเข้า"}
 ]
 const TITLES := [
 	["Meet Luna at Sunshine","พบ Luna ที่ร้าน Sunshine"],
@@ -48,6 +48,7 @@ func title() -> String: return game.quests.title() if stage==COMPLETE_STAGE and 
 func task() -> String: return game.quests.task() if stage==COMPLETE_STAGE and game.quests.has_active() else l(TASKS[stage][0],TASKS[stage][1])
 func dialogue() -> String: return l(DIALOGUE[stage][0],DIALOGUE[stage][1])
 func tracker_title() -> String:
+	if game.places.by_id.has(tracked_place): return game.places.by_id[tracked_place].name
 	for place in PLACES:
 		if place.id==tracked_place: return l(place.id,place.th)
 	return title()
@@ -61,6 +62,7 @@ func action_text() -> String:
 		5: return l("SEE YOU, LUNA","แล้วเจอกันนะ Luna")
 	return l("LET'S KEEP WALKING","เดินต่อกันเลย")
 func target() -> Vector3:
+	if game.places.by_id.has(tracked_place): return game.places.target(tracked_place)
 	for place in PLACES:
 		if place.id==tracked_place: return Vector3(place.at.x,game.ground(place.at.x,place.at.y),place.at.y)
 	if game.quests.has_active(): return game.quests.target()
@@ -92,7 +94,7 @@ func update() -> void:
 			game.tell(l("Discovered: ","ค้นพบ: ")+l(place.id,place.th))
 func data() -> Dictionary:
 	var at: Vector3=game.luna.position
-	return {"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered,"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
+	return {"map_scale":10,"quests":game.quests.data(),"tour_version":1,"stage":stage,"meals":meals,"language":language,"relaxed":relaxed,"discovered":discovered.duplicate(),"tracked_place":tracked_place,"luna":[at.x,at.y,at.z]}
 func restore(value: Variant) -> void:
 	stage=0; meals=0; discovered.clear(); tracked_place=""
 	game.quests.restore(value.get("quests",{}) if value is Dictionary else {})
@@ -106,12 +108,17 @@ func restore(value: Variant) -> void:
 	if visits is Array:
 		for place in PLACES:
 			if place.id in visits: discovered.append(place.id)
+		for id in visits:
+			if id is String and game.places.by_id.has(id) and id not in discovered: discovered.append(id)
 	for place in PLACES:
 		if value.get("tracked_place")==place.id: tracked_place=place.id
+	if game.places.by_id.has(value.get("tracked_place","")): tracked_place=value.tracked_place
 	var at=value.get("luna",[])
 	if at is Array and at.size()==3:
 		var valid := true
 		for number in at: valid=valid and (number is float or number is int) and is_finite(float(number))
-		if valid and absf(float(at[0]))<1400 and absf(float(at[2]))<1400 and game.ground(float(at[0]),float(at[2]))>-.4:
+		if valid and int(value.get("map_scale",20))==20:
+			for i in range(3): at[i]=float(at[i])*2.0
+		if valid and absf(float(at[0]))<2800 and absf(float(at[2]))<2800 and game.ground(float(at[0]),float(at[2]))>-.4:
 			game.luna.position=Vector3(float(at[0]),maxf(float(at[1]),game.ground(float(at[0]),float(at[2]))+.05),float(at[2]))
 	game.guide.clear_path()

@@ -4,13 +4,13 @@
 ## Doing this ahead of time is what keeps first load short on phones and in the browser.
 
 const RES := 2048
-const SPAN := 2880.0
+const SPAN := 5760.0
 const PIXEL := SPAN/RES
 const SURFACE_RES := 720
 const FAR_CHUNK := 240.0
 const PALM_CHUNK := 80.0
 const LAND := 240
-const LAND_STEP := 12.0
+const LAND_STEP := 24.0
 ## One game building stands for roughly this many mapped ones; keeps the town light enough for phones.
 const MAX_BUILDINGS := 1100
 const BUCKET := 40.0
@@ -47,7 +47,7 @@ func _initialize() -> void:
 	var images := paint_maps()
 	images[0].save_png("res://assets/baked/terrain_macro.png")
 	images[1].save_png("res://assets/baked/terrain_data.png")
-	var data := {"version":1,"heights":heights,"buildings":buildings,"poles":poles,"surface":images[2]}
+	var data := {"version":2,"map_scale":10,"heights":heights,"buildings":buildings,"poles":poles,"surface":images[2]}
 	data.merge(place_flora())
 	data["rocks"]=place_rocks()
 	var file := FileAccess.open("res://assets/baked/world.dat",FileAccess.WRITE)
@@ -159,7 +159,7 @@ func grade_roads() -> void:
 				continue
 			var j := i
 			while j<samples.size() and raw[j]<0.9: j+=1
-			if i>0 and j<samples.size() and (j-i)*6.0<=48.0:
+			if i>0 and j<samples.size() and (j-i)*6.0<=96.0:
 				for k in range(i,j): causeway[k]=1
 			i=j
 		for s in range(samples.size()):
@@ -237,8 +237,9 @@ func flat_enough(x: float,z: float,radius: float) -> bool:
 	return low>1.3 and high-low<4.4
 
 func free_spot(x: float,z: float,radius: float) -> bool:
+	if preload("res://scripts/sunshine_spa.gd").reserved(x,z,radius) or preload("res://scripts/elluk_restaurant.gd").reserved(x,z,radius) or preload("res://scripts/seaside_inn.gd").reserved(x,z,radius) or preload("res://scripts/island_landmarks.gd").reserved(x,z,radius) or preload("res://scripts/place_sites.gd").reserved(x,z,radius): return false
 	# The Mele village green keeps its original hand-placed layout and villager routes.
-	if x>-535.0 and x<-445.0 and z>55.0 and z<160.0: return false
+	if x>-1070.0 and x<-890.0 and z>110.0 and z<320.0: return false
 	for b in buildings_near(x,z):
 		var gap: float=radius+maxf(b.w,b.d)*0.62+2.0
 		if Vector2(b.x,b.z).distance_squared_to(Vector2(x,z))<gap*gap: return false
@@ -331,13 +332,13 @@ func place_buildings() -> Array:
 	# Mele: the original village layout, now facing its street.
 	for i in range(10):
 		# West row stands clear of the tide line.
-		var x := -507.0 if i%2==0 else -464.0
-		var z := 86.0+floorf(i/2.0)*17.0
+		var x := -1014.0 if i%2==0 else -928.0
+		var z := 172.0+floorf(i/2.0)*34.0
 		# The mapped Ring Road runs through the south end of this layout: those plots stay empty.
 		if lot_clear_of_roads(x,z,PI/2 if i%2==0 else -PI/2,10.0,8.5):
 			add_building(x,z,PI/2 if i%2==0 else -PI/2,10.0,8.5,1,i%2)
 	# Outer rows make Mele read as a lived-in village rather than a line of houses.
-	var outer := [[-541.0,80.0,PI/2],[-541.0,103.0,PI/2],[-541.0,126.0,PI/2],[-437.0,74.0,-PI/2],[-437.0,97.0,-PI/2],[-437.0,120.0,-PI/2],[-437.0,143.0,-PI/2],[-470.0,54.0,0.0],[-505.0,54.0,0.0],[-470.0,168.0,PI],[-440.0,168.0,PI],[-505.0,170.0,PI]]
+	var outer := [[-1082.0,160.0,PI/2],[-1082.0,206.0,PI/2],[-1082.0,252.0,PI/2],[-874.0,148.0,-PI/2],[-874.0,194.0,-PI/2],[-874.0,240.0,-PI/2],[-874.0,286.0,-PI/2],[-940.0,108.0,0.0],[-1010.0,108.0,0.0],[-940.0,336.0,PI],[-880.0,336.0,PI],[-1010.0,340.0,PI]]
 	for o in outer:
 		var outer_w := rng.randf_range(8.5,12.0)
 		var outer_d := rng.randf_range(7.0,9.0)
@@ -638,7 +639,7 @@ func place_flora() -> Dictionary:
 	var palms := {}
 	var palm_far := {}
 	var counts := [0,0,0]
-	var step := 8.0
+	var step := 13.0
 	var z := -SPAN/2
 	while z<SPAN/2:
 		var x := -SPAN/2
@@ -660,7 +661,7 @@ func place_flora() -> Dictionary:
 		z+=step
 	# Coconut palms line the shore and dot the settlements.
 	z=-SPAN/2
-	var palm_step := 7.5
+	var palm_step := 12.0
 	while z<SPAN/2:
 		var x := -SPAN/2
 		while x<SPAN/2:
@@ -694,8 +695,8 @@ func building_clear(x: float,z: float) -> bool:
 func place_rocks() -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	for i in range(520):
-		var x := rng.randf_range(-1250,1250)
-		var z := rng.randf_range(-1350,1250)
+		var x := rng.randf_range(-2500,2500)
+		var z := rng.randf_range(-2700,2500)
 		var h: float=world.height_at(x,z)
 		if h<-0.7 or road_distance(x,z)<8.0 or clearing(x,z)<0.8: continue
 		var edge: float=world.coast_distance(Vector2(x,z))

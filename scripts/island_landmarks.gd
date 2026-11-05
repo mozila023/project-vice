@@ -1,7 +1,7 @@
 extends Node3D
 ## Blender assets and matching solids, grounded to the rendered island surface.
-const PORT := Vector2(-312.35762,519.93177)
-const BAR := Vector2(-373.6553,628.97706)
+const PORT := Vector2(-624.71524,1039.86354)
+const BAR := Vector2(-747.3106,1257.95412)
 var game: Node3D
 var port: Node3D
 var bar: Node3D
@@ -46,9 +46,10 @@ func build(owner_game: Node3D) -> void:
 		light.light_energy=.7
 		lights.append(light)
 	update_hours()
-func place(asset: String,at: Vector2,footprint: Vector2,facing := 1) -> Node3D:
+func place(asset: String,at: Vector2,footprint: Vector2,facing := 1,folder := "island_expansion") -> Node3D:
 	var node := Node3D.new()
 	add_child(node)
+	var natural := folder=="coastal_detail" and asset in ["waterfall","lagoon","river","cave"]
 	var high := -INF
 	var low := INF
 	for x in range(9):
@@ -56,22 +57,32 @@ func place(asset: String,at: Vector2,footprint: Vector2,facing := 1) -> Node3D:
 			var height: float=game.world.surface_height_at(at.x+(x/8.0-.5)*footprint.x,at.y+(z/8.0-.5)*footprint.y)
 			high=maxf(high,height)
 			low=minf(low,height)
-	node.position=Vector3(at.x,high+.12,at.y)
+	if natural: high=game.world.surface_height_at(at.x,at.y)-.04
+	node.position=Vector3(at.x,high+(.0 if natural else .12),at.y)
 	if facing<0: node.rotation.y=PI
-	var model: Node3D=load("res://assets/models/island_expansion/"+asset+".glb").instantiate()
+	var model: Node3D=load("res://assets/models/"+folder+"/"+asset+".glb").instantiate()
 	node.add_child(model)
 	for mesh in model.find_children("*","MeshInstance3D",true,false): mesh.visibility_range_end=360
 	var body := StaticBody3D.new()
 	node.add_child(body)
-	var solids: Array=JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/island_expansion/"+asset+"_collision.json"))
+	var solids: Array=JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/"+folder+"/"+asset+"_collision.json"))
 	# Foundation fills the entire gap down to the lowest terrain sample.
-	solids.append({"center":[0,-(high-low+.65)/2,0],"size":[footprint.x,high-low+.65,footprint.y]})
+	if not natural: solids.append({"center":[0,-(high-low+.65)/2,0],"size":[footprint.x,high-low+.65,footprint.y]})
 	for solid in solids:
 		var shape := CollisionShape3D.new()
+		if solid.has("points"):
+			var convex := ConvexPolygonShape3D.new()
+			var points := PackedVector3Array()
+			for p in solid.points: points.append(Vector3(p[0],p[1],p[2]))
+			convex.points=points
+			shape.shape=convex
+			body.add_child(shape)
+			continue
 		shape.shape=BoxShape3D.new()
 		shape.shape.size=Vector3(solid.size[0],solid.size[1],solid.size[2])
 		shape.position=Vector3(solid.center[0],solid.center[1],solid.center[2])
 		body.add_child(shape)
+	if natural: return node
 	# Visible concrete footings share the collision foundation's exact dimensions.
 	var base := MeshInstance3D.new()
 	base.mesh=BoxMesh.new()
@@ -85,7 +96,8 @@ func place(asset: String,at: Vector2,footprint: Vector2,facing := 1) -> Node3D:
 	var end_z: float=footprint.y/2+8
 	var bottom: float=game.world.surface_height_at(at.x,at.y+end_z*facing)
 	var ramp := CSGPolygon3D.new()
-	ramp.polygon=PackedVector2Array([Vector2(footprint.y/2-1,-.12),Vector2(end_z,bottom-node.position.y-.12),Vector2(end_z,bottom-node.position.y+.04),Vector2(footprint.y/2+.8,.06),Vector2(footprint.y/2-1,.06)])
+	var base_y := minf(-.3,bottom-node.position.y-.3)
+	ramp.polygon=PackedVector2Array([Vector2(footprint.y/2-1,base_y),Vector2(end_z,base_y),Vector2(end_z,bottom-node.position.y+.04),Vector2(footprint.y/2+.8,.06),Vector2(footprint.y/2-1,.06)])
 	ramp.depth=3
 	ramp.rotation.y=-PI/2
 	ramp.position.x=-1.5

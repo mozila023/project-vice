@@ -24,7 +24,7 @@ void vertex() {
 
 void fragment() {
 	vec2 p = world_pos.xz;
-	vec2 map_uv = p/2880.0+0.5;
+	vec2 map_uv = p/5760.0+0.5;
 	vec3 macro = texture(macro_map,map_uv).rgb;
 	vec4 data = texture(data_map,map_uv);
 	float dist = length(world_pos-CAMERA_POSITION_WORLD);
@@ -54,7 +54,7 @@ void fragment() {
 	floor_col *= vec3(0.40,0.40,0.28);
 	rock *= vec3(0.62,0.62,0.56);
 	// Pale coral sand: the photo keeps its grain, the colour is pulled toward the local beach.
-	vec3 sand = mix(sand_photo,vec3(0.71,0.66,0.53),0.48)*0.9;
+	vec3 sand = mix(sand_photo,vec3(0.77,0.73,0.64),0.40)*0.9;
 	// Trodden earth stays a mid brown: the leaf-litter photo alone would make every verge look burnt.
 	vec3 earth = mix(vec3(dot(floor_col,vec3(0.4)))*vec3(1.75,1.5,1.12),vec3(0.36,0.31,0.23),0.45);
 
@@ -64,7 +64,7 @@ void fragment() {
 	near = mix(near,sand,sand_mix);
 	// Distant land reads as baked map; near ground takes broad variation from it too.
 	float macro_lum = dot(macro,vec3(0.33));
-	vec3 base = mix(near,macro*mix(0.92,1.08,big_noise.r),smoothstep(35.0,260.0,dist));
+	vec3 base = mix(near,macro*mix(0.92,1.08,big_noise.r),smoothstep(55.0,420.0,dist));
 
 	// Damp sand with a slow tide line; submerged ground takes the seabed map.
 	float tide = sin(TIME*0.35+big_noise.r*7.0)*0.09;

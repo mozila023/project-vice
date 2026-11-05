@@ -1,7 +1,7 @@
 // Turns OpenStreetMap extracts into game data. Run tools/download_osm_detail.ps1 first, then:
 //   node tools/process_geography.mjs
 // Outputs: efate-game-map.json (runtime), coast-distance.bin (runtime), land-cover.bin (bake only).
-// The game map is 1:20, so a town block is only a few metres across: the road network is generalised the way a
+// The game map is 1:10, so a town block is only a few metres across: the road network is generalised the way a
 // printed map does it, and individual buildings become a density raster that the world bake draws houses from.
 import fs from 'node:fs';
 const geo = name => new URL(`../assets/geography/${name}`, import.meta.url);
@@ -26,7 +26,7 @@ while (parts.length) {
   }
   loops.push(chain);
 }
-const project = p => [(p.lon - 168.363) * 5300, -(p.lat + 17.6625) * 5550];
+const project = p => [(p.lon - 168.363) * 10600, -(p.lat + 17.6625) * 11100];
 const area = pts => Math.abs(pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2);
 function simplify(points, gap) { const out = [points[0]]; for (let i = 1; i < points.length - 1; i++) if (Math.hypot(points[i][0] - out.at(-1)[0], points[i][1] - out.at(-1)[1]) > gap) out.push(points[i]); out.push(points.at(-1)); return out; }
 const polygons = loops.filter(p => p.ids[0] === p.ids.at(-1)).map(p => simplify(p.points.map(project), 12)).filter(p => p.length > 6).sort((a, b) => area(b) - area(a));
@@ -224,12 +224,12 @@ for (const way of routeRaw) {
   route.push(...pts);
 }
 
-const data = { source: '© OpenStreetMap contributors', license: 'ODbL 1.0', origin: [168.363, -17.6625], meters_per_game_meter: 20, coasts: polygons, roads, places, traffic_route: smooth(route) };
+const data = { source: '© OpenStreetMap contributors', license: 'ODbL 1.0', origin: [168.363, -17.6625], meters_per_game_meter: 10, coasts: polygons, roads, places, traffic_route: smooth(route) };
 fs.writeFileSync(geo('efate-game-map.json'), JSON.stringify(data));
 
 // ---- Land cover raster for the world bake: 240 x 240 cells of 12 m ----
 // Layout: Uint16 real-building count per cell, Uint16 shop count per cell, Uint8 land class per cell.
-const LAND = 240, LAND_STEP = 12, LAND_MIN = -1440;
+const LAND = 240, LAND_STEP = 24, LAND_MIN = -2880;
 const CLASS = { residential: 1, commercial: 2, retail: 2, industrial: 3, farmland: 4, orchard: 4, meadow: 4, forest: 5, wood: 5, scrub: 6, park: 7, wetland: 8, aerodrome: 9 };
 const density = new Uint16Array(LAND * LAND), shops = new Uint16Array(LAND * LAND), land = new Uint8Array(LAND * LAND);
 const cellOf = (x, z) => { const ix = Math.floor((x - LAND_MIN) / LAND_STEP), iz = Math.floor((z - LAND_MIN) / LAND_STEP); return ix < 0 || iz < 0 || ix >= LAND || iz >= LAND ? -1 : iz * LAND + ix; };
@@ -256,7 +256,7 @@ for (const { kind, poly } of areas.sort((a, b) => b.size - a.size)) {
 fs.writeFileSync(geo('land-cover.bin'), Buffer.concat([Buffer.from(density.buffer), Buffer.from(shops.buffer), Buffer.from(land.buffer)]));
 
 // ---- Offline signed-distance field: avoid polygon queries every physics tick ----
-const side = 241, step = 12, origin = [-1440, -1440];
+const side = 241, step = 24, origin = [-2880, -2880];
 const edges = polygons.flatMap(poly => poly.slice(0, -1).map((p, i) => [p, poly[i + 1]]));
 const distance = new Float32Array(side * side);
 for (let z = 0; z < side; z++) for (let x = 0; x < side; x++) {

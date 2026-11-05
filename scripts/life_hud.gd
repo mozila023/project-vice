@@ -4,6 +4,9 @@ var mobile := OS.has_feature("mobile") or DisplayServer.is_touchscreen_available
 var move_vector := Vector2.ZERO
 var running := false
 var notes_page := 0
+var atlas_mode := false
+var atlas_entries: Array = []
+var atlas_search: LineEdit
 var sleep_effect := 0.0
 var fingers := {}
 var stick_origin := Vector2.ZERO
@@ -30,8 +33,20 @@ func _ready() -> void:
 	mini_map=preload("res://scripts/mini_map.gd").new()
 	mini_map.game=game
 	add_child(mini_map)
+	atlas_entries=game.places.entries
+	atlas_search=LineEdit.new()
+	atlas_search.placeholder_text=l("Search places or type: beach, hospital…","ค้นหาชื่อสถานที่ หรือประเภท เช่น beach, hospital…")
+	atlas_search.add_theme_font_override("font",font)
+	atlas_search.add_theme_font_size_override("font_size",14)
+	atlas_search.size=Vector2(650,34)
+	atlas_search.visible=false
+	add_child(atlas_search)
+	atlas_search.text_changed.connect(func(value: String): atlas_entries=game.places.search(value); notes_page=0)
 
 func _process(_dt: float) -> void:
+	atlas_search.visible=game.panel=="island" and atlas_mode
+	atlas_search.position=size/2+Vector2(-330,-151)
+	if not atlas_search.visible and atlas_search.has_focus(): atlas_search.release_focus()
 	sleep_effect=maxf(0,sleep_effect-_dt/1.5)
 	smoothed_health=lerpf(smoothed_health,game.health,clampf(_dt*7,0,1))
 	if game.panel=="settings" and not is_instance_valid(settings_view):
@@ -90,6 +105,8 @@ func buttons() -> Dictionary:
 		values["close"]=Rect2(w/2+105,h/2+132,185,45)
 		if game.panel=="port": values["port_report"]=Rect2(w/2-290,h/2+65,580,45)
 		elif game.landmarks.bar_open: values.merge({"bar_greet":Rect2(w/2-290,h/2+12,580,45),"bar_story":Rect2(w/2-290,h/2+72,580,45)})
+	elif game.panel=="place_info":
+		values.merge({"track_place":Rect2(w/2-290,h/2+65,580,45),"close":Rect2(w/2+105,h/2+132,185,45)})
 	elif game.panel=="hotel":
 		values.merge({"sleep":Rect2(w/2-290,h/2+65,580,48),"close":Rect2(w/2+105,h/2+132,185,45)})
 	elif game.panel in ["pack","journal","island","map"]:
@@ -98,8 +115,12 @@ func buttons() -> Dictionary:
 		if game.panel=="journal" and game.quests.unlocked():
 			for i in range(4): values["quest_"+str(i)]=Rect2(w/2+165,h/2-137+i*74,165,36)
 		if game.panel=="island":
+			values["atlas_toggle"]=Rect2(w/2-70,h/2+205,275,40)
 			values.merge({"notes_prev":Rect2(w/2-330,h/2+205,120,40),"notes_next":Rect2(w/2-200,h/2+205,120,40)})
-			for i in range(notes_page*6,mini(notes_page*6+6,game.story.PLACES.size())): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+(i%6)*48,108,36)
+			if atlas_mode:
+				for i in range(notes_page*6,mini(notes_page*6+6,atlas_entries.size())): values["atlas_"+str(i)]=Rect2(w/2+220,h/2-117+(i%6)*42,108,35)
+			else:
+				for i in range(notes_page*6,mini(notes_page*6+6,game.story.PLACES.size())): values["place_"+str(i)]=Rect2(w/2+220,h/2-137+(i%6)*48,108,36)
 	elif game.panel=="settings": return {}
 	elif game.panel!="": values["close"]=Rect2(w/2-70,h-85,140,48)
 	elif mobile:
@@ -170,6 +191,11 @@ func _draw() -> void:
 		text(Vector2(w/2-290,h/2-163),game.active_villager+" / "+(l(game.story.TITLES[game.story.stage][0],game.story.TITLES[game.story.stage][1]) if game.active_villager=="Luna" else l("Neighbour","เพื่อนบ้าน")),21,GOLD)
 		paragraph(Vector2(w/2-290,h/2-148),game.story.dialogue() if game.active_villager=="Luna" else game.quests.neighbour_story(),580,17)
 		text(Vector2(w/2-290,h/2+10),l("Your fish: %d  /  Your vatu: %d","ปลาที่มี: %d  /  เงิน: %d วาตู") % [game.fish,game.coins],15)
+	elif game.panel=="place_info":
+		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
+		var entry: Dictionary=game.places.by_id[game.places.selected]
+		paragraph(Vector2(w/2-290,h/2-163),entry.name,580,23,GOLD)
+		paragraph(Vector2(w/2-290,h/2-105),game.places.description(entry),580,17)
 	elif game.panel in ["port","nakamal"]:
 		card(Rect2(w/2-320,h/2-200,640,395),Color(0.02,0.08,0.09,0.97))
 		text(Vector2(w/2-290,h/2-163),"IFIRA PORT" if game.panel=="port" else "EVENING NAKAMAL",23,GOLD)
@@ -204,6 +230,9 @@ func _draw() -> void:
 		if key.begins_with("quest_"): label=l("TRACK","นำทาง") if int(key.trim_prefix("quest_")) not in game.quests.claimed else l("COMPLETE","สำเร็จ")
 		if key=="quest_1" and game.quests.ready(1) and 1 not in game.quests.claimed: label=l("CLAIM REWARD","รับรางวัล")
 		if key in ["notes_prev","notes_next","community_meal","port_report","bar_greet","bar_story"]: label={"notes_prev":l("← PREVIOUS","← ก่อนหน้า"),"notes_next":l("NEXT →","ถัดไป →"),"community_meal":l("COMMUNITY MEAL · 2 FISH","มื้อแบ่งปัน · ปลา 2 ตัว"),"port_report":l("REPORT TO FOREMAN","รายงานหัวหน้างาน"),"bar_greet":l("GREET TAVI","ทักทาย Tavi"),"bar_story":l("LISTEN TO THE STORY","ฟังเรื่องราวชุมชน")}[key]
+		if key=="atlas_toggle": label=l("MY NOTES" if atlas_mode else "ALL PLACES · %d" % game.places.entries.size(),"บันทึกของฉัน" if atlas_mode else "สถานที่ทั้งหมด · %d" % game.places.entries.size())
+		if key=="track_place": label=l("TRACK THIS PLACE","นำทางไปสถานที่นี้")
+		if key.begins_with("atlas_"): label=l("DETAILS","ดูข้อมูล")
 		if key=="settings": label=l("SETTINGS","ตั้งค่า")
 		if key=="main_menu": label=l("MAIN MENU","เมนูหลัก")
 		if game.driving and key=="jump": label=l("BRAKE","เบรกมือ")
@@ -229,6 +258,16 @@ func draw_pack_frame() -> void:
 func draw_journal() -> void:
 	var c := size/2
 
+	if game.panel=="island" and atlas_mode:
+		for i in range(notes_page*6,mini(notes_page*6+6,atlas_entries.size())):
+			var entry: Dictionary=atlas_entries[i]
+			var title: String=entry.name
+			while font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,16).x>525: title=title.left(title.length()-2).strip_edges()+"…"
+			var y: float=-94+(i%6)*42
+			text(c+Vector2(-330,y),title,16,GOLD)
+			text(c+Vector2(-330,y+18),game.places.category_label(entry.category)+" · %.5f, %.5f" % [entry.latitude,entry.longitude]+(" ✓" if entry.id in game.story.discovered else ""),11)
+		text(c+Vector2(-330,180),l("%d places · Page %d / %d","%d สถานที่ · หน้า %d / %d")%[atlas_entries.size(),notes_page+1,maxi(1,ceili(atlas_entries.size()/6.0))],12)
+		return
 	if game.panel=="island":
 		for i in range(notes_page*6,mini(notes_page*6+6,game.story.PLACES.size())):
 			var place: Dictionary=game.story.PLACES[i]
@@ -250,7 +289,7 @@ func draw_journal() -> void:
 		text(c+Vector2(-330,61),game.story.progress(),16,GOLD)
 		paragraph(c+Vector2(-330,83),l("Luna's welcome tour: Sunshine → Pad Thai → Seaside Inn.\nMeals: 8 vatu · Rooms: 10 vatu · Full game day: 1 real hour.","ทัวร์กับ Luna: Sunshine → Pad Thai → Seaside Inn\nข้าว 8 วาตู · ห้องพัก 10 วาตู · หนึ่งวันเกมเท่ากับหนึ่งชั่วโมงจริง"),650,14)
 	if game.quests.unlocked(): return
-	paragraph(c+Vector2(-330,159),l("Luna and Seaside Inn are fictional. Sunshine and Pad Thai follow supplied location references. Map scale: 1:20.","Luna และ Seaside Inn เป็นส่วนสมมติ Sunshine และ Pad Thai อ้างอิงสถานที่ที่ให้มา แผนที่ย่อส่วน 1:20"),655,12)
+	paragraph(c+Vector2(-330,159),l("Luna and Seaside Inn are fictional. Sunshine and Pad Thai follow supplied location references. Map scale: 1:10.","Luna และ Seaside Inn เป็นส่วนสมมติ Sunshine และ Pad Thai อ้างอิงสถานที่ที่ให้มา แผนที่ย่อส่วน 1:10"),655,12)
 
 
 func draw_navigation() -> void:
@@ -293,35 +332,40 @@ func draw_map() -> void:
 	if game.navigation.active() and game.navigation.route.size()>1:
 		var route := PackedVector2Array()
 		for at: Vector3 in game.navigation.route:
-			route.append(rect.position+Vector2(at.x/2880+0.5,at.z/2880+0.5)*rect.size)
+			route.append(rect.position+Vector2(at.x/5760+0.5,at.z/5760+0.5)*rect.size)
 		draw_polyline(route,Color("dbbd7d"),3,true)
 	for site in [{"at":game.landmarks.PORT,"name":"Ifira Port"},{"at":game.landmarks.BAR,"name":"Evening Nakamal"}]:
-		var mark: Vector2=rect.position+(site.at/2880.0+Vector2.ONE*.5)*rect.size
+		var mark: Vector2=rect.position+(site.at/5760.0+Vector2.ONE*.5)*rect.size
 		draw_circle(mark,4,Color("dda76c"))
 		if game.story.tracked_place==site.name: text(mark+Vector2(7,-25),site.name,12,GOLD)
+	for entry in game.places.entries:
+		if not entry.featured and entry.id!=game.story.tracked_place: continue
+		var point: Vector2=rect.position+(Vector2(entry.at[0],entry.at[1])/5760.0+Vector2.ONE*.5)*rect.size
+		draw_circle(point,2,Color("b8cfa9"))
+		if entry.id==game.story.tracked_place: text(point+Vector2(7,14),entry.name,12,GOLD)
 	var p: Vector3=game.player.position
 	var restaurant: Vector2=preload("res://scripts/elluk_restaurant.gd").SITE
-	var restaurant_point: Vector2=rect.position+(restaurant/2880.0+Vector2.ONE*0.5)*rect.size
+	var restaurant_point: Vector2=rect.position+(restaurant/5760.0+Vector2.ONE*0.5)*rect.size
 	draw_circle(restaurant_point,4,GOLD)
 	text(restaurant_point+Vector2(8,36),"PAD THAI @ELLUK",12,GOLD)
-	var inn: Vector2=rect.position+(game.hotel.SITE/2880.0+Vector2.ONE*.5)*rect.size
+	var inn: Vector2=rect.position+(game.hotel.SITE/5760.0+Vector2.ONE*.5)*rect.size
 	draw_rect(Rect2(inn-Vector2.ONE*3,Vector2.ONE*6),Color("b9e4dc"))
 	if game.story.tracked_place=="Seaside Inn": text(inn+Vector2(7,-15),"Seaside Inn",12,GOLD)
 	var spa: Vector2=preload("res://scripts/sunshine_spa.gd").SITE
-	var spa_point: Vector2=rect.position+(spa/2880.0+Vector2.ONE*0.5)*rect.size
+	var spa_point: Vector2=rect.position+(spa/5760.0+Vector2.ONE*0.5)*rect.size
 	draw_rect(Rect2(spa_point-Vector2.ONE*3,Vector2.ONE*6),Color("9ad1bc"))
 	text(spa_point+Vector2(8,20),"Sunshine Wellness & Spa",12,Color("9ad1bc"))
-	draw_circle(rect.position+Vector2(p.x/2880+0.5,p.z/2880+0.5)*rect.size,5,WHITE)
+	draw_circle(rect.position+Vector2(p.x/5760+0.5,p.z/5760+0.5)*rect.size,5,WHITE)
 	var goal: Vector3=game.story.target()
-	var goal_point: Vector2=rect.position+Vector2(goal.x/2880+0.5,goal.z/2880+0.5)*rect.size
+	var goal_point: Vector2=rect.position+Vector2(goal.x/5760+0.5,goal.z/5760+0.5)*rect.size
 	draw_arc(goal_point,9,0,TAU,24,GOLD,3,true)
 	text(goal_point+Vector2(10,-9),l("GOAL","จุดหมาย"),13,GOLD)
 	for entry in game.world.geography.get("places",[]):
 		if not entry.name in ["Port Vila","Mele","Eton","Emua","Mangaliliu","Port Havannah","Pango"]: continue
-		var point: Vector2=rect.position+(Vector2(entry.position[0],entry.position[1])/Vector2(2880,2880)+Vector2.ONE*0.5)*rect.size
+		var point: Vector2=rect.position+(Vector2(entry.position[0],entry.position[1])/Vector2(5760,5760)+Vector2.ONE*0.5)*rect.size
 		draw_circle(point,3,GOLD)
 		text(point+Vector2(7,0),entry.name,13)
-	text(rect.position+Vector2(-140,height+18),"© OpenStreetMap contributors · ODbL · 1:20",11)
+	text(rect.position+Vector2(-140,height+18),"© OpenStreetMap contributors · ODbL · 1:10",11)
 
 func _input(event: InputEvent) -> void:
 	if game.panel=="settings": return
@@ -374,7 +418,9 @@ func activate(key: String,pressed: bool) -> void:
 		game.audio.play_sfx("ui_click",1.04,-5.5)
 	match key:
 		"notes_prev": notes_page=maxi(0,notes_page-1)
-		"notes_next": notes_page=mini(int((game.story.PLACES.size()-1)/6),notes_page+1)
+		"notes_next": notes_page=mini(maxi(0,int(((atlas_entries.size() if atlas_mode else game.story.PLACES.size())-1)/6)),notes_page+1)
+		"atlas_toggle": atlas_mode=not atlas_mode; notes_page=0
+		"track_place": game.story.tracked_place=game.places.selected; game.panel="map"
 		"community_meal", "port_report", "bar_greet", "bar_story": game.quests.action(key)
 		"journal", "island": game.panel=key; release_all()
 		"mode": game.story.relaxed=not game.story.relaxed; Preferences.relaxed=game.story.relaxed; Preferences.save()
@@ -401,6 +447,9 @@ func activate(key: String,pressed: bool) -> void:
 		"sell", "meal", "chat", "story": game.trade(key)
 		"restaurant_meal", "ingredient_fish", "ingredient_coconuts", "ingredient_wood", "sleep": game.service(key)
 		_:
+			if key.begins_with("atlas_"):
+				game.places.selected=atlas_entries[int(key.trim_prefix("atlas_"))].id
+				game.panel="place_info"
 			if key.begins_with("quest_"):
 				var id := int(key.trim_prefix("quest_"))
 				if id in game.quests.claimed: return

@@ -87,7 +87,7 @@ func build() -> void:
 	load_refined_house()
 	for data in world.baked.buildings:
 		# Reserve the landmark parcel rather than placing a generic house through it.
-		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/seaside_inn.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/island_landmarks.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
+		if (preload("res://scripts/sunshine_spa.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/elluk_restaurant.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/seaside_inn.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/island_landmarks.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7) or preload("res://scripts/place_sites.gd").reserved(data.x,data.z,maxf(data.w,data.d)*0.7)): continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed=data.seed
 		var base: float=footing(data)
@@ -105,6 +105,12 @@ func build() -> void:
 			if preload("res://scripts/island_landmarks.gd").reserved(at.x,at.z,1):
 				var sites := preload("res://scripts/island_landmarks.gd")
 				at.z=sites.BAR.y-12 if absf(at.z-sites.BAR.y)<11 else sites.PORT.y-22
+			at.y=world.surface_height_at(at.x,at.z)
+			grounded[i]=at
+		for i in range(grounded.size()):
+			var at: Vector3=grounded[i]
+			for site in preload("res://scripts/place_sites.gd").SITES:
+				if absf(at.x-site.at[0])<site.size[0]/2+2 and absf(at.z-site.at[1])<site.size[1]/2+9: at.x=site.at[0]+site.size[0]/2+3
 			at.y=world.surface_height_at(at.x,at.z)
 			grounded[i]=at
 		power_line(grounded)
@@ -486,7 +492,7 @@ func power_line(chain: PackedVector3Array) -> void:
 
 func street_lamps() -> void:
 	# A few warm lamps around the village green, used only at night.
-	for spot in [Vector2(-497,100),Vector2(-481,128),Vector2(-470,92),Vector2(-505,128)]:
+	for spot in [Vector2(-994,200),Vector2(-962,256),Vector2(-940,184),Vector2(-1010,256)]:
 		var lamp := OmniLight3D.new()
 		lamp.light_color=Color(1.0,0.78,0.5)
 		lamp.light_energy=0.0

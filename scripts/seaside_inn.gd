@@ -1,8 +1,8 @@
 extends Node3D
 ## Fictional playable inn near Sunshine; not a claim about a real hotel business.
-const SITE := Vector2(-199,506)
+const SITE := Vector2(-398,1012)
 const TITLE := "Seaside Inn"
-const ENTRANCE := Vector2(-199,513.5)
+const ENTRANCE := SITE+Vector2(0,7.5)
 var world: Node3D
 var floor_height := 0.0
 var bed_point := Vector3.ZERO

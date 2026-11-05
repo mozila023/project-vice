@@ -125,6 +125,7 @@ clear()
 # Aerial hero: actual baked island height grid, ocean and instanced canopy.
 data=json.load(open(os.path.join(ROOT,'tools/.cache/island-expansion/terrain.json')))
 n=data['n'];heights=data['heights'];step=data['step'];minimum=data['min'];stride=2
+world_span=(n-3)*step;render_scale=world_span/2880
 ids=list(range(0,n,stride));verts=[];faces=[]
 for z in ids:
     for x in ids:verts.append((minimum+x*step,-(minimum+z*step),heights[z*n+x]*1.7))
@@ -138,19 +139,19 @@ uv=mesh.uv_layers.new(name='Map')
 for poly in mesh.polygons:
     poly.use_smooth=True
     for loop in poly.loop_indices:
-        co=mesh.vertices[mesh.loops[loop].vertex_index].co;uv.data[loop].uv=((co.x+1440)/2880,(co.y+1440)/2880)
+        co=mesh.vertices[mesh.loops[loop].vertex_index].co;uv.data[loop].uv=((co.x+world_span/2)/world_span,(co.y+world_span/2)/world_span)
 m=material('Photographic island terrain',(.45,.58,.28));p=m.node_tree.nodes.get('Principled BSDF');image=m.node_tree.nodes.new('ShaderNodeTexImage');image.image=bpy.data.images.load(os.path.join(ROOT,'assets/baked/terrain_macro.png'));m.node_tree.links.new(image.outputs['Color'],p.inputs['Base Color']);land.data.materials.append(m)
 water=material('Clear Pacific',(.025,.25,.31),.23);p=water.node_tree.nodes.get('Principled BSDF');p.inputs['Metallic'].default_value=.12
 noise=water.node_tree.nodes.new('ShaderNodeTexNoise');noise.inputs['Scale'].default_value=260
 bump=water.node_tree.nodes.new('ShaderNodeBump');bump.inputs['Strength'].default_value=.16;bump.inputs['Distance'].default_value=.08;water.node_tree.links.new(noise.outputs['Fac'],bump.inputs['Height']);water.node_tree.links.new(bump.outputs['Normal'],p.inputs['Normal'])
-bpy.ops.mesh.primitive_plane_add(size=12000,location=(0,0,.04));bpy.context.object.name='Pacific Ocean';bpy.context.object.data.materials.append(water)
+bpy.ops.mesh.primitive_plane_add(size=12000*render_scale,location=(0,0,.04));bpy.context.object.name='Pacific Ocean';bpy.context.object.data.materials.append(water)
 rng=random.Random(745)
 canopies=[material('Canopy '+str(i),c) for i,c in enumerate([(.035,.105,.022),(.065,.16,.035),(.10,.21,.048)])]
 bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2,radius=1);source=bpy.context.object;source.name='Canopy prototype'
 for mat in canopies:source.data.materials.append(mat)
 for poly in source.data.polygons:poly.material_index=rng.randrange(3);poly.use_smooth=True
-for z in range(5,n-5):
-    for x in range(5,n-5):
+for z in range(5,n-5,max(1,math.ceil(render_scale))):
+    for x in range(5,n-5,max(1,math.ceil(render_scale))):
         h=heights[z*n+x]
         if h<4 or rng.random()<.18:continue
         obj=bpy.data.objects.new('Forest canopy',source.data);bpy.context.collection.objects.link(obj)
@@ -161,7 +162,7 @@ scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=24
 scene.render.resolution_x=1920;scene.render.resolution_y=1080;scene.render.resolution_percentage=100
 scene.world.use_nodes=True;scene.world.node_tree.nodes.get('Background').inputs['Color'].default_value=(.48,.68,.83,1);scene.world.node_tree.nodes.get('Background').inputs['Strength'].default_value=.65
 bpy.ops.object.light_add(type='SUN',location=(0,0,2000));sun=bpy.context.object;sun.rotation_euler=(math.radians(52),math.radians(-20),math.radians(-32));sun.data.energy=3.5;sun.data.angle=.08
-bpy.ops.object.camera_add(location=(-2250,-2700,2500));camera=bpy.context.object;direction=Vector((-150,100,40))-camera.location;camera.rotation_euler=direction.to_track_quat('-Z','Y').to_euler();camera.data.clip_end=20000;camera.data.lens=39;scene.camera=camera
+bpy.ops.object.camera_add(location=Vector((-2250,-2700,2500))*render_scale);camera=bpy.context.object;direction=Vector((-150,100,40))*render_scale-camera.location;camera.rotation_euler=direction.to_track_quat('-Z','Y').to_euler();camera.data.clip_end=20000*render_scale;camera.data.lens=39;scene.camera=camera
 scene.view_settings.view_transform='AgX';scene.render.image_settings.file_format='PNG'
 os.makedirs(os.path.join(ROOT,'assets/menu'),exist_ok=True)
 scene.render.filepath=os.path.join(ROOT,'assets/menu/efate_aerial.png')
