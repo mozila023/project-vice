@@ -53,7 +53,7 @@ const chainTime=()=>chain.reduce((a,id)=>a+SK[id].dur,0);
 const IMG={};
 const ASSETS=['bg',...[0,1,2,3].map(i=>'h_atk'+i),...[0,1,2,3,4,5].map(i=>'h_run'+i),...[0,1,2,3,4,5,6,7].map(i=>'h_sp'+i),
  ...[0,1,2,3].map(i=>'g'+i),...[0,1,2,3].map(i=>'y'+i),...[0,1,2,3].map(i=>'s'+i),...[0,1,2,3].map(i=>'b'+i),...[0,1,2,3].map(i=>'o'+i),...['weapon','armor','charm'].flatMap(k=>[0,1,2].map(r=>'it_'+k+r)),
- 'fx_slashG','fx_slashC','fx_burst','fx_shock','fx_giant','fx_naga','fx_chakra','fx_lotus','fx_fire','fx_pillar',...ORDER.map(i=>'ic_'+i)];
+ 'ui_coin','ui_stone','npc_merchant','npc_smith','fx_slashG','fx_slashC','fx_burst','fx_shock','fx_giant','fx_naga','fx_chakra','fx_lotus','fx_fire','fx_pillar',...ORDER.map(i=>'ic_'+i)];
 function loadAssets(cb){let n=ASSETS.length;ASSETS.forEach(k=>{const i=new Image();i.onload=i.onerror=()=>{if(--n===0)cb();};i.src='assets/'+k+'.webp';IMG[k]=i;});}
 const ok=im=>im&&im.complete&&im.naturalWidth>0;
 const TC={};function tint(im,col){const k=im.src+col;if(TC[k])return TC[k];const c=document.createElement('canvas');c.width=im.naturalWidth||1;c.height=im.naturalHeight||1;const g=c.getContext('2d');g.drawImage(im,0,0);g.globalCompositeOperation='source-atop';g.fillStyle=col;g.fillRect(0,0,c.width,c.height);return TC[k]=c;}
@@ -97,13 +97,18 @@ function heroFrame(){const p=P;
 
 // ================= มอนสเตอร์ =================
 const ET={
- ghost:{name:'ผีน้อย',fk:'g',hp:30,w:46,h:62,sp:[95,150],dmg:8,kb:1,fps:8,hover:1,drop:.12,gib:['#7fdc4a','#ffcf4a','#3f9a2a'],mm:'#7fdc4a'},
- skel:{name:'ทหารโครงกระดูก',fk:'s',hp:48,w:50,h:105,sp:[120,165],dmg:10,kb:.9,fps:9,drop:.15,gib:['#f1e6c8','#ffcf4a','#8a6a3a'],mm:'#f1e6c8'},
- bird:{name:'ปักษาไฟ',fk:'b',hp:28,w:62,h:52,sp:[150,200],dmg:9,kb:1.1,fps:11,fly:1,drop:.13,gib:['#ff7a3d','#ffcf4a','#ff3d1f'],mm:'#ff9a3d'},
- yak:{name:'ยักษ์',fk:'y',hp:130,w:72,h:118,sp:[60,80],dmg:14,kb:.5,fps:7,drop:.35,gib:['#c8202e','#ffcf4a','#7a1018'],mm:'#ff5b6e'},
- golem:{name:'ยักษ์หินทวารบาล',fk:'o',hp:420,w:100,h:165,sp:[40,55],dmg:22,kb:.22,fps:5,drop:1,gib:['#9a948a','#ffcf4a','#5a554e'],mm:'#c9c2b8'},
+ ghost:{gold:5,name:'ผีน้อย',fk:'g',hp:30,w:46,h:62,sp:[95,150],dmg:8,kb:1,fps:8,hover:1,drop:.12,gib:['#7fdc4a','#ffcf4a','#3f9a2a'],mm:'#7fdc4a'},
+ skel:{gold:7,name:'ทหารโครงกระดูก',fk:'s',hp:48,w:50,h:105,sp:[120,165],dmg:10,kb:.9,fps:9,drop:.15,gib:['#f1e6c8','#ffcf4a','#8a6a3a'],mm:'#f1e6c8'},
+ bird:{gold:6,name:'ปักษาไฟ',fk:'b',hp:28,w:62,h:52,sp:[150,200],dmg:9,kb:1.1,fps:11,fly:1,drop:.13,gib:['#ff7a3d','#ffcf4a','#ff3d1f'],mm:'#ff9a3d'},
+ yak:{gold:18,name:'ยักษ์',fk:'y',hp:130,w:72,h:118,sp:[60,80],dmg:14,kb:.5,fps:7,drop:.35,gib:['#c8202e','#ffcf4a','#7a1018'],mm:'#ff5b6e'},
+ golem:{gold:60,name:'ยักษ์หินทวารบาล',fk:'o',hp:420,w:100,h:165,sp:[40,55],dmg:22,kb:.22,fps:5,drop:1,gib:['#9a948a','#ffcf4a','#5a554e'],mm:'#c9c2b8'},
 };
-const hpScale=()=>Math.pow(1.35,stage-1);
+const MODE={
+ easy:{n:'ง่าย',col:'#7fdc4a',hp0:.75,grow:1.22,dmg:.6,gold:1.5,stone:1.7,drop:1.4,price:.75,enh:12,breakAt:99,desc:'มอนเลือดน้อย เงินและหินดรอปเยอะ ของถูก ตีบวกไม่มีวันลดขั้น'},
+ normal:{n:'ปกติ',col:'#5fb8ff',hp0:1,grow:1.35,dmg:1,gold:1,stone:1,drop:1,price:1,enh:0,breakAt:10,desc:'สมดุล ตีบวกตั้งแต่ +10 ขึ้นไป ถ้าล้มเหลวจะลดลง 1 ขั้น'},
+ hard:{n:'ยาก',col:'#ff5b6e',hp0:1.3,grow:1.5,dmg:1.45,gold:.8,stone:.7,drop:.8,price:1.3,enh:-10,breakAt:7,desc:'มอนเลือดหนา ตีแรง ของแพง หินหายาก ตีบวกตั้งแต่ +7 ล้มเหลวลดขั้น'}};
+let mode=save.mode||null;const MD=()=>MODE[mode||'normal'];
+const hpScale=()=>MD().hp0*Math.pow(MD().grow,stage-1);
 function pickType(){const w={ghost:5,skel:stage>=1?3:0,bird:stage>=2?3:1.2,yak:1+stage*.3,golem:stage>=3?.25+.12*stage:(stage===2?.15:0)};
   let t=Math.random()*Object.values(w).reduce((a,b)=>a+b,0);for(const k in w){t-=w[k];if(t<=0)return k;}return 'ghost';}
 
@@ -116,17 +121,21 @@ function makeItem(slot,r,lv){const m=RAR[r].m,rand=(a,b)=>a+Math.random()*(b-a);
   if(slot==='armor'){it.hp=Math.round(lv*28*m*rand(.9,1.1));it.def=Math.min(60,Math.round((4+lv*2.2)*m));}
   if(slot==='charm'){it.crit=Math.round((3+lv*1.3)*m);it.en=Math.round((8+lv*2)*m);}
   return it;}
-const iscore=it=>!it?0:it.slot==='weapon'?it.atk:it.slot==='armor'?it.hp+it.def*8:it.crit*8+it.en*3;
-const istat=it=>it.slot==='weapon'?`โจมตี +${it.atk}%`:it.slot==='armor'?`HP +${it.hp} · ลดดาเมจ ${it.def}%`:`คริ +${it.crit}% · เกจ +${it.en}%`;
+const pm=it=>1+(it.plus||0)*.12+Math.max(0,(it.plus||0)-9)*.1;
+const S=(it,k)=>k==='def'?Math.min(75,Math.round(it.def*(1+(it.plus||0)*.04))):Math.round(it[k]*pm(it));
+const iname=it=>it.name+(it.plus?' +'+it.plus:'');
+const iscore=it=>!it?0:it.slot==='weapon'?S(it,'atk'):it.slot==='armor'?S(it,'hp')+S(it,'def')*8:S(it,'crit')*8+S(it,'en')*3;
+const istat=it=>it.slot==='weapon'?`โจมตี +${S(it,'atk')}%`:it.slot==='armor'?`HP +${S(it,'hp')} · ลดดาเมจ ${S(it,'def')}%`:`คริ +${S(it,'crit')}% · เกจ +${S(it,'en')}%`;
 let eq=save.eq||{weapon:makeItem('weapon',0,1),armor:null,charm:null},bag=save.bag||[];
-const atkMul=()=>1+(eq.weapon?eq.weapon.atk/100:0);
-const maxHpOf=()=>100+(eq.armor?eq.armor.hp:0);
-const defOf=()=>eq.armor?eq.armor.def/100:0;
-const critOf=()=>.12+(eq.charm?eq.charm.crit/100:0);
-const enMul=()=>1+(eq.charm?eq.charm.en/100:0);
-function saveEq(){save.eq=eq;save.bag=bag;persist();}
+const atkMul=()=>1+(eq.weapon?S(eq.weapon,'atk')/100:0);
+const maxHpOf=()=>100+(eq.armor?S(eq.armor,'hp'):0);
+const defOf=()=>eq.armor?S(eq.armor,'def')/100:0;
+const critOf=()=>.12+(eq.charm?S(eq.charm,'crit')/100:0);
+const enMul=()=>1+(eq.charm?S(eq.charm,'en')/100:0);
+let gold=save.gold||0,stones=save.stones||0;
+function saveEq(){save.eq=eq;save.bag=bag;save.gold=gold;save.stones=stones;save.mode=mode;persist();}
 function gainItem(it){const cur=eq[it.slot];let msg;
-  if(iscore(it)>iscore(cur)){eq[it.slot]=it;if(cur)bag.unshift(cur);msg='สวมใส่แล้ว!';if(it.slot==='armor'){P.maxHp=maxHpOf();P.hp=Math.min(P.maxHp,P.hp+it.hp);}}
+  if(iscore(it)>iscore(cur)){eq[it.slot]=it;if(cur)bag.unshift(cur);msg='สวมใส่แล้ว!';if(it.slot==='armor'){P.maxHp=maxHpOf();P.hp=Math.min(P.maxHp,P.hp+S(it,'hp'));}}
   else{bag.unshift(it);msg='เก็บเข้ากระเป๋า';}
   if(bag.length>15){bag.sort((a,b)=>iscore(b)-iscore(a));bag.length=15;}
   saveEq();pickups.push({it,msg,life:2.6,max:2.6});if(pickups.length>4)pickups.shift();}
@@ -149,7 +158,7 @@ let enemies=[],parts=[],fxs=[],projs=[],texts=[],trail=[],drops=[],pickups=[];
 let energy=0,kills=0,quota=30,spawnT=0,state='edit',afterEdit='start',doomedN=0;
 let timeScale=1,hitstop=0,shake=0,zoom=1,zoomT=1,desat=0,desatT=0,flash=0,dark=0,darkT=0,chroma=0,blackT=0;
 let run=null,finale=null,bigTotal=null,banner=null,toast=null,t0=0,cracks=null;
-let WORLD_W=4200,camX=0,portalX=4000;
+let goldT=0,WORLD_W=4200,camX=0,portalX=4000;
 const keys={};
 const rand=(a,b)=>a+Math.random()*(b-a);
 const dmgScale=()=>1+.22*(stage-1);
@@ -158,7 +167,7 @@ const dmgScale=()=>1+.22*(stage-1);
 // ใช้ e.code = ปุ่มจริงบนคีย์บอร์ด กดได้แม้เปิดภาษาไทยอยู่
 const KM={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',KeyS:'jump',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyZ:'atk',KeyX:'skill'};
 addEventListener('keydown',e=>{ac();const c=e.code;const k=KM[c];
-  if(state==='edit'||state==='msg'){if(c==='Enter'||c==='KeyC'||c==='Space'){e.preventDefault();if(state==='edit')closeEditor();else document.getElementById('mGo').click();}return;}
+  if(state==='edit'||state==='msg'){if(document.getElementById('modeSel').classList.contains('show'))return;if(c==='Enter'||c==='KeyC'||c==='Space'){e.preventDefault();if(state==='edit')closeEditor();else document.getElementById('mGo').click();}return;}
   if(k){keys[k]=true;e.preventDefault();if(e.repeat)return;if(k==='skill')tryRelease();if(k==='jump')jump();}
   if(c==='KeyC'||c==='Tab'){e.preventDefault();if(state==='play'&&!run&&!finale)openEditor('resume');}
   if(c==='KeyV'){if(!run)energy=100;}
@@ -204,7 +213,10 @@ function kill(e,big){if(e.dead)return;e.dead=true;if(e.doomed)doomedN--;kills++;
   sparks(e.x,e.y-e.h/2,ET[e.type].gib[0],big?26:12,big?700:450);
   if(big){ring(e.x,e.y-e.h/2,10,110,'#fff',.35,6);gibs(e.x,e.y-e.h/2,e);}
   if(!run&&!finale)energy=Math.min(100,energy+4*enMul());
-  if(Math.random()<ET[e.type].drop*(run||finale?.6:1)&&drops.length<25){const r=Math.random();const rr=r<.05+stage*.005?2:r<.3?1:0;
+  const T=ET[e.type];const g=Math.max(1,Math.round(T.gold*(1+.3*(stage-1))*MD().gold*rand(.8,1.2)));gold+=g;goldT=.6;
+  if(!run||Math.random()<.3)texts.push({x:e.x+rand(-10,10),y:e.y-e.h-30,vy:-120,txt:'+'+g+' G',col:'#ffd76a',sz:15,life:.7,max:.7});
+  const sc={ghost:.012,skel:.018,bird:.016,yak:.06,golem:.3}[e.type]*MD().stone;if(Math.random()<sc)drops.push({x:e.x,y:e.y-e.h/2,vx:rand(-100,100),vy:-560,stone:1,t:0});
+  if(Math.random()<T.drop*MD().drop*(run||finale?.6:1)&&drops.length<25){const r=Math.random();const rr=r<.05+stage*.005?2:r<.3?1:0;
     drops.push({x:e.x,y:e.y-e.h/2,vx:rand(-120,120),vy:-520,it:makeItem(['weapon','armor','charm'][Math.floor(Math.random()*3)],rr,stage),t:0});}}
 
 // ================= สกิลแต่ละตัว =================
@@ -359,14 +371,14 @@ function updateEnemies(dt){
       e.vx+=(tv-e.vx)*Math.min(1,dt*6);}
     e.x=Math.max(10,Math.min(WORLD_W-10,e.x));
     if(!run&&!finale&&P.finisher<=0&&!e.doomed&&P.inv<=0&&e.stun<=0&&Math.abs(e.x-P.x)<e.w/2+14&&Math.abs((e.y-e.h/2)-(P.y-70))<Math.max(70,e.h/2+20)){
-      const dm=Math.round(T.dmg*(1+.18*(stage-1))*(1-defOf()));P.hp-=dm;addText(P.x,P.y-170,dm,false,true);
+      const dm=Math.max(1,Math.round(T.dmg*MD().dmg*(1+.18*(stage-1))*(1-defOf())));P.hp-=dm;addText(P.x,P.y-170,dm,false,true);
       P.inv=.9;P.hurt=.35;P.vx=Math.sign(P.x-e.x||1)*420;P.vy=-320;P.ground=false;shake=10;flash=Math.max(flash,.15);sTone(200,80,.2,.2,'square');}
   }
   enemies=enemies.filter(e=>!e.dead);
   // ของดรอป
   for(const d of drops){d.t+=dt;d.vy+=1400*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;if(d.y>=GY-18){d.y=GY-18;d.vy=-d.vy*.3;d.vx*=.7;}
     const dx=P.x-d.x,dd=Math.abs(dx);if(d.t>.4&&(dd<170||(!run&&!finale&&bigTotal&&dd<700))){d.x+=Math.sign(dx)*Math.min(dd,(dd<170?520:900)*dt);}
-    if(d.t>.4&&dd<34&&Math.abs((P.y-60)-d.y)<120){d.got=1;gainItem(d.it);sTone(880,1760,.15,.12,'triangle');sparks(d.x,d.y,RAR[d.it.r].c,10,300);}}
+    if(d.t>.4&&dd<34&&Math.abs((P.y-60)-d.y)<120){d.got=1;if(d.stone){stones++;saveEq();pickups.push({stone:1,life:2.2,max:2.2});sTone(660,1980,.25,.15,'triangle');sparks(d.x,d.y,'#b98cff',14,320);}else{gainItem(d.it);sTone(880,1760,.15,.12,'triangle');sparks(d.x,d.y,RAR[d.it.r].c,10,300);}}}
   drops=drops.filter(d=>!d.got);
 }
 function updateProjs(dt){
@@ -405,7 +417,7 @@ function update(rdt){
   zoom+=(zoomT-zoom)*Math.min(1,rdt*7);desat+=(desatT-desat)*Math.min(1,rdt*7);dark+=(darkT-dark)*Math.min(1,rdt*6);
   flash=Math.max(0,flash-rdt*2.6);shake=Math.max(0,shake-rdt*55);chroma=Math.max(0,chroma-rdt*1.6);
   if(cracks){cracks.life-=rdt;if(cracks.life<=0)cracks=null;}
-  for(const o of [bigTotal,banner,toast])if(o)o.life-=rdt;for(const p of pickups)p.life-=rdt;pickups=pickups.filter(p=>p.life>0);
+  for(const o of [bigTotal,banner,toast])if(o)o.life-=rdt;for(const p of pickups)p.life-=rdt;goldT=Math.max(0,goldT-rdt);pickups=pickups.filter(p=>p.life>0);
   if(bigTotal&&bigTotal.life<=0)bigTotal=null;if(banner&&banner.life<=0)banner=null;if(toast&&toast.life<=0)toast=null;
   // กล้องตามตัวละคร
   const tx=Math.max(0,Math.min(WORLD_W-W,P.x-W/2+P.face*90));camX+=(tx-camX)*Math.min(1,rdt*5);
@@ -413,7 +425,7 @@ function update(rdt){
   if(hitstop>0){hitstop-=rdt;return;}
   const dt=rdt*timeScale;
   updatePlayer(dt);if(run)updateRun(dt);updateEnemies(dt);updateProjs(dt);updateFx(dt);spawn(dt);
-  if(P.hp<=0){P.hp=0;state='msg';showMsg('แพ้แล้ว 😵','ของที่เก็บได้ยังอยู่ครบ ลองสวมอุปกรณ์ที่ดีกว่า (กด C) หรือจัดคอมโบใหม่','ลองอีกครั้ง ▶',()=>startStage());}
+  if(P.hp<=0){P.hp=0;saveEq();openHub('💀 แพ้แล้ว — เงินและของที่เก็บได้ยังอยู่ครบ ลองซื้อของหรือตีบวกแล้วลุยด่าน '+stage+' ใหม่');}
 }
 
 // ================= วาด =================
@@ -470,7 +482,8 @@ function drawEnemy(e,sil){const T=ET[e.type];
   if(e.hp<e.max&&!e.doomed){const bw=e.type==='golem'?80:44,y=e.y+hover-h-8;ctx.fillStyle='#000a';ctx.fillRect(e.x-bw/2,y,bw,5);ctx.fillStyle='#ff4d5e';ctx.fillRect(e.x-bw/2,y,bw*Math.max(0,e.hp/e.max),5);}
   if(e.type==='golem'&&!e.doomed)txt(T.name,e.x,e.y-h-16,12,'#e8e2d8','center',700);
 }
-function drawDrops(){for(const d of drops){const R=RAR[d.it.r],im=IMG['it_'+d.it.slot+d.it.r];const bob=Math.sin(t0*4+d.x)*3;
+function drawDrops(){for(const d of drops){if(d.stone){ctx.save();ctx.translate(d.x,d.y+Math.sin(t0*4+d.x)*3);ctx.globalCompositeOperation='lighter';const g=ctx.createRadialGradient(0,0,2,0,0,40);g.addColorStop(0,'rgba(185,140,255,.7)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(-40,-40,80,80);ctx.globalCompositeOperation='source-over';if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,-18,-18,36,36);ctx.restore();continue;}
+  const R=RAR[d.it.r],im=IMG['it_'+d.it.slot+d.it.r];const bob=Math.sin(t0*4+d.x)*3;
   if(d.it.r>0){ctx.save();ctx.globalCompositeOperation='lighter';const g=ctx.createLinearGradient(0,d.y-160,0,d.y);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,R.c);ctx.globalAlpha=.35+.15*Math.sin(t0*6);ctx.fillStyle=g;ctx.fillRect(d.x-10,d.y-160,20,160);ctx.restore();}
   ctx.save();ctx.translate(d.x,d.y+bob);ctx.shadowColor=R.c;ctx.shadowBlur=14;if(ok(im))ctx.drawImage(im,-19,-19,38,38);ctx.restore();}}
 function drawVortex(){if(!run||chain[run.i]!=='vortex'||!run.st.v||run.st.b)return;const st=run.st;const k=Math.min(1,run.t/.4);
@@ -517,9 +530,9 @@ function drawHUD(){
   ctx.fillStyle='#000a';ctx.fillRect(16,16,224,14);ctx.fillStyle='#ff5b6e';ctx.fillRect(18,18,220*P.hp/P.maxHp,10);
   const full=energy>=100&&!run&&!finale;
   ctx.fillStyle='#000a';ctx.fillRect(16,52,224,14);ctx.fillStyle=full?`hsl(${t0*300%360},90%,65%)`:'#6a8cff';ctx.fillRect(18,54,220*energy/100,10);
-  txt('HP '+Math.max(0,Math.ceil(P.hp))+'/'+P.maxHp,246,29,12,'#fff','left',700);txt('พลังโจมตี ×'+atkMul().toFixed(2),18,112,13,'#ffcf9a','left',700);
-  pickups.forEach((p,i)=>{const R=RAR[p.it.r],a=Math.min(1,p.life/p.max*3),y=H-120-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle=R.c;ctx.fillRect(W-330,y-24,4,36);
-    const im=IMG['it_'+p.it.slot+p.it.r];if(ok(im))ctx.drawImage(im,W-322,y-21,30,30);txt(p.it.name+' ('+R.n+')',W-286,y-6,14,R.c,'left',800);txt(istat(p.it)+' · '+p.msg,W-286,y+9,11,'#ddd','left',600);ctx.globalAlpha=1;});txt('พลัง',246,65,12,'#cfd8ff','left',700);if(full)txt((isTouch?'★':'X')+' ปล่อยคอมโบ '+chainTime().toFixed(1)+' วิ!',18,92,16,'#ffd76a','left');
+  txt('HP '+Math.max(0,Math.ceil(P.hp))+'/'+P.maxHp,246,29,12,'#fff','left',700);txt('พลังโจมตี ×'+atkMul().toFixed(2),18,112,13,'#ffcf9a','left',700);{const gs=1+goldT*.5;if(ok(IMG.ui_coin))ctx.drawImage(IMG.ui_coin,16,122,22,22);ctx.save();ctx.translate(42,139);ctx.scale(gs,gs);txt(gold.toLocaleString(),0,0,15,'#ffd76a','left',800);ctx.restore();if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,120,122,22,22);txt(''+stones,146,139,15,'#d8c2ff','left',800);txt(MD().n,190,139,12,MD().col,'left',800);}
+  pickups.forEach((p,i)=>{if(p.stone){const a=Math.min(1,p.life/p.max*3),y=H-120-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle='#b98cff';ctx.fillRect(W-330,y-24,4,36);if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,W-322,y-21,30,30);txt('หินตีบวก +1 (มี '+stones+')',W-286,y+2,15,'#d8c2ff','left',800);ctx.globalAlpha=1;return;}const R=RAR[p.it.r],a=Math.min(1,p.life/p.max*3),y=H-120-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle=R.c;ctx.fillRect(W-330,y-24,4,36);
+    const im=IMG['it_'+p.it.slot+p.it.r];if(ok(im))ctx.drawImage(im,W-322,y-21,30,30);txt(iname(p.it)+' ('+R.n+')',W-286,y-6,14,R.c,'left',800);txt(istat(p.it)+' · '+p.msg,W-286,y+9,11,'#ddd','left',600);ctx.globalAlpha=1;});txt('พลัง',246,65,12,'#cfd8ff','left',700);if(full)txt((isTouch?'★':'X')+' ปล่อยคอมโบ '+chainTime().toFixed(1)+' วิ!',18,92,16,'#ffd76a','left');
   txt('ด่าน '+stage+(testMode?' (ทดลอง)':''),W-18,32,18,'#fff','right');
   txt('กำจัด '+Math.min(kills,quota)+' / '+quota,W-18,56,15,kills>=quota?'#ffd76a':'#cfc6e8','right',700);
   if(!isTouch&&!run&&!finale)txt('C จัดคอมโบ · V เติมเกจ',W-18,78,12,'#8d83aa','right',600);
@@ -590,25 +603,70 @@ function startStage(){projs=[];fxs=[];parts=[];texts=[];trail=[];run=null;finale
   WORLD_W=Math.min(8000,3600+600*stage);portalX=WORLD_W-160;
   P.x=150;P.y=GY;P.vx=P.vy=0;P.face=1;P.maxHp=maxHpOf();P.hp=P.maxHp;P.inv=1;P.finisher=0;kills=0;quota=testMode?40:16+6*stage;energy=testMode?100:20;spawnT=.6;camX=0;
   populate();state='play';banner={t:'ด่าน '+stage+' — ไปทางขวา →',col:'#fff',life:1.8,max:1.8};hideMsg();}
-function stageClear(){const oldN=unlockedN(),oldCap=capOf();stage++;save.stage=stage;persist();
-  let t='';const nN=unlockedN();if(nN>oldN)t+='ปลดล็อกสกิลใหม่: <b style="color:#ffd76a">'+ORDER.slice(oldN,nN).map(i=>SK[i].name).join(', ')+'</b><br>';
-  if(capOf()>oldCap)t+='คอมโบยาวสุดเพิ่มเป็น <b style="color:#ffd76a">'+capOf()+' วิ</b>';if(!t)t='ปลดครบทุกอย่างแล้ว ลุยต่อ!';
-  state='msg';showMsg('ผ่านด่าน! 🎉',t,'ด่านต่อไป ▶',()=>startStage());}
+function stageClear(){const oldN=unlockedN(),oldCap=capOf();stage++;save.stage=stage;save.shop=null;saveEq();persist();
+  let t='✨ ผ่านด่าน '+(stage-1)+'!';const nN=unlockedN();if(nN>oldN)t+=' · ปลดล็อกสกิล: '+ORDER.slice(oldN,nN).map(i=>SK[i].name).join(', ');
+  if(capOf()>oldCap)t+=' · คอมโบยาวสุด '+capOf()+' วิ';sTone(523,1046,.4,.15,'triangle');openHub(t);}
 const msgEl=document.getElementById('msg');
 function showMsg(title,html,goLabel,onGo){document.getElementById('mTitle').textContent=title;document.getElementById('mText').innerHTML=html;
   const g=document.getElementById('mGo');g.textContent=goLabel;g.onclick=onGo;const me=document.getElementById('mEdit');me.onclick=()=>{hideMsg();openEditor('start');};msgEl.classList.add('show');}
 function hideMsg(){msgEl.classList.remove('show');}
 const edEl=document.getElementById('editor');
-function openEditor(after){afterEdit=after;state='edit';for(const k in keys)keys[k]=false;renderEditor();edEl.classList.add('show');}
-function closeEditor(){edEl.classList.remove('show');save.chain=chain;persist();if(afterEdit==='resume')state='play';else startStage();}
-function renderEquip(){const el=document.getElementById('equip');if(!el)return;
-  const card=(it,label,i)=>{if(!it)return`<div class="eqc empty"><small>${label}</small><b>ว่าง</b></div>`;const R=RAR[it.r];
-    return`<div class="eqc" ${i!==undefined?`data-i="${i}"`:''} style="border-color:${R.c}"><img src="assets/it_${it.slot}${it.r}.webp"><div><small>${label||SLOTN[it.slot]} · Lv.${it.lv}</small><b style="color:${R.c}">${it.name}</b><span>${istat(it)}</span></div></div>`;};
-  el.innerHTML=`<div class="eqrow">${['weapon','armor','charm'].map(k=>card(eq[k],SLOTN[k])).join('')}</div>
+let curTab='skill',enhSel=null;
+function openHub(note){afterEdit='start';document.getElementById('hubNote').textContent=note||'';curTab=note&&note.startsWith('✨')?'shop':curTab;openPanel();}
+function openEditor(after){afterEdit=after;document.getElementById('hubNote').textContent=after==='resume'?'⏸ หยุดเกมชั่วคราว — ร้านค้ากับตีบวกใช้ได้เฉพาะในเมือง (หลังเข้าประตูวาร์ป)':'';if(after==='resume'&&(curTab==='shop'||curTab==='enh'))curTab='skill';openPanel();}
+function openPanel(){state='edit';for(const k in keys)keys[k]=false;hideMsg();renderEditor();edEl.classList.add('show');}
+function closeEditor(){edEl.classList.remove('show');save.chain=chain;saveEq();if(afterEdit==='resume')state='play';else startStage();}
+function setTab(t){curTab=t;renderEditor();}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+const sellP=it=>Math.round(25*it.lv*(1+it.r*1.5)*(1+(it.plus||0)*.35));
+function itemCard(it,label,extra,attr,cls){if(!it)return`<div class="eqc empty"><small>${label}</small><b>ว่าง</b></div>`;const R=RAR[it.r];
+  return`<div class="eqc ${cls||''}" ${attr||''} style="border-color:${R.c}${attr?';cursor:pointer':''}"><img src="assets/it_${it.slot}${it.r}.webp"><div style="flex:1"><small>${label||SLOTN[it.slot]} · Lv.${it.lv} · ${R.n}</small><b style="color:${R.c}">${iname(it)}</b><span>${istat(it)}</span></div>${extra||''}</div>`;}
+function renderEquip(){const el=document.getElementById('equip');
+  const town=afterEdit!=='resume';
+  el.innerHTML=`<div class="eqrow">${['weapon','armor','charm'].map(k=>itemCard(eq[k],SLOTN[k])).join('')}</div>
     <div class="stat">พลังโจมตี ×${atkMul().toFixed(2)} · HP สูงสุด ${maxHpOf()} · ลดดาเมจ ${Math.round(defOf()*100)}% · คริ ${Math.round(critOf()*100)}% · เกจไวขึ้น ${Math.round((enMul()-1)*100)}%</div>
-    <h3>กระเป๋า (${bag.length}/15) <small style="color:#8d83aa">กดเพื่อสวมใส่</small></h3><div class="bag">${bag.map((it,i)=>card(it,null,i)).join('')||'<span style="color:#6f6690;font-size:13px">ยังว่าง — ฟันมอนสเตอร์ให้ดรอปของ</span>'}</div>`;
-  el.querySelectorAll('.bag .eqc').forEach(c=>c.onclick=()=>{equipFromBag(+c.dataset.i);renderEquip();});}
-function renderEditor(){renderEquip();
+    <h3>กระเป๋า (${bag.length}/15)</h3><div class="bag">${bag.map((it,i)=>itemCard(it,null,`<button data-eq="${i}">ใส่</button>${town?`<button data-sell="${i}">ขาย ${sellP(it)}G</button>`:''}`)).join('')||'<span style="color:#6f6690;font-size:13px">ยังว่าง — ฟันมอนสเตอร์ให้ดรอปของ หรือซื้อที่ร้าน</span>'}</div>`;
+  el.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{equipFromBag(+b.dataset.eq);renderEditor();});
+  el.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sell;gold+=sellP(bag[i]);bag.splice(i,1);saveEq();sTone(1200,1800,.1,.1,'triangle');renderEditor();});}
+function shopStock(){if(save.shop&&save.shop.stage===stage)return save.shop;
+  const items=[];for(let i=0;i<5;i++){const q=Math.random();const r=q<.06?2:q<.4?1:0;items.push(makeItem(['weapon','armor','charm'][i%3===0?0:Math.floor(Math.random()*3)],r,stage));}
+  save.shop={stage,items,stoneLeft:3};persist();return save.shop;}
+const buyP=it=>Math.round(90*it.lv*Math.pow(1+it.r*1.4,1.5)*MD().price);
+const stoneP=()=>Math.round(260*(1+.25*(stage-1))*MD().price);
+function renderShop(){const el=document.getElementById('shop');if(afterEdit==='resume'){el.innerHTML='<p class="sub">ร้านค้าเปิดเฉพาะในเมือง — เข้าประตูวาร์ปท้ายแมพก่อนนะ</p>';return;}
+  const sh=shopStock();
+  el.innerHTML=`<div class="npc"><img src="assets/npc_merchant.webp"><div><b>ลุงพ่อค้า:</b> ของใหม่มาทุกด่านเลยหลาน! ด่านยิ่งลึก ของยิ่งแรง ขายของเก่าได้ที่แท็บอุปกรณ์นะ</div></div>
+    <div class="shop">${sh.items.map((it,i)=>it.sold?'':itemCard(it,null,`<div class="buy"><span class="price">${buyP(it).toLocaleString()} G</span><button data-buy="${i}" ${gold<buyP(it)?'disabled style="opacity:.4"':''}>ซื้อ</button></div>`)).join('')}
+    <div class="eqc" style="border-color:#b98cff"><img src="assets/ui_stone.webp"><div style="flex:1"><small>วัตถุดิบ · เหลือ ${sh.stoneLeft} ชิ้น</small><b style="color:#d8c2ff">หินตีบวก</b><span>ใช้ตีบวกอุปกรณ์</span></div><div class="buy"><span class="price">${stoneP().toLocaleString()} G</span><button data-stone ${gold<stoneP()||!sh.stoneLeft?'disabled style="opacity:.4"':''}>ซื้อ</button></div></div></div>`;
+  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const it=sh.items[+b.dataset.buy];const p=buyP(it);if(gold<p)return;gold-=p;it.sold=1;gainItem(Object.assign({},it,{sold:undefined}));persist();sTone(900,1500,.15,.12,'triangle');renderEditor();});
+  const sb=el.querySelector('[data-stone]');if(sb)sb.onclick=()=>{const p=stoneP();if(gold<p||!sh.stoneLeft)return;gold-=p;stones++;sh.stoneLeft--;saveEq();sTone(660,1980,.2,.12,'triangle');renderEditor();};}
+const ENH=[100,100,100,95,90,80,70,60,50,40,35,30,25,20,15];
+const enhRate=it=>Math.max(5,Math.min(100,ENH[it.plus||0]+MD().enh));
+const enhCost=it=>({g:Math.round(60*((it.plus||0)+1)*(1+it.lv*.25)*(1+it.r*.5)*MD().price),s:1+Math.floor((it.plus||0)/3)});
+let enhMsg=null;
+function renderEnh(){const el=document.getElementById('enh');if(afterEdit==='resume'){el.innerHTML='<p class="sub">ร้านตีบวกเปิดเฉพาะในเมือง</p>';return;}
+  const all=[...['weapon','armor','charm'].map(k=>eq[k]).filter(Boolean),...bag];if(enhSel&&!all.includes(enhSel))enhSel=null;if(!enhSel)enhSel=all[0]||null;
+  let box='<p class="sub">ยังไม่มีอุปกรณ์</p>';
+  if(enhSel){const it=enhSel,pl=it.plus||0;
+    if(pl>=15)box=`<div class="enhbox"><img class="big" src="assets/it_${it.slot}${it.r}.webp"><div><b style="font-size:20px;color:${RAR[it.r].c}">${iname(it)}</b><br>ตีบวกสูงสุดแล้ว! ${istat(it)}</div></div>`;
+    else{const nx=Object.assign({},it,{plus:pl+1}),c=enhCost(it),rate=enhRate(it),brk=pl>=MD().breakAt;const can=gold>=c.g&&stones>=c.s;
+      box=`<div class="enhbox"><img class="big" src="assets/it_${it.slot}${it.r}.webp"><div style="flex:1;min-width:220px">
+        <b style="font-size:20px;color:${RAR[it.r].c}">${iname(it)} → +${pl+1}</b><br>${istat(it)}<br><span style="color:#7fdc4a">→ ${istat(nx)}</span><br>
+        โอกาสสำเร็จ <b style="color:${rate>=70?'#7fdc4a':rate>=40?'#ffd76a':'#ff5b6e'}">${rate}%</b> · ${brk?'<span style="color:#ff5b6e">ล้มเหลวจะลดลง 1 ขั้น</span>':'ล้มเหลวขั้นไม่ลด (เสียแค่วัตถุดิบ)'}<br>
+        ใช้ <b class="price">${c.g.toLocaleString()} G</b> + หินตีบวก <b style="color:#d8c2ff">${c.s}</b> ก้อน (มี ${stones})</div>
+        <div style="text-align:center"><button class="go" id="bEnh" ${can?'':'disabled style="opacity:.4"'}>🔨 ตีบวก!</button><div class="enhres" id="enhRes" style="color:${enhMsg&&enhMsg.ok?'#7fdc4a':'#ff5b6e'}">${enhMsg?enhMsg.t:''}</div></div></div>`;}}
+  el.innerHTML=`<div class="npc"><img src="assets/npc_smith.webp"><div><b>ช่างตีเหล็ก:</b> ตีได้ถึง +15! ยิ่งสูงยิ่งเสี่ยงนะ ${MD().breakAt<99?`ตั้งแต่ +${MD().breakAt} ขึ้นไป ถ้าพังจะลดขั้น`:'โหมดง่ายพังยังไงขั้นก็ไม่ลด'}</div></div>${box}
+    <h3>เลือกอุปกรณ์</h3><div class="bag">${all.map((it,i)=>itemCard(it,eq[it.slot]===it?'สวมอยู่':null,'',`data-pick="${i}"`,it===enhSel?'sel':'')).join('')}</div>`;
+  el.querySelectorAll('[data-pick]').forEach(c=>c.onclick=()=>{enhSel=all[+c.dataset.pick];enhMsg=null;renderEditor();});
+  const be=document.getElementById('bEnh');if(be)be.onclick=()=>{const it=enhSel,c=enhCost(it);if(gold<c.g||stones<c.s)return;gold-=c.g;stones-=c.s;
+    const pl=it.plus||0;if(Math.random()*100<enhRate(it)){it.plus=pl+1;enhMsg={ok:1,t:'สำเร็จ! +'+it.plus};sTone(600,1800,.35,.18,'triangle');setTimeout(()=>sTone(900,2400,.3,.12,'triangle'),120);}
+    else{if(pl>=MD().breakAt){it.plus=pl-1;enhMsg={ok:0,t:'ล้มเหลว… ลดเหลือ +'+it.plus};}else enhMsg={ok:0,t:'ล้มเหลว…'};sTone(300,60,.5,.25,'sawtooth');}
+    P.maxHp=maxHpOf();saveEq();renderEditor();};}
+function renderEditor(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===curTab));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
+  document.getElementById('hubTitle').textContent=afterEdit==='resume'?'⏸ พักเกม':'🏯 เมือง — ก่อนลุยด่าน '+stage;
+  document.getElementById('mGold').textContent=gold.toLocaleString();document.getElementById('mStone').textContent=stones;const mm=document.getElementById('mMode');mm.textContent='โหมด '+MD().n;mm.style.color=MD().col;
+  renderEquip();renderShop();renderEnh();
   const pal=document.getElementById('palette');pal.innerHTML='';const cap=capOf();
   ORDER.forEach((id,i)=>{const s=SK[id],un=isUnlocked(id);const d=document.createElement('div');d.className='card'+(un?'':' locked');
     d.innerHTML=`<img src="assets/ic_${id}.webp" class="ic"><span class="t">${s.dur} วิ</span><b>${un?'':'🔒 '}${s.name}</b><small>${un?s.desc:'ผ่านด่าน '+needStage(i)+' เพื่อปลดล็อก'}</small>`;
@@ -621,7 +679,7 @@ function renderEditor(){renderEquip();
   const t=chainTime();document.getElementById('ctime').textContent=t.toFixed(1)+' / '+cap+' วิ';document.getElementById('cbar').style.width=Math.min(100,t/cap*100)+'%';
   document.getElementById('syns').innerHTML=SYN.map(s=>found.has(s[2])?`✨ ${SK[s[0]].name} → ${SK[s[1]].name} = <b style="color:#ffd76a">${s[2]} ×${s[3]}</b>`:`❓ ??? → ??? <span style="color:#6f6690">(ลองเรียงสกิลคู่กันดู)</span>`).join('<br>');
   document.getElementById('bTest').textContent=testMode?'ปิดโหมดทดลอง':'โหมดทดลอง: ปลดทุกสกิล 60 วิ';
-  document.getElementById('bGo').textContent=afterEdit==='resume'?'กลับไปเล่น ▶':'ลุย ▶';
+  document.getElementById('bGo').textContent=afterEdit==='resume'?'กลับไปเล่น ▶':'ออกเดินทาง ด่าน '+stage+' ▶';document.getElementById('bTest').textContent=testMode?'ปิดโหมดทดลอง':'โหมดทดลอง: ปลดทุกสกิล 60 วิ';
 }
 function flashBar(){const b=document.getElementById('cbar');b.style.background='#ff4d4d';setTimeout(()=>b.style.background='',250);}
 document.getElementById('bClear').onclick=()=>{chain=[];renderEditor();};
@@ -634,5 +692,11 @@ document.getElementById('bTest').onclick=()=>{testMode=!testMode;save.test=testM
 document.getElementById('bGo').onclick=closeEditor;
 
 window.__dbg=()=>({drops:drops.length,bag:bag.length,eq:Object.values(eq).filter(Boolean).length,kills,enemies:enemies.length,types:[...new Set(enemies.map(e=>e.type))]});
-loadAssets(()=>{openEditor('start');requestAnimationFrame(loop);});
+function openModeSel(){const el=document.getElementById('modes');el.innerHTML=Object.entries(MODE).map(([k,m])=>`<div class="card" data-m="${k}" style="border-left:4px solid ${m.col}"><b style="color:${m.col}">${m.n}</b><small>${m.desc}</small></div>`).join('');
+  el.querySelectorAll('[data-m]').forEach(c=>c.onclick=()=>{mode=c.dataset.m;saveEq();document.getElementById('modeSel').classList.remove('show');openHub('โหมด '+MD().n+' — จัดคอมโบแล้วออกเดินทางได้เลย');});
+  edEl.classList.remove('show');state='edit';document.getElementById('modeSel').classList.add('show');}
+document.getElementById('bMode').onclick=openModeSel;
+document.getElementById('bReset').onclick=()=>{const b=document.getElementById('bReset');if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='กดอีกครั้งเพื่อยืนยัน (ลบเซฟทั้งหมด)';return;}
+  try{localStorage.removeItem('combo-proto');}catch(e){}location.reload();};
+loadAssets(()=>{if(!mode)openModeSel();else openHub('');requestAnimationFrame(loop);});
 })();
