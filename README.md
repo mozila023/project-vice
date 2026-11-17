@@ -28,4 +28,6 @@
 - `game.js` — โค้ดเกมทั้งหมด
 - `assets/` — ภาพตัวละคร ศัตรู ฉาก ไอคอน และเอฟเฟกต์ (วาดด้วย ChatGPT แล้วตัดเป็นเฟรม)
 
-โปรเจกต์เก่า (เกมเกาะ Godot) ยังเก็บไว้ใน git ที่ tag `backup-before-combo-game`
+เล่นออนไลน์: https://mozila023.github.io/project-vice/
+
+โปรเจกต์เก่า (เกมเกาะ Godot) ยังย้อนดูได้ในประวัติ git ที่ commit `159dfda`
