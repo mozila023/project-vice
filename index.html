@@ -26,6 +26,13 @@ h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
 .chip{background:#2a2240;border:1px solid #574a80;border-radius:8px;padding:4px 8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px}
 .chip:hover{background:#4a2233;border-color:#c55}
 .chip.syn{box-shadow:0 0 0 2px #ffd76a inset}
+.eqrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bag{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.eqc{display:flex;gap:8px;align-items:center;background:#211b31;border:1px solid #3b3255;border-left-width:4px;border-radius:10px;padding:6px 8px;font-size:12px}
+.bag .eqc{cursor:pointer}.bag .eqc:hover{background:#2c2442}
+.eqc img{width:40px;height:40px;border-radius:6px}.eqc small{display:block;color:#8d83aa}.eqc b{display:block;font-size:14px}.eqc span{color:#ddd}
+.eqc.empty{opacity:.5;display:block}
+.stat{margin-top:6px;font-size:13px;color:#ffcf9a}
 .chip img{width:24px;height:24px;border-radius:5px}
 .card .ic{width:46px;height:46px;border-radius:8px;float:left;margin:0 8px 0 0}
 .card.locked .ic{filter:grayscale(1) brightness(.5)}
@@ -57,8 +64,10 @@ kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-r
 </div>
 
 <div class="ov" id="editor"><div class="panel">
-  <h2>⚔️ จัดคอมโบสกิลยาว</h2>
+  <h2>⚔️ จัดคอมโบ & อุปกรณ์</h2>
   <p class="sub">กดการ์ดเพื่อเพิ่มต่อท้าย · กดชิปในแถวคอมโบเพื่อลบ · ใช้สกิลซ้ำได้ · เรียงบางคู่ติดกันจะเจอ <b style="color:#ffd76a">คอมโบซ่อน</b></p>
+  <h3>อุปกรณ์สวมใส่</h3>
+  <div id="equip"></div>
   <h3>สกิลย่อย</h3>
   <div class="grid" id="palette"></div>
   <h3>คอมโบของคุณ <span id="ctime" style="color:#ffd76a"></span></h3>
