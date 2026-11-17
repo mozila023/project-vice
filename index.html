@@ -1,260 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-<meta name="game-source-commit" content="159dfda4da64b6cf442fef04cfe2578116b9642e">
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>Vanuatu Vice</title>
-		<style>
-html, body, #canvas {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-
-body {
-	color: white;
-	background-color: black;
-	overflow: hidden;
-	touch-action: none;
-}
-
-#canvas {
-	display: block;
-}
-
-#canvas:focus {
-	outline: none;
-}
-
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
-#status {
-	background-color: #08171c;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	visibility: hidden;
-}
-
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
-}
-
-#status-splash.show-image--false {
-	display: none;
-}
-
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
-}
-
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
-}
-
-#status-progress, #status-notice {
-	display: none;
-}
-
-#status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
-}
-
-#status-notice {
-	background-color: #5b3943;
-	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
-	line-height: 1.3;
-	margin: 0 2rem;
-	overflow: hidden;
-	padding: 1rem;
-	text-align: center;
-	z-index: 1;
-}
-		</style>
-		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
-<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-<meta name="mobile-web-app-capable" content="yes"><style>body{background:#08171c}</style>
-	</head>
-	<body>
-		<canvas id="canvas">
-			Your browser does not support the canvas tag.
-		</canvas>
-
-		<noscript>
-			Your browser does not support JavaScript.
-		</noscript>
-
-		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
-			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
-		</div>
-
-		<script src="index.js"></script>
-		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":103610804,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
-const GODOT_THREADS_ENABLED = false;
-const fetchGameResource = window.fetch.bind(window);
-window.fetch = function(input, options) {
-    const url = typeof input === 'string' ? input : (input.url || '');
-    return fetchGameResource(input, /\.pck(?:$|\?)/.test(url) ? {...options, cache: 'reload'} : options);
-};
-const engine = new Engine(GODOT_CONFIG);
-
-(function () {
-	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
-	const statusNotice = document.getElementById('status-notice');
-
-	let initializing = true;
-	let statusMode = '';
-
-	function setStatusMode(mode) {
-		if (statusMode === mode || !initializing) {
-			return;
-		}
-		if (mode === 'hidden') {
-			statusOverlay.remove();
-			initializing = false;
-			return;
-		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
-	}
-
-	function setStatusNotice(text) {
-		while (statusNotice.lastChild) {
-			statusNotice.removeChild(statusNotice.lastChild);
-		}
-		const lines = text.split('\n');
-		lines.forEach((line) => {
-			statusNotice.appendChild(document.createTextNode(line));
-			statusNotice.appendChild(document.createElement('br'));
-		});
-	}
-
-	function displayFailureNotice(err) {
-		console.error(err);
-		if (err instanceof Error) {
-			setStatusNotice(err.message);
-		} else if (typeof err === 'string') {
-			setStatusNotice(err);
-		} else {
-			setStatusNotice('An unknown error occurred.');
-		}
-		setStatusMode('notice');
-		initializing = false;
-	}
-
-	const missing = Engine.getMissingFeatures({
-		threads: GODOT_THREADS_ENABLED,
-	});
-
-	if (missing.length !== 0) {
-		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			let serviceWorkerRegistrationPromise;
-			try {
-				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
-			} catch (err) {
-				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
-			}
-			// There's a chance that installing the service worker would fix the issue
-			Promise.race([
-				serviceWorkerRegistrationPromise.then((registration) => {
-					if (registration != null) {
-						return Promise.reject(new Error('Service worker already exists.'));
-					}
-					return registration;
-				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
-				new Promise((resolve) => {
-					setTimeout(() => resolve(), 2000);
-				}),
-			]).then(() => {
-				// Reload if there was no error.
-				window.location.reload();
-			}).catch((err) => {
-				console.error('Error while registering service worker:', err);
-			});
-		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-			displayFailureNotice(missingMsg + missing.join('\n'));
-		}
-	} else {
-		setStatusMode('progress');
-		engine.startGame({
-			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
-				}
-			},
-		}).then(() => {
-			setStatusMode('hidden');
-		}, displayFailureNotice);
-	}
-}());
-		</script>
-	<style>
-#vice-fullscreen{position:fixed;bottom:max(10px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:20;width:46px;height:42px;border:1px solid #65827e;border-radius:12px;background:#102c2be6;color:#f5d6a2;font:28px sans-serif;touch-action:manipulation;cursor:pointer}
-#vice-fullscreen:focus-visible{outline:2px solid #f5d6a2}
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ฟันมันส์ — คอมโบสกิลยาว</title>
+<style>
+html,body{margin:0;height:100%;background:#07060c;color:#eee;font-family:system-ui,"Noto Sans Thai","Leelawadee UI",sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative}
+canvas{display:block}
+.ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,6,16,.78);backdrop-filter:blur(3px)}
+.ov.show{display:flex}
+.panel{width:min(92%,880px);max-height:94%;overflow:auto;background:#15121f;border:1px solid #3a3150;border-radius:14px;padding:16px 18px;box-sizing:border-box}
+h2{margin:0 0 6px;font-size:22px}
+h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
+.sub{color:#a99fc4;font-size:13px;margin:0 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{background:#211b31;border:1px solid #3b3255;border-radius:10px;padding:8px 10px;cursor:pointer;transition:transform .08s,border-color .1s}
+.card:hover{transform:translateY(-2px);border-color:#8a72d6}
+.card.locked{opacity:.4;cursor:not-allowed}
+.card b{display:block;font-size:15px}
+.card small{color:#a99fc4;font-size:12px;display:block}
+.card .t{float:right;font-size:12px;color:#ffd76a}
+#chain{display:flex;flex-wrap:wrap;gap:6px;min-height:42px;background:#0e0b17;border:1px dashed #3b3255;border-radius:10px;padding:8px}
+.chip{background:#2a2240;border:1px solid #574a80;border-radius:8px;padding:4px 8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.chip:hover{background:#4a2233;border-color:#c55}
+.chip.syn{box-shadow:0 0 0 2px #ffd76a inset}
+.chip img{width:24px;height:24px;border-radius:5px}
+.card .ic{width:46px;height:46px;border-radius:8px;float:left;margin:0 8px 0 0}
+.card.locked .ic{filter:grayscale(1) brightness(.5)}
+.chip i{font-style:normal;color:#8d83aa;font-size:11px}
+.bar{height:12px;background:#0e0b17;border-radius:6px;overflow:hidden;border:1px solid #3b3255;margin-top:8px}
+.bar>div{height:100%;background:linear-gradient(90deg,#6a5cff,#ff5fa2,#ffd76a)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+button{font:inherit;font-size:15px;border:0;border-radius:9px;padding:9px 14px;cursor:pointer;background:#2e2645;color:#eee}
+button:hover{background:#3d3360}
+button.go{background:linear-gradient(90deg,#ff5f6d,#ffc371);color:#1a0f12;font-weight:700}
+.syns{font-size:13px;color:#cfc6e8;line-height:1.7}
+.help{font-size:13px;color:#a99fc4;line-height:1.6}
+kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;color:#eee}
+#touch{position:absolute;inset:0;pointer-events:none;display:none}
+#touch .b{position:absolute;pointer-events:auto;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff}
+#touch .b:active{background:rgba(255,255,255,.3)}
 </style>
-<button id="vice-fullscreen" type="button" aria-label="Full screen" title="Full screen">⛶</button>
-<script>
-(() => {
-  const button = document.getElementById('vice-fullscreen');
-  button.addEventListener('pointerdown', event => event.preventDefault());
-  button.addEventListener('click', async event => {
-    event.stopPropagation();
-    try {
-      if (document.fullscreenElement || document.webkitFullscreenElement) {
-        await (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen());
-      } else {
-        const root = document.documentElement;
-        if (root.requestFullscreen) await root.requestFullscreen({ navigationUI: 'hide' });
-        else if (root.webkitRequestFullscreen) await root.webkitRequestFullscreen();
-        else {
-          button.title = 'Safari: Share → Add to Home Screen';
-          alert('Safari: กดแชร์ แล้วเลือกเพิ่มไปยังหน้าจอโฮม เพื่อเล่นแบบเต็มจอ');
-          return;
-        }
-        try { await screen.orientation.lock('landscape'); } catch (_) {}
-      }
-    } catch (_) { button.title = 'แตะเพื่อเปิดเต็มจออีกครั้ง'; }
-    document.getElementById('canvas')?.focus();
-  });
-  const update = () => button.setAttribute('aria-label', (document.fullscreenElement || document.webkitFullscreenElement) ? 'Exit full screen' : 'Full screen');
-  document.addEventListener('fullscreenchange', update);
-  document.addEventListener('webkitfullscreenchange', update);
-})();
-</script>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+<canvas id="c"></canvas>
+<div id="touch">
+  <div class="b" data-k="left" style="left:14px;bottom:18px">◀</div>
+  <div class="b" data-k="right" style="left:90px;bottom:18px">▶</div>
+  <div class="b" data-k="jump" style="right:166px;bottom:18px">⤒</div>
+  <div class="b" data-k="atk" style="right:90px;bottom:18px;width:72px;height:72px">⚔️</div>
+  <div class="b" data-k="skill" style="right:24px;bottom:104px">★</div>
+  <div class="b" data-k="edit" style="right:14px;top:60px;width:48px;height:48px;font-size:18px">☰</div>
+</div>
 
+<div class="ov" id="editor"><div class="panel">
+  <h2>⚔️ จัดคอมโบสกิลยาว</h2>
+  <p class="sub">กดการ์ดเพื่อเพิ่มต่อท้าย · กดชิปในแถวคอมโบเพื่อลบ · ใช้สกิลซ้ำได้ · เรียงบางคู่ติดกันจะเจอ <b style="color:#ffd76a">คอมโบซ่อน</b></p>
+  <h3>สกิลย่อย</h3>
+  <div class="grid" id="palette"></div>
+  <h3>คอมโบของคุณ <span id="ctime" style="color:#ffd76a"></span></h3>
+  <div id="chain"></div>
+  <div class="bar"><div id="cbar"></div></div>
+  <h3>คอมโบซ่อนที่เจอแล้ว</h3>
+  <div class="syns" id="syns"></div>
+  <div class="row">
+    <button id="bClear">ล้าง</button>
+    <button id="bFill">สุ่มเรียงให้เต็มเวลา</button>
+    <button id="bTest">โหมดทดลอง: ปลดทุกสกิล 60 วิ</button>
+    <span style="flex:1"></span>
+    <button class="go" id="bGo">ลุย ▶</button>
+  </div>
+  <h3>วิธีเล่น</h3>
+  <div class="help">
+    <b>A</b> <b>D</b> (หรือ ← →) เดิน · <b>S</b> (หรือ Space) กระโดด · <b>Z</b> ฟัน (กดค้างได้) · <b>X</b> ปล่อยคอมโบ (ต้องเกจเต็ม) · <b>C</b> จัดคอมโบ · <b>V</b> เติมเกจทันที (ทดสอบ) · <b>M</b> ปิดเสียง · <b>Enter</b> เริ่มเล่น<br>
+    เดินไปทางขวาตามแมพ ฟันศัตรูให้ครบจำนวน แล้วเข้าประตูวาร์ปท้ายแมพเพื่อผ่านด่าน · ฟันธรรมดาเติมเกจ → เกจเต็มกด X ปล่อยคอมโบยาว<br>
+    ถ้ากดแล้วไม่ติด ให้คลิกที่จอเกมหนึ่งครั้งก่อน (ภาษาไทยหรืออังกฤษก็กดได้)
+  </div>
+</div></div>
+
+<div class="ov" id="msg"><div class="panel" style="width:min(90%,460px);text-align:center">
+  <h2 id="mTitle"></h2><p class="sub" id="mText" style="font-size:15px;line-height:1.6"></p>
+  <div class="row" style="justify-content:center"><button id="mEdit">จัดคอมโบ</button><button class="go" id="mGo">ด่านต่อไป ▶</button></div>
+</div></div>
+</div></div>
+
+<script src="game.js"></script>
 </body>
 </html>
-
