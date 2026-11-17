@@ -33,6 +33,21 @@ h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
 .eqc img{width:40px;height:40px;border-radius:6px}.eqc small{display:block;color:#8d83aa}.eqc b{display:block;font-size:14px}.eqc span{color:#ddd}
 .eqc.empty{opacity:.5;display:block}
 .stat{margin-top:6px;font-size:13px;color:#ffcf9a}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top h2{margin:0;flex:1}
+.money{display:flex;align-items:center;gap:6px;font-size:16px}.money img{width:26px;height:26px}.money b{margin-right:10px;color:#ffd76a}
+#mMode{font-size:12px;padding:3px 8px;border-radius:20px;background:#2e2645}
+.note{margin:6px 0;color:#ffd76a;font-size:14px;min-height:4px}
+.tabs{display:flex;gap:4px;margin:8px 0 10px;border-bottom:1px solid #3a3150;flex-wrap:wrap}
+.tabs button{border-radius:9px 9px 0 0;background:transparent;color:#a99fc4;padding:8px 14px}.tabs button.on{background:#2e2645;color:#fff}
+.tab{display:none}.tab.on{display:block}
+.foot{position:sticky;bottom:-16px;background:#15121f;padding:10px 0 4px;margin-bottom:-4px}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.npc{display:flex;gap:12px;align-items:center;margin-bottom:10px}.npc img{width:84px;height:84px;object-fit:contain}.npc div{background:#211b31;border-radius:12px;padding:8px 12px;font-size:14px;line-height:1.5}
+.buy{display:flex;gap:8px;align-items:center;margin-left:auto}.price{color:#ffd76a;font-weight:700;white-space:nowrap}
+.eqc button{padding:5px 10px;font-size:13px}.eqc.sel{box-shadow:0 0 0 2px #ffd76a inset}
+.enhbox{display:flex;gap:16px;align-items:center;background:#211b31;border-radius:12px;padding:14px;margin-top:10px;flex-wrap:wrap}
+.enhbox .big{width:96px;height:96px}.enhres{font-size:22px;font-weight:900;min-height:30px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.modes .card{padding:14px}.modes .card b{font-size:20px}.modes .card small{font-size:13px;line-height:1.6;margin-top:6px}
 .chip img{width:24px;height:24px;border-radius:5px}
 .card .ic{width:46px;height:46px;border-radius:8px;float:left;margin:0 8px 0 0}
 .card.locked .ic{filter:grayscale(1) brightness(.5)}
@@ -64,30 +79,37 @@ kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-r
 </div>
 
 <div class="ov" id="editor"><div class="panel">
-  <h2>⚔️ จัดคอมโบ & อุปกรณ์</h2>
-  <p class="sub">กดการ์ดเพื่อเพิ่มต่อท้าย · กดชิปในแถวคอมโบเพื่อลบ · ใช้สกิลซ้ำได้ · เรียงบางคู่ติดกันจะเจอ <b style="color:#ffd76a">คอมโบซ่อน</b></p>
-  <h3>อุปกรณ์สวมใส่</h3>
-  <div id="equip"></div>
-  <h3>สกิลย่อย</h3>
-  <div class="grid" id="palette"></div>
-  <h3>คอมโบของคุณ <span id="ctime" style="color:#ffd76a"></span></h3>
-  <div id="chain"></div>
-  <div class="bar"><div id="cbar"></div></div>
-  <h3>คอมโบซ่อนที่เจอแล้ว</h3>
-  <div class="syns" id="syns"></div>
-  <div class="row">
-    <button id="bClear">ล้าง</button>
-    <button id="bFill">สุ่มเรียงให้เต็มเวลา</button>
-    <button id="bTest">โหมดทดลอง: ปลดทุกสกิล 60 วิ</button>
-    <span style="flex:1"></span>
-    <button class="go" id="bGo">ลุย ▶</button>
+  <div class="top"><h2 id="hubTitle">🏯 เมือง</h2><div class="money"><img src="assets/ui_coin.webp"><b id="mGold">0</b><img src="assets/ui_stone.webp"><b id="mStone">0</b><span id="mMode"></span></div></div>
+  <div class="note" id="hubNote"></div>
+  <div class="tabs"><button data-t="skill">⚔️ สกิล</button><button data-t="equip">🛡️ อุปกรณ์</button><button data-t="shop">💰 ร้านค้า</button><button data-t="enh">🔨 ตีบวก</button><button data-t="help">❔ วิธีเล่น</button></div>
+  <div class="tab" id="tab-skill">
+    <p class="sub">กดการ์ดเพื่อเพิ่มต่อท้าย · กดชิปในแถวคอมโบเพื่อลบ · ใช้สกิลซ้ำได้ · เรียงบางคู่ติดกันจะเจอ <b style="color:#ffd76a">คอมโบซ่อน</b></p>
+    <div class="grid" id="palette"></div>
+    <h3>คอมโบของคุณ <span id="ctime" style="color:#ffd76a"></span></h3>
+    <div id="chain"></div>
+    <div class="bar"><div id="cbar"></div></div>
+    <div class="row"><button id="bClear">ล้าง</button><button id="bFill">สุ่มเรียงให้เต็มเวลา</button><button id="bTest">โหมดทดลอง</button></div>
+    <h3>คอมโบซ่อนที่เจอแล้ว</h3>
+    <div class="syns" id="syns"></div>
   </div>
-  <h3>วิธีเล่น</h3>
-  <div class="help">
-    <b>A</b> <b>D</b> (หรือ ← →) เดิน · <b>S</b> (หรือ Space) กระโดด · <b>Z</b> ฟัน (กดค้างได้) · <b>X</b> ปล่อยคอมโบ (ต้องเกจเต็ม) · <b>C</b> จัดคอมโบ · <b>V</b> เติมเกจทันที (ทดสอบ) · <b>M</b> ปิดเสียง · <b>Enter</b> เริ่มเล่น<br>
-    เดินไปทางขวาตามแมพ ฟันศัตรูให้ครบจำนวน แล้วเข้าประตูวาร์ปท้ายแมพเพื่อผ่านด่าน · ฟันธรรมดาเติมเกจ → เกจเต็มกด X ปล่อยคอมโบยาว<br>
-    ถ้ากดแล้วไม่ติด ให้คลิกที่จอเกมหนึ่งครั้งก่อน (ภาษาไทยหรืออังกฤษก็กดได้)
-  </div>
+  <div class="tab" id="tab-equip"><div id="equip"></div></div>
+  <div class="tab" id="tab-shop"><div id="shop"></div></div>
+  <div class="tab" id="tab-enh"><div id="enh"></div></div>
+  <div class="tab" id="tab-help"><div class="help">
+    <b>A</b> <b>D</b> (หรือ ← →) เดิน · <b>S</b> (หรือ Space) กระโดด · <b>Z</b> ฟัน (กดค้างได้) · <b>X</b> ปล่อยคอมโบ (ต้องเกจเต็ม) · <b>C</b> เปิดหน้าสกิล/อุปกรณ์ระหว่างเล่น · <b>V</b> เติมเกจทันที (ทดสอบ) · <b>M</b> ปิดเสียง · <b>Enter</b> ออกเดินทาง<br><br>
+    • เดินไปทางขวา ฟันมอนให้ครบจำนวน แล้วเข้าประตูวาร์ปท้ายแมพ → กลับมาที่เมือง<br>
+    • ฟันมอนได้เงิน 💰 · บางตัวดรอปอุปกรณ์ · หินตีบวกดรอปยาก (ยักษ์หินดรอปบ่อยสุด)<br>
+    • ในเมือง: จัดคอมโบ · ซื้อ/ขายของ · ตีบวกอุปกรณ์ได้ถึง +15 (ยิ่งสูงยิ่งเสี่ยง)<br>
+    • มอนเลือดเพิ่มทุกด่าน ความโหดขึ้นกับโหมดที่เลือก (ง่าย / ปกติ / ยาก)<br>
+    • ถ้ากดแล้วไม่ติด ให้คลิกที่จอเกมหนึ่งครั้งก่อน (ภาษาไทยหรืออังกฤษก็กดได้)<br><br>
+    <button id="bMode">เปลี่ยนโหมดความยาก</button> <button id="bReset">เริ่มเกมใหม่ทั้งหมด</button>
+  </div></div>
+  <div class="row foot"><span style="flex:1"></span><button class="go" id="bGo">ออกเดินทาง ▶</button></div>
+</div></div>
+
+<div class="ov" id="modeSel"><div class="panel" style="width:min(94%,760px)">
+  <h2>เลือกระดับความยาก</h2><p class="sub">เปลี่ยนได้ภายหลังในหน้าวิธีเล่น</p>
+  <div class="modes" id="modes"></div>
 </div></div>
 
 <div class="ov" id="msg"><div class="panel" style="width:min(90%,460px);text-align:center">
