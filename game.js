@@ -68,12 +68,12 @@ const CLS={sword:{n:'นักดาบ',kp:'h_',hp:100,col:'#ff6b5b',desc:'ฟ�
  archer:{n:'นักธนู',kp:'a_',hp:90,col:'#7fdc4a',desc:'ยิงไกล ฝนธนู ศรระเบิด ระยะไกลสุด',def:['a_rapid','a_fan','a_rapid']}};
 let cls='sword',ORDER=ORDER_SWORD,SYN=SYN_SWORD;
 function readSave(c){let s=null;try{s=JSON.parse(localStorage.getItem('mahacombo-'+c)||'null');if(!s&&c==='sword')s=JSON.parse(localStorage.getItem('combo-proto')||'null');}catch(e){}return s;}
-let save=Object.assign({stage:1,chain:['slash','upper','dash','slash'],found:[],test:false},readSave('sword')||{});
+let save=Object.assign({stage:1,chain:['slash','upper','dash','slash'],found:[]},readSave('sword')||{});
 function persist(){try{localStorage.setItem('mahacombo-'+cls,JSON.stringify(save));localStorage.setItem('mahacombo-last',cls);}catch(e){}}
-let stage=save.stage,chain=save.chain.filter(id=>SK[id]),found=new Set(save.found),testMode=!!save.test;
-const unlockedN=()=>testMode?ORDER.length:Math.min(ORDER.length,1+2*stage);
+let stage=save.stage,chain=save.chain.filter(id=>SK[id]),found=new Set(save.found);
+const unlockedN=()=>Math.min(ORDER.length,1+2*stage);
 const needStage=i=>Math.floor((i-1)/2);
-const capOf=()=>testMode?60:CAP[Math.min(stage-1,CAP.length-1)]+(typeof eq!=='undefined'?tot('ct'):0);
+const capOf=()=>CAP[Math.min(stage-1,CAP.length-1)]+(typeof eq!=='undefined'?tot('ct'):0);
 const isUnlocked=id=>ORDER.indexOf(id)<unlockedN();
 const chainTime=()=>chain.reduce((a,id)=>a+SK[id].dur,0);
 
@@ -196,6 +196,11 @@ const iscore=it=>{if(!it)return 0;const st=itemStats(it);let s=0;for(const k in 
 let eq=save.eq||{weapon:makeItem('weapon',0,1)},bag=save.bag||[];
 function normAll(){for(const k of SLOTS)eq[k]=normItem(eq[k])||null;bag=bag.map(normItem);}
 normAll();
+function restoreCombo(){
+  chain=chain.filter(id=>ORDER.includes(id)&&isUnlocked(id));
+  if(!chain.length)chain=CLS[cls].def.slice();
+  while(chainTime()>capOf()+1e-6)chain.pop();
+}
 function tot(k){let s=0;for(const sl of SLOTS){const it=eq[sl];if(!it)continue;if(k in it.main)s+=mainV(it,k);for(const x of it.subs)if(x.k===k)s+=x.v;}return s;}
 const atkMul=()=>1+tot('atk')/100;
 const maxHpOf=()=>CLS[cls].hp+tot('hp');
@@ -206,8 +211,9 @@ const enMul=()=>1+tot('en')/100;
 const goldMul=()=>1+tot('gold')/100;
 const spdMul=()=>Math.min(1.6,1+tot('spd')/100);
 const lsOf=()=>Math.min(.3,tot('ls')/100);
+restoreCombo();
 let gold=save.gold||0,stones=save.stones||0;
-function saveEq(){save.eq=eq;save.bag=bag;save.gold=gold;save.stones=stones;save.mode=mode;persist();}
+function saveEq(){delete save.test;save.eq=eq;save.bag=bag;save.gold=gold;save.stones=stones;save.mode=mode;persist();}
 function gainItem(it){const cur=eq[it.slot];let msg;
   if(iscore(it)>iscore(cur)){eq[it.slot]=it;if(cur)bag.unshift(cur);msg='สวมใส่แล้ว!';const old=P.maxHp;P.maxHp=maxHpOf();P.hp=Math.min(P.maxHp,P.hp+Math.max(0,P.maxHp-old));}
   else{bag.unshift(it);msg='เก็บเข้ากระเป๋า';}
@@ -231,16 +237,60 @@ function nz(freq,q,v,dur,type='bandpass',rev=.1,f1){if(!AC||muted)return;const t
 function osc(type,f0,f1,dur,v,rev=.15,a=.004,det=0){if(!AC||muted)return;const t=T();const o=AC.createOscillator();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);o.detune.value=det;
   const g=AC.createGain();env(g,t,v,a,dur);o.connect(g);out(g,rev);o.start(t);o.stop(t+a+dur+.05);}
 function sTone(f0,f1,dur,v=.3,type='sine'){osc(type,f0,f1,dur,v*.8,.2);}
-// ฟันโดน: กลองหนักๆ + เสียงคลิก + เสียงโลหะ
-function sHit(p=1,v=.14){if(!AC||muted)return;if(T()-lastSnd<.03)return;lastSnd=T();const k=Math.min(1.4,v*7);
-  osc('sine',170*p,45,.09,.5*k,0);nz(2600*p,1.1,.25*k,.05,'bandpass',.05);osc('triangle',1400*p+Math.random()*300,900,.08,.06*k,.25);}
-// ฟันลม: noise กวาดความถี่
-function sSwish(){if(!AC||muted)return;const f=rand(900,1300);nz(f,2.2,.22,.16,'bandpass',.18,f*4);nz(5000,.7,.05,.07,'highpass',0);}
-// ระเบิด: ซับเบสยาว + noise ต่ำ + หางก้อง
-function sBoom(v=.7){if(!AC||muted)return;osc('sine',110,26,1.1,v,.25,.005);osc('triangle',70,30,.6,v*.5,0);nz(900,.6,v*.9,.5,'lowpass',.6,120);nz(3000,.5,v*.3,.12,'highpass',.3);}
-function sTwang(){if(!AC||muted)return;osc('triangle',rand(330,380),220,.18,.18,.15,.002);nz(4200,3,.12,.04,'bandpass',0);osc('sine',880,700,.05,.05,0);}
-function sMagic(base=600){if(!AC||muted)return;for(let i=0;i<3;i++)setTimeout(()=>osc('sine',base*[1,1.5,2][i],base*[1,1.5,2][i]*1.02,.35,.06,.6,.01,rand(-8,8)),i*45);nz(7000,1,.04,.25,'highpass',.5);}
-function sCrit(){if(!AC||muted)return;osc('sine',200,40,.25,.7,0);osc('square',2400,1200,.12,.06,.4,.002);osc('triangle',3200,3000,.4,.05,.6,.002);nz(6000,1,.25,.08,'highpass',.4);nz(400,.7,.4,.18,'lowpass',.2);}
+// เสียงปะทะ: น้ำหนักและย่านเสียงต่างกันตามวัสดุของศัตรู
+function sHit(p=1,v=.14,material='body'){
+  if(!AC||muted||T()-lastSnd<.045)return;
+  lastSnd=T();
+  const strength=Math.min(1.4,v*7);
+  osc('sine',135*p,45,.11,.34*strength,0);
+  nz(720*p,.9,.32*strength,.08,'lowpass',.08,210);
+  if(material==='bone'){
+    nz(2700*p,2.2,.26*strength,.065,'bandpass',.14);
+    osc('triangle',1150*p,740*p,.10,.06*strength,.12);
+  }else if(material==='stone'){
+    nz(1650*p,1.2,.30*strength,.16,'bandpass',.20,490);
+    nz(4200,1.5,.11*strength,.04,'highpass',.10);
+  }else{
+    nz(3600*p,.8,.19*strength,.055,'bandpass',.10,1200);
+  }
+}
+// ดาบแหวกอากาศ: เสียงกวาดขึ้นและตกตามจังหวะฟัน
+function sSwish(){
+  if(!AC||muted)return;
+  const f=rand(780,1120);
+  nz(f,1.1,.19,.15,'bandpass',.12,f*2.6);
+  nz(f*3,1.4,.09,.065,'bandpass',.06,f*.85);
+}
+// แรงระเบิด: แรงอัดช่วงต้น ตามด้วยเสียงก้องและเศษกระจาย
+function sBoom(v=.7){
+  if(!AC||muted)return;
+  osc('sine',104,28,.72,v*.68,.2);
+  nz(2400,.65,v*.62,.08,'bandpass',.15,700);
+  nz(650,.7,v*.7,.55,'lowpass',.46,85);
+  nz(3600,1.2,v*.21,.24,'bandpass',.32,680);
+}
+// สายธนูดีดและเสียงลูกศรแหวกอากาศ
+function sTwang(){
+  if(!AC||muted)return;
+  const f=rand(255,290);
+  osc('triangle',f,f*.87,.13,.17,.09,.002);
+  osc('sine',f*2.9,f*2.65,.062,.09,.10,.002);
+  nz(1800,2.1,.15,.028,'bandpass',.05);
+  nz(5800,1.1,.09,.1,'bandpass',.12,2100);
+}
+function sMagic(base=600){
+  if(!AC||muted)return;
+  osc('sine',base*.54,base,.22,.12,.48,.018);
+  osc('triangle',base*1.48,base*1.6,.25,.05,.4,.03);
+  nz(2300,1.7,.13,.19,'bandpass',.45,5200);
+}
+function sCrit(){
+  if(!AC||muted)return;
+  osc('sine',158,42,.21,.37,0);
+  nz(4400,1.7,.33,.07,'bandpass',.18,1800);
+  osc('triangle',1700,1440,.24,.08,.35,.002);
+  osc('sine',2520,2250,.31,.04,.42,.003);
+}
 function sCoin(){if(!AC||muted)return;osc('square',1900,1900,.05,.03,.2,.002);setTimeout(()=>osc('square',2540,2540,.09,.03,.3,.002),55);}
 function sUI(){osc('triangle',880,1320,.06,.05,.1,.002);}
 // ===== เพลงประกอบ: สเกลเพนทาโทนิกแบบไทย (ระนาด + กลองทน + ฉิ่ง) =====
@@ -281,14 +331,13 @@ addEventListener('keydown',e=>{ac();const c=e.code;const k=KM[c];
   if(state==='edit'||state==='msg'){if(document.getElementById('modeSel').classList.contains('show')||document.getElementById('classSel').classList.contains('show'))return;if(c==='Enter'||c==='KeyC'||c==='Space'){e.preventDefault();if(state==='edit')closeEditor();else document.getElementById('mGo').click();}return;}
   if(scene==='town'&&state==='play'&&(c==='KeyW'||c==='ArrowUp'||c==='Enter'||c==='KeyE')){e.preventDefault();if(!e.repeat)talk();return;}
   if(k){keys[k]=true;e.preventDefault();if(e.repeat)return;if(k==='skill')tryRelease();if(k==='jump')jump();}
-  if(c==='KeyC'||c==='Tab'){e.preventDefault();if(state==='play'&&!run&&!finale){if(scene==='town'){afterEdit='town';document.getElementById('hubNote').textContent='';openPanel();}else openEditor('resume');}}
-  if(c==='KeyV'){if(!run)energy=100;}
+  if(c==='KeyC'||c==='Tab'){e.preventDefault();if(state==='play'&&!run&&!finale){openEditor(scene==='town'?'town':'resume');}}
   if(c==='KeyM'){muted=!muted;musicVol();}if(c==='KeyN'){musicOn=!musicOn;musicVol();}});
 addEventListener('keyup',e=>{const k=KM[e.code];if(k)keys[k]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 addEventListener('pointerdown',()=>{ac();try{window.focus();}catch(e){}});
 document.querySelectorAll('#touch .b').forEach(b=>{const k=b.dataset.k;
-  b.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(k==='edit'){if(state==='play'&&!run&&!finale){if(scene==='town'){if(nearNpc)talk();else{afterEdit='town';openPanel();}}else openEditor('resume');}return;}keys[k]=true;if(k==='skill')tryRelease();if(k==='jump')jump();});
+  b.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(k==='edit'){if(state==='play'&&!run&&!finale){if(scene==='town'&&nearNpc)talk();else openEditor(scene==='town'?'town':'resume');}return;}keys[k]=true;if(k==='skill')tryRelease();if(k==='jump')jump();});
   const up=()=>keys[k]=false;b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);});
 function jump(){if(state==='play'&&P.ground&&!finale&&!(run&&['slam','dash','xslash'].includes(chain[run.i]))){P.vy=-780;P.ground=false;P.jt=.14;for(let i=0;i<8;i++)parts.push({x:P.x+rand(-20,20),y:GY,vx:rand(-120,120),vy:rand(-120,-30),life:.35,max:.35,col:'#b8a088',sz:rand(3,6),g:300,solid:1});}}
 
@@ -314,7 +363,7 @@ function damage(e,base,kx,ky,opt){
   if(!crit&&(!run||Math.random()<.25))addText(e.x+rand(-14,14),e.y-e.h-8,v,false);
   if(lsOf()>0&&!finale)P.hp=Math.min(P.maxHp,P.hp+Math.min(3,v*lsOf()*.02));
   if(run){run.hits++;run.dmg+=v;e.marked=true;}else if(!finale){energy=Math.min(100,energy+7*enMul());}
-  sHit(e.heavy?.6:1);
+  sHit(e.heavy?.6:1,.14,e.type==='golem'?'stone':e.type==='skel'?'bone':'body');
   if(e.hp<=0&&!e.doomed){if((run||finale)&&doomedN<50){e.doomed=true;doomedN++;}else kill(e);}
 }
 function hitRect(x,y,w,h,d,kx,ky,opt){let n=0;for(const e of enemies){if(e.dead)continue;if(e.x+e.w/2>x&&e.x-e.w/2<x+w&&e.y>y&&e.y-e.h<y+h){damage(e,d,typeof kx==='function'?kx(e):kx,ky,opt);n++;}}return n;}
@@ -734,9 +783,9 @@ function drawHUD(){if(scene==='town'){drawTownHUD();return;}
   txt('HP '+Math.max(0,Math.ceil(P.hp))+'/'+P.maxHp,246,29,12,'#fff','left',700);txt('พลังโจมตี ×'+atkMul().toFixed(2),18,112,13,'#ffcf9a','left',700);{const gs=1+goldT*.5;if(ok(IMG.ui_coin))ctx.drawImage(IMG.ui_coin,16,122,22,22);ctx.save();ctx.translate(42,139);ctx.scale(gs,gs);txt(gold.toLocaleString(),0,0,15,'#ffd76a','left',800);ctx.restore();if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,120,122,22,22);txt(''+stones,146,139,15,'#d8c2ff','left',800);txt(MD().n,190,139,12,MD().col,'left',800);}
   pickups.forEach((p,i)=>{if(p.stone){const a=Math.min(1,p.life/p.max*3),y=H-120-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle='#b98cff';ctx.fillRect(W-330,y-24,4,36);if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,W-322,y-21,30,30);txt('หินตีบวก +1 (มี '+stones+')',W-286,y+2,15,'#d8c2ff','left',800);ctx.globalAlpha=1;return;}const R=RAR[p.it.r],a=Math.min(1,p.life/p.max*3),y=H-120-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle=R.c;ctx.fillRect(W-330,y-24,4,36);
     const im=IMG[iicon(p.it)];if(ok(im))ctx.drawImage(im,W-322,y-21,30,30);txt(iname(p.it)+' ('+R.n+')',W-286,y-6,14,R.c,'left',800);txt(istatTxt(p.it).slice(0,46)+' · '+p.msg,W-286,y+9,11,'#ddd','left',600);ctx.globalAlpha=1;});txt('พลัง',246,65,12,'#cfd8ff','left',700);if(full)txt((isTouch?'★':'X')+' ปล่อยคอมโบ '+chainTime().toFixed(1)+' วิ!',18,92,16,'#ffd76a','left');
-  txt('ด่าน '+stage+(testMode?' (ทดลอง)':''),W-18,32,18,'#fff','right');
+  txt('ด่าน '+stage,W-18,32,18,'#fff','right');
   txt('กำจัด '+Math.min(kills,quota)+' / '+quota,W-18,56,15,kills>=quota?'#ffd76a':'#cfc6e8','right',700);
-  if(!isTouch&&!run&&!finale)txt('C จัดคอมโบ · V เติมเกจ',W-18,78,12,'#8d83aa','right',600);
+  if(!isTouch&&!run&&!finale)txt('C จัดคอมโบ',W-18,78,12,'#8d83aa','right',600);
   if(!run&&!finale&&!bigTotal){const mw=300,mx=(W-mw)/2,my=24;ctx.fillStyle='rgba(10,6,20,.6)';ctx.fillRect(mx-6,my-8,mw+12,16);ctx.fillStyle='#4a3d66';ctx.fillRect(mx,my-1,mw,2);
     for(const e of enemies){if(e.dead)continue;ctx.fillStyle=ET[e.type].mm;ctx.fillRect(mx+e.x/WORLD_W*mw-1,my-3,2,6);}
     ctx.fillStyle=kills>=quota?'#ffd76a':'#888';ctx.beginPath();ctx.arc(mx+portalX/WORLD_W*mw,my,5,0,7);ctx.fill();
@@ -813,7 +862,7 @@ function loop(now){const rdt=Math.min(.05,(now-last)/1000);last=now;update(rdt);
 // ================= ลำดับเกม =================
 function startStage(){scene='stage';projs=[];fxs=[];parts=[];texts=[];trail=[];run=null;finale=null;bigTotal=null;cracks=null;doomedN=0;timeScale=1;zoomT=1;desatT=0;darkT=0;blackT=0;
   WORLD_W=Math.min(8000,3600+600*stage);portalX=WORLD_W-160;
-  P.x=150;P.y=GY;P.vx=P.vy=0;P.face=1;P.maxHp=maxHpOf();P.hp=P.maxHp;P.inv=1;P.finisher=0;kills=0;quota=testMode?40:16+6*stage;energy=testMode?100:20;spawnT=.6;camX=0;
+  P.x=150;P.y=GY;P.vx=P.vy=0;P.face=1;P.maxHp=maxHpOf();P.hp=P.maxHp;P.inv=1;P.finisher=0;kills=0;quota=16+6*stage;energy=20;spawnT=.6;camX=0;
   populate();state='play';banner={t:'ด่าน '+stage+' · '+stageBg()[1]+' — ไปทางขวา →',col:'#fff',life:1.8,max:1.8};hideMsg();}
 function stageClear(){const oldN=unlockedN(),oldCap=capOf();stage++;save.stage=stage;save.shop=null;saveEq();persist();
   let t='✨ ผ่านด่าน '+(stage-1)+'!';const nN=unlockedN();if(nN>oldN)t+=' · ปลดล็อกสกิล: '+ORDER.slice(oldN,nN).map(i=>SK[i].name).join(', ');
@@ -826,49 +875,54 @@ const edEl=document.getElementById('editor');
 let curTab='skill',enhSel=null;
 // ===== เมือง (แมพเดินได้ มี NPC) =====
 const NPCS=[{x:430,img:'npc_s',name:'ช่างตีเหล็ก',role:'ตีบวกอุปกรณ์',tab:'enh',col:'#ff9a3d'},{x:900,img:'npc_m',name:'ลุงพ่อค้า',role:'ซื้อ-ขายของ',tab:'shop',col:'#ffd76a'},{x:1370,img:'npc_r',name:'ฤๅษีสอนวิชา',role:'จัดคอมโบสกิล',tab:'skill',col:'#9fe8ff'}];
-let nearNpc=null;
-function enterTown(note){scene='town';edEl.classList.remove('show');hideMsg();projs=[];fxs=[];parts=[];texts=[];trail=[];enemies=[];drops=[];run=null;finale=null;bigTotal=null;cracks=null;doomedN=0;timeScale=1;zoomT=1;desatT=0;darkT=0;blackT=0;
+let nearNpc=null,activeNpc=null;
+const canUseService=tab=>scene==='town'&&state==='edit'&&activeNpc?.tab===tab;
+function canOpenTab(tab){
+  if(!activeNpc)return tab!=='shop'&&tab!=='enh';
+  return canUseService(tab)||(tab==='equip'&&canUseService('shop'));
+}
+function enterTown(note){nearNpc=activeNpc=null;scene='town';edEl.classList.remove('show');hideMsg();projs=[];fxs=[];parts=[];texts=[];trail=[];enemies=[];drops=[];run=null;finale=null;bigTotal=null;cracks=null;doomedN=0;timeScale=1;zoomT=1;desatT=0;darkT=0;blackT=0;
   WORLD_W=1960;portalX=WORLD_W-130;P.x=150;P.y=GY;P.vx=P.vy=0;P.face=1;P.maxHp=maxHpOf();P.hp=P.maxHp;P.inv=0;P.finisher=0;camX=0;energy=0;state='play';
   banner={t:note||('🏯 เมือง — '+CLS[cls].n),col:'#ffd76a',life:3,max:3};}
 function openHub(note){enterTown(note);}
-function talk(){if(!nearNpc)return;sUI();curTab=nearNpc.tab;afterEdit='town';document.getElementById('hubNote').textContent=nearNpc.name+': '+({enh:'จะตีอะไรดีล่ะ? ยิ่งสูงยิ่งเสี่ยงนะ!',shop:'ของใหม่มาทุกด่านเลยหลาน!',skill:'มาฝึกเรียงกระบวนท่ากันเถิด'})[nearNpc.tab];openPanel();}
+function talk(){if(scene!=='town'||state!=='play'||!nearNpc||Math.abs(P.x-nearNpc.x)>=90)return;sUI();activeNpc=nearNpc;curTab=nearNpc.tab;afterEdit='town';document.getElementById('hubNote').textContent=nearNpc.name+': '+({enh:'จะตีอะไรดีล่ะ? ยิ่งสูงยิ่งเสี่ยงนะ!',shop:'ของใหม่มาทุกด่านเลยหลาน!',skill:'มาฝึกเรียงกระบวนท่ากันเถิด'})[nearNpc.tab];openPanel();}
 function drawNpcs(){nearNpc=null;for(const n of NPCS){const d=Math.abs(P.x-n.x);if(d<90)nearNpc=n;const im=IMG[n.img];if(!ok(im))continue;const h=150,w=h*im.naturalWidth/im.naturalHeight,b=Math.sin(t0*2+n.x)*2;
     ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(n.x,GY+2,w*.35,7,0,0,7);ctx.fill();
     ctx.save();ctx.translate(n.x,GY);ctx.scale(P.x<n.x?1:-1,1+.012*Math.sin(t0*3+n.x));ctx.drawImage(im,-w/2,-h+b,w,h);ctx.restore();
     txt(n.name,n.x,GY-h-22,15,n.col,'center',800);txt(n.role,n.x,GY-h-6,11,'#e8e0ff','center',600);
     if(nearNpc===n){const y=GY-h-56+Math.sin(t0*6)*3;ctx.fillStyle='rgba(15,10,25,.85)';ctx.fillRect(n.x-92,y-18,184,26);ctx.strokeStyle=n.col;ctx.strokeRect(n.x-92+.5,y-17.5,183,25);txt((isTouch?'แตะ ☰':'กด W / Enter')+' คุย',n.x,y,13,'#fff','center',800);}}}
-function openEditor(after){afterEdit=after;document.getElementById('hubNote').textContent=after==='resume'?'⏸ หยุดเกมชั่วคราว — ร้านค้ากับตีบวกใช้ได้เฉพาะในเมือง (หลังเข้าประตูวาร์ป)':'';if(after==='resume'&&(curTab==='shop'||curTab==='enh'))curTab='skill';openPanel();}
+function openEditor(after){activeNpc=null;afterEdit=after;document.getElementById('hubNote').textContent=after==='resume'?'⏸ หยุดเกมชั่วคราว — ร้านค้ากับตีบวกใช้ได้เฉพาะในเมือง (หลังเข้าประตูวาร์ป)':'';curTab='skill';openPanel();}
 function openPanel(){state='edit';for(const k in keys)keys[k]=false;hideMsg();renderEditor();edEl.classList.add('show');}
-function closeEditor(){edEl.classList.remove('show');save.chain=chain;saveEq();if(afterEdit==='resume'||afterEdit==='town')state='play';else startStage();}
-function setTab(t){curTab=t;renderEditor();}
+function closeEditor(){activeNpc=null;edEl.classList.remove('show');save.chain=chain;saveEq();if(afterEdit==='resume'||afterEdit==='town')state='play';else startStage();}
+function setTab(t){if(!canOpenTab(t))return;curTab=t;renderEditor();}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 const sellP=it=>Math.round(20*it.lv*Math.pow(RAR[it.r].m,2)*(1+(it.plus||0)*.35));
 function itemCard(it,label,extra,attr,cls){if(!it)return`<div class="eqc empty"><small>${label}</small><b>ว่าง</b></div>`;const R=RAR[it.r];
   return`<div class="eqc ${cls||''}" ${attr||''} style="border-color:${R.c}${attr?';cursor:pointer':''}"><img src="assets/${iicon(it)}.webp"><div style="flex:1"><small>${label||SLOTN[it.slot]} · Lv.${it.lv} · ${R.n}</small><b style="color:${R.c}">${iname(it)}</b><span>${istat(it)}</span></div>${extra||''}</div>`;}
 function renderEquip(){const el=document.getElementById('equip');
-  const town=afterEdit!=='resume';
+  const canSell=canUseService('shop');
   el.innerHTML=`<div class="eqrow">${SLOTS.map(k=>itemCard(eq[k],SLOTN[k])).join('')}</div>
     <div class="stat">โจมตี ×${atkMul().toFixed(2)} · HP ${maxHpOf()} · ลดดาเมจ ${Math.round(defOf()*100)}% · คริ ${Math.round(critOf()*100)}% (×${cdmgOf().toFixed(2)}) · เกจ +${Math.round((enMul()-1)*100)}% · เงิน +${Math.round((goldMul()-1)*100)}% · ความเร็ว +${Math.round((spdMul()-1)*100)}% · ดูดเลือด ${Math.round(lsOf()*100)}% · เวลาคอมโบ +${tot('ct')} วิ</div>
-    <h3>กระเป๋า (${bag.length}/24) <small style="color:#8d83aa">ขอบสีบอกระดับ: ธรรมดา · <span style="color:#7fdc4a">ดี</span> · <span style="color:#5fb8ff">หายาก</span> · <span style="color:#c77dff">มหากาพย์</span> · <span style="color:#ffb02e">ตำนาน</span></small></h3><div class="bag">${bag.map((it,i)=>itemCard(it,null,`<button data-eq="${i}">ใส่</button>${town?`<button data-sell="${i}">ขาย ${sellP(it)}G</button>`:''}`)).join('')||'<span style="color:#6f6690;font-size:13px">ยังว่าง — ฟันมอนสเตอร์ให้ดรอปของ หรือซื้อที่ร้าน</span>'}</div>`;
+    <h3>กระเป๋า (${bag.length}/24) <small style="color:#8d83aa">ขอบสีบอกระดับ: ธรรมดา · <span style="color:#7fdc4a">ดี</span> · <span style="color:#5fb8ff">หายาก</span> · <span style="color:#c77dff">มหากาพย์</span> · <span style="color:#ffb02e">ตำนาน</span></small></h3><div class="bag">${bag.map((it,i)=>itemCard(it,null,`<button data-eq="${i}">ใส่</button>${canSell?`<button data-sell="${i}">ขาย ${sellP(it)}G</button>`:''}`)).join('')||'<span style="color:#6f6690;font-size:13px">ยังว่าง — ฟันมอนสเตอร์ให้ดรอปของ หรือซื้อที่ร้าน</span>'}</div>`;
   el.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{equipFromBag(+b.dataset.eq);renderEditor();});
-  el.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sell;gold+=sellP(bag[i]);bag.splice(i,1);saveEq();sTone(1200,1800,.1,.1,'triangle');renderEditor();});}
+  el.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{if(!canUseService('shop'))return;const i=+b.dataset.sell;if(!bag[i])return;gold+=sellP(bag[i]);bag.splice(i,1);saveEq();sTone(1200,1800,.1,.1,'triangle');renderEditor();});}
 function shopStock(){if(save.shop&&save.shop.stage===stage)return save.shop;
   const items=[];for(let i=0;i<8;i++)items.push(makeItem(i===0?'weapon':SLOTS[Math.floor(Math.random()*SLOTS.length)],Math.min(4,rollR(12)),stage));
   save.shop={stage,items,stoneLeft:3};persist();return save.shop;}
 const buyP=it=>Math.round(80*it.lv*Math.pow(RAR[it.r].m,2.2)*(1+it.subs.length*.25)*MD().price);
 const stoneP=()=>Math.round(260*(1+.25*(stage-1))*MD().price);
-function renderShop(){const el=document.getElementById('shop');if(afterEdit==='resume'){el.innerHTML='<p class="sub">ร้านค้าเปิดเฉพาะในเมือง — เข้าประตูวาร์ปท้ายแมพก่อนนะ</p>';return;}
+function renderShop(){const el=document.getElementById('shop');if(!canUseService('shop')){el.innerHTML='';return;}
   const sh=shopStock();
   el.innerHTML=`<div class="npc"><img src="assets/npc_merchant.webp"><div><b>ลุงพ่อค้า:</b> ของใหม่มาทุกด่านเลยหลาน! ด่านยิ่งลึก ของยิ่งแรง ขายของเก่าได้ที่แท็บอุปกรณ์นะ</div></div>
     <div class="shop">${sh.items.map((it,i)=>it.sold?'':itemCard(it,null,`<div class="buy"><span class="price">${buyP(it).toLocaleString()} G</span><button data-buy="${i}" ${gold<buyP(it)?'disabled style="opacity:.4"':''}>ซื้อ</button></div>`)).join('')}
     <div class="eqc" style="border-color:#b98cff"><img src="assets/ui_stone.webp"><div style="flex:1"><small>วัตถุดิบ · เหลือ ${sh.stoneLeft} ชิ้น</small><b style="color:#d8c2ff">หินตีบวก</b><span>ใช้ตีบวกอุปกรณ์</span></div><div class="buy"><span class="price">${stoneP().toLocaleString()} G</span><button data-stone ${gold<stoneP()||!sh.stoneLeft?'disabled style="opacity:.4"':''}>ซื้อ</button></div></div></div>`;
-  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const it=sh.items[+b.dataset.buy];const p=buyP(it);if(gold<p)return;gold-=p;it.sold=1;gainItem(Object.assign({},it,{sold:undefined}));persist();sTone(900,1500,.15,.12,'triangle');renderEditor();});
-  const sb=el.querySelector('[data-stone]');if(sb)sb.onclick=()=>{const p=stoneP();if(gold<p||!sh.stoneLeft)return;gold-=p;stones++;sh.stoneLeft--;saveEq();sTone(660,1980,.2,.12,'triangle');renderEditor();};}
+  el.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{if(!canUseService('shop'))return;const it=sh.items[+b.dataset.buy];if(!it||it.sold)return;const p=buyP(it);if(gold<p)return;gold-=p;it.sold=1;gainItem(Object.assign({},it,{sold:undefined}));persist();sTone(900,1500,.15,.12,'triangle');renderEditor();});
+  const sb=el.querySelector('[data-stone]');if(sb)sb.onclick=()=>{if(!canUseService('shop'))return;const p=stoneP();if(gold<p||!sh.stoneLeft)return;gold-=p;stones++;sh.stoneLeft--;saveEq();sTone(660,1980,.2,.12,'triangle');renderEditor();};}
 const ENH=[100,100,100,95,90,80,70,60,50,40,35,30,25,20,15];
 const enhRate=it=>Math.max(5,Math.min(100,ENH[it.plus||0]+MD().enh));
 const enhCost=it=>({g:Math.round(60*((it.plus||0)+1)*(1+it.lv*.25)*RAR[it.r].m*MD().price),s:1+Math.floor((it.plus||0)/3)});
 let enhMsg=null;
-function renderEnh(){const el=document.getElementById('enh');if(afterEdit==='resume'){el.innerHTML='<p class="sub">ร้านตีบวกเปิดเฉพาะในเมือง</p>';return;}
+function renderEnh(){const el=document.getElementById('enh');if(!canUseService('enh')){el.innerHTML='';return;}
   const all=[...SLOTS.map(k=>eq[k]).filter(Boolean),...bag];if(enhSel&&!all.includes(enhSel))enhSel=null;if(!enhSel)enhSel=all[0]||null;
   let box='<p class="sub">ยังไม่มีอุปกรณ์</p>';
   if(enhSel){const it=enhSel,pl=it.plus||0;
@@ -882,12 +936,12 @@ function renderEnh(){const el=document.getElementById('enh');if(afterEdit==='res
   el.innerHTML=`<div class="npc"><img src="assets/npc_smith.webp"><div><b>ช่างตีเหล็ก:</b> ตีได้ถึง +15! ยิ่งสูงยิ่งเสี่ยงนะ ${MD().breakAt<99?`ตั้งแต่ +${MD().breakAt} ขึ้นไป ถ้าพังจะลดขั้น`:'โหมดง่ายพังยังไงขั้นก็ไม่ลด'}</div></div>${box}
     <h3>เลือกอุปกรณ์</h3><div class="bag">${all.map((it,i)=>itemCard(it,eq[it.slot]===it?'สวมอยู่':null,'',`data-pick="${i}"`,it===enhSel?'sel':'')).join('')}</div>`;
   el.querySelectorAll('[data-pick]').forEach(c=>c.onclick=()=>{enhSel=all[+c.dataset.pick];enhMsg=null;renderEditor();});
-  const be=document.getElementById('bEnh');if(be)be.onclick=()=>{const it=enhSel,c=enhCost(it);if(gold<c.g||stones<c.s)return;gold-=c.g;stones-=c.s;
+  const be=document.getElementById('bEnh');if(be)be.onclick=()=>{if(!canUseService('enh')||!enhSel||(enhSel.plus||0)>=15)return;const it=enhSel,c=enhCost(it);if(gold<c.g||stones<c.s)return;gold-=c.g;stones-=c.s;
     const pl=it.plus||0;if(Math.random()*100<enhRate(it)){it.plus=pl+1;enhMsg={ok:1,t:'สำเร็จ! +'+it.plus};sTone(600,1800,.35,.18,'triangle');setTimeout(()=>sTone(900,2400,.3,.12,'triangle'),120);}
     else{if(pl>=MD().breakAt){it.plus=pl-1;enhMsg={ok:0,t:'ล้มเหลว… ลดเหลือ +'+it.plus};}else enhMsg={ok:0,t:'ล้มเหลว…'};sTone(300,60,.5,.25,'sawtooth');}
     P.maxHp=maxHpOf();saveEq();renderEditor();};}
 function renderEditor(){
-  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===curTab));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
+  document.querySelectorAll('.tabs button').forEach(b=>{b.hidden=!canOpenTab(b.dataset.t);b.classList.toggle('on',!b.hidden&&b.dataset.t===curTab);});document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.getElementById('hubTitle').textContent=afterEdit==='resume'?'⏸ พักเกม':afterEdit==='town'?'🏯 เมือง — '+CLS[cls].n:'🏯 เมือง — '+CLS[cls].n+' · ก่อนลุยด่าน '+stage;
   document.getElementById('mGold').textContent=gold.toLocaleString();document.getElementById('mStone').textContent=stones;const mm=document.getElementById('mMode');mm.textContent='โหมด '+MD().n;mm.style.color=MD().col;
   renderEquip();renderShop();renderEnh();
@@ -902,8 +956,7 @@ function renderEditor(){
     c.innerHTML=`<i>${i+1}</i><img src="assets/ic_${id}.webp">${SK[id].name}`;c.title='กดเพื่อลบ';c.onclick=()=>{chain.splice(i,1);renderEditor();};ch.appendChild(c);});
   const t=chainTime();document.getElementById('ctime').textContent=t.toFixed(1)+' / '+cap+' วิ';document.getElementById('cbar').style.width=Math.min(100,t/cap*100)+'%';
   document.getElementById('syns').innerHTML=SYN.map(s=>found.has(s[2])?`✨ ${SK[s[0]].name} → ${SK[s[1]].name} = <b style="color:#ffd76a">${s[2]} ×${s[3]}</b>`:`❓ ??? → ??? <span style="color:#6f6690">(ลองเรียงสกิลคู่กันดู)</span>`).join('<br>');
-  document.getElementById('bTest').textContent=testMode?'ปิดโหมดทดลอง':'โหมดทดลอง: ปลดทุกสกิล 60 วิ';
-  document.getElementById('bGo').textContent=afterEdit==='resume'?'กลับไปเล่น ▶':afterEdit==='town'?'กลับไปเดินในเมือง ▶':'ออกเดินทาง ด่าน '+stage+' ▶';document.getElementById('bTest').textContent=testMode?'ปิดโหมดทดลอง':'โหมดทดลอง: ปลดทุกสกิล 60 วิ';
+  document.getElementById('bGo').textContent=afterEdit==='resume'?'กลับไปเล่น ▶':afterEdit==='town'?'กลับไปเดินในเมือง ▶':'ออกเดินทาง ด่าน '+stage+' ▶';
 }
 function flashBar(){const b=document.getElementById('cbar');b.style.background='#ff4d4d';setTimeout(()=>b.style.background='',250);}
 document.getElementById('bClear').onclick=()=>{chain=[];renderEditor();};
@@ -911,15 +964,13 @@ document.getElementById('bFill').onclick=()=>{const cap=capOf(),av=ORDER.filter(
   while(guard++<400){const fit=av.filter(id=>chainTime()+SK[id].dur<=cap);if(!fit.length)break;
     const prev=chain[chain.length-1];const syn=SYN.filter(s=>s[0]===prev&&fit.includes(s[1]));
     chain.push(syn.length&&Math.random()<.5?syn[0][1]:fit[Math.floor(Math.random()*fit.length)]);}renderEditor();};
-document.getElementById('bTest').onclick=()=>{testMode=!testMode;save.test=testMode;persist();while(chainTime()>capOf())chain.pop();chain=chain.filter(isUnlocked);
-  if(afterEdit==='resume')afterEdit='town';renderEditor();};
 document.getElementById('bGo').onclick=closeEditor;
 
 window.__dbg=()=>({drops:drops.length,bag:bag.length,eq:Object.values(eq).filter(Boolean).length,kills,enemies:enemies.length,types:[...new Set(enemies.map(e=>e.type))]});
 function loadClass(c,fresh){cls=c;ORDER=ORDERS[c];SYN=SYNS[c];const sv=fresh?null:readSave(c);
-  save=Object.assign({stage:1,chain:CLS[c].def.slice(),found:[],test:false},sv||{});
-  stage=save.stage;chain=(save.chain||[]).filter(id=>SK[id]&&ORDER.includes(id));if(!chain.length)chain=CLS[c].def.slice();found=new Set(save.found||[]);testMode=!!save.test;
-  mode=save.mode||null;eq=save.eq||{weapon:makeItem('weapon',0,1)};bag=save.bag||[];normAll();gold=save.gold||0;stones=save.stones||0;
+  save=Object.assign({stage:1,chain:CLS[c].def.slice(),found:[]},sv||{});
+  stage=save.stage;chain=Array.isArray(save.chain)?save.chain.slice():[];found=new Set(save.found||[]);
+  mode=save.mode||null;eq=save.eq||{weapon:makeItem('weapon',0,1)};bag=save.bag||[];normAll();restoreCombo();gold=save.gold||0;stones=save.stones||0;
   P.maxHp=maxHpOf();P.hp=P.maxHp;enhSel=null;}
 const csEl=document.getElementById('classSel'),msEl=document.getElementById('modeSel');
 function openClassSel(){edEl.classList.remove('show');msEl.classList.remove('show');state='edit';
