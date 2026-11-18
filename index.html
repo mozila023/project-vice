@@ -28,7 +28,7 @@ h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
 .chip:hover{background:#4a2233;border-color:#c55}
 .chip.syn{box-shadow:0 0 0 2px #ffd76a inset}
 .eqrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.bag{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.bag{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px}
 .eqc{display:flex;gap:8px;align-items:center;background:#211b31;border:1px solid #3b3255;border-left-width:4px;border-radius:10px;padding:6px 8px;font-size:12px}
 .bag .eqc{cursor:pointer}.bag .eqc:hover{background:#2c2442}
 .eqc img{width:40px;height:40px;border-radius:6px}.eqc small{display:block;color:#8d83aa}.eqc b{display:block;font-size:14px}.eqc span{color:#ddd}
@@ -69,6 +69,12 @@ h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
 .tver{position:absolute;right:10px;bottom:6px;font-size:11px;color:#bbb;text-shadow:0 1px 3px #000}
 .embers span{position:absolute;bottom:-10px;width:4px;height:4px;border-radius:50%;background:#ffb347;box-shadow:0 0 8px #ff7a1f;animation:rise linear infinite}
 @keyframes rise{to{transform:translate(var(--dx),-110vh);opacity:0}}
+.classes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cls{background:linear-gradient(180deg,#2a2140,#171225);border:2px solid #3b3255;border-radius:14px;padding:12px;text-align:center;cursor:pointer;transition:transform .12s,border-color .12s}
+.cls:hover{transform:translateY(-4px)}.cls .pic{height:190px;display:flex;align-items:flex-end;justify-content:center}.cls .pic img{max-height:180px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6));animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.cls b{display:block;font-size:24px;margin-top:6px;font-family:var(--k)}.cls small{display:block;color:#cfc6e8;font-size:13px;line-height:1.5;min-height:40px}.cls .sv{margin-top:8px;font-size:12px;color:#ffd76a}
+#cont .card{margin-bottom:10px;padding:14px;border-left:4px solid #ffd76a}
 .chip img{width:24px;height:24px;border-radius:5px}
 .card .ic{width:46px;height:46px;border-radius:8px;float:left;margin:0 8px 0 0}
 .card.locked .ic{filter:grayscale(1) brightness(.5)}
@@ -103,7 +109,7 @@ kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-r
   <div class="tbg"></div><div class="tshade"></div><div class="embers" id="embers"></div>
   <div class="logo"><div class="l1">MAHA</div><div class="l2">COMBO</div><div class="l3">มหาคอมโบ · ฟันต่อกันเป็นท่าเดียว ยาวสุด 1 นาที</div></div>
   <div class="tstart"><button class="go" id="bStart">⚔️ เริ่มเกม</button><div class="blink">กด Enter หรือคลิกเพื่อเริ่ม</div></div>
-  <div class="tver">v0.6 · ภาพโดย ChatGPT</div>
+  <div class="tver">v0.7 · 3 อาชีพ · ภาพโดย ChatGPT</div>
 </div>
 
 <div class="ov" id="editor"><div class="panel">
@@ -124,19 +130,25 @@ kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-r
   <div class="tab" id="tab-shop"><div id="shop"></div></div>
   <div class="tab" id="tab-enh"><div id="enh"></div></div>
   <div class="tab" id="tab-help"><div class="help">
-    <b>A</b> <b>D</b> (หรือ ← →) เดิน · <b>S</b> (หรือ Space) กระโดด · <b>Z</b> ฟัน (กดค้างได้) · <b>X</b> ปล่อยคอมโบ (ต้องเกจเต็ม) · <b>C</b> เปิดหน้าสกิล/อุปกรณ์ระหว่างเล่น · <b>V</b> เติมเกจทันที (ทดสอบ) · <b>M</b> ปิดเสียง · <b>Enter</b> ออกเดินทาง<br><br>
+    <b>A</b> <b>D</b> (หรือ ← →) เดิน · <b>S</b> (หรือ Space) กระโดด · <b>Z</b> ฟัน (กดค้างได้) · <b>X</b> ปล่อยคอมโบ (ต้องเกจเต็ม) · <b>C</b> เปิดหน้าสกิล/อุปกรณ์ระหว่างเล่น · <b>V</b> เติมเกจทันที (ทดสอบ) · <b>M</b> ปิดเสียงทั้งหมด · <b>N</b> เปิด/ปิดเพลง · <b>Enter</b> ออกเดินทาง<br><br>
     • เดินไปทางขวา ฟันมอนให้ครบจำนวน แล้วเข้าประตูวาร์ปท้ายแมพ → กลับมาที่เมือง<br>
     • ฟันมอนได้เงิน 💰 · บางตัวดรอปอุปกรณ์ · หินตีบวกดรอปยาก (ยักษ์หินดรอปบ่อยสุด)<br>
     • ในเมือง: จัดคอมโบ · ซื้อ/ขายของ · ตีบวกอุปกรณ์ได้ถึง +15 (ยิ่งสูงยิ่งเสี่ยง)<br>
     • มอนเลือดเพิ่มทุกด่าน ความโหดขึ้นกับโหมดที่เลือก (ง่าย / ปกติ / ยาก)<br>
     • ถ้ากดแล้วไม่ติด ให้คลิกที่จอเกมหนึ่งครั้งก่อน (ภาษาไทยหรืออังกฤษก็กดได้)<br><br>
-    <button id="bMode">เปลี่ยนโหมดความยาก</button> <button id="bReset">เริ่มเกมใหม่ทั้งหมด</button>
+    <button id="bClass">เปลี่ยนอาชีพ</button> <button id="bMode">เปลี่ยนโหมดความยาก</button> <button id="bReset">เริ่มเกมใหม่ทั้งหมด</button>
   </div></div>
   <div class="row foot"><span style="flex:1"></span><button class="go" id="bGo">ออกเดินทาง ▶</button></div>
 </div></div>
 
+<div class="ov" id="classSel"><div class="panel" style="width:min(96%,900px)">
+  <h2>เลือกอาชีพ</h2><p class="sub">แต่ละอาชีพมีสกิล คอมโบซ่อน เงิน และอุปกรณ์แยกกัน</p>
+  <div class="classes" id="classes"></div>
+</div></div>
+
 <div class="ov" id="modeSel"><div class="panel" style="width:min(94%,760px)">
-  <h2>เลือกระดับความยาก</h2><p class="sub">เปลี่ยนได้ภายหลังในหน้าวิธีเล่น</p>
+  <h2 id="modeTitle">เลือกระดับความยาก</h2><p class="sub" id="modeSub">เปลี่ยนได้ภายหลังในหน้าวิธีเล่น</p>
+  <div id="cont"></div>
   <div class="modes" id="modes"></div>
 </div></div>
 
