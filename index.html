@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ฟันมันส์ — คอมโบสกิลยาว</title>
+<title>MAHA COMBO — มหาคอมโบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,600;0,800;1,900&display=swap">
 <style>
 html,body{margin:0;height:100%;background:#07060c;color:#eee;font-family:system-ui,"Noto Sans Thai","Leelawadee UI",sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
@@ -48,6 +49,26 @@ h3{margin:14px 0 6px;font-size:15px;color:#bcb2d8;font-weight:600}
 .enhbox{display:flex;gap:16px;align-items:center;background:#211b31;border-radius:12px;padding:14px;margin-top:10px;flex-wrap:wrap}
 .enhbox .big{width:96px;height:96px}.enhres{font-size:22px;font-weight:900;min-height:30px}
 .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.modes .card{padding:14px}.modes .card b{font-size:20px}.modes .card small{font-size:13px;line-height:1.6;margin-top:6px}
+:root{--k:"Kanit",system-ui,sans-serif}
+#title{display:none;align-items:stretch;justify-content:stretch;background:#000;overflow:hidden;backdrop-filter:none}#title.show{display:block}
+.tbg{position:absolute;inset:-4%;background:url(assets/cover.webp) center/cover no-repeat;animation:kb 22s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1) translate(0,0)}to{transform:scale(1.08) translate(-1.5%,1%)}}
+.tshade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 18%,rgba(0,0,0,.45),rgba(0,0,0,0) 45%),linear-gradient(to top,rgba(10,4,20,.85),rgba(10,4,20,0) 35%)}
+.logo{position:absolute;left:0;right:0;top:4%;text-align:center;font-family:var(--k);transform:skew(-6deg);animation:pop .9s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{from{transform:skew(-6deg) scale(2.2);opacity:0}to{transform:skew(-6deg) scale(1);opacity:1}}
+.logo .l1,.logo .l2{font-weight:900;font-style:italic;line-height:.82;letter-spacing:.02em;background:linear-gradient(180deg,#fffbe0 0%,#ffd76a 38%,#ff9a1f 62%,#c2410c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 0 #3a0d00) drop-shadow(0 0 18px rgba(255,140,0,.65))}
+.logo .l1{font-size:clamp(34px,7vw,78px)}.logo .l2{font-size:clamp(52px,11.5vw,132px)}
+.logo .l3{margin-top:8px;font-weight:800;font-size:clamp(13px,1.9vw,20px);color:#fff;text-shadow:0 2px 6px #000,0 0 12px #ff3d6e;transform:skew(6deg)}
+.logo::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);mix-blend-mode:overlay;animation:shine 3.5s ease-in-out infinite;pointer-events:none}
+@keyframes shine{0%,60%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.tstart{position:absolute;left:0;right:0;bottom:7%;text-align:center}
+.tstart .go{font-family:var(--k);font-size:clamp(16px,2.4vw,24px);padding:12px 34px;border-radius:40px;box-shadow:0 0 24px rgba(255,140,60,.7);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.06);box-shadow:0 0 40px rgba(255,170,60,.95)}}
+.blink{margin-top:8px;font-size:13px;color:#ffe9c8;text-shadow:0 1px 4px #000;animation:bl 1.2s steps(2) infinite}@keyframes bl{50%{opacity:.25}}
+.tver{position:absolute;right:10px;bottom:6px;font-size:11px;color:#bbb;text-shadow:0 1px 3px #000}
+.embers span{position:absolute;bottom:-10px;width:4px;height:4px;border-radius:50%;background:#ffb347;box-shadow:0 0 8px #ff7a1f;animation:rise linear infinite}
+@keyframes rise{to{transform:translate(var(--dx),-110vh);opacity:0}}
 .chip img{width:24px;height:24px;border-radius:5px}
 .card .ic{width:46px;height:46px;border-radius:8px;float:left;margin:0 8px 0 0}
 .card.locked .ic{filter:grayscale(1) brightness(.5)}
@@ -76,6 +97,13 @@ kbd{background:#2a2240;border:1px solid #574a80;border-bottom-width:2px;border-r
   <div class="b" data-k="atk" style="right:90px;bottom:18px;width:72px;height:72px">⚔️</div>
   <div class="b" data-k="skill" style="right:24px;bottom:104px">★</div>
   <div class="b" data-k="edit" style="right:14px;top:60px;width:48px;height:48px;font-size:18px">☰</div>
+</div>
+
+<div class="ov show" id="title">
+  <div class="tbg"></div><div class="tshade"></div><div class="embers" id="embers"></div>
+  <div class="logo"><div class="l1">MAHA</div><div class="l2">COMBO</div><div class="l3">มหาคอมโบ · ฟันต่อกันเป็นท่าเดียว ยาวสุด 1 นาที</div></div>
+  <div class="tstart"><button class="go" id="bStart">⚔️ เริ่มเกม</button><div class="blink">กด Enter หรือคลิกเพื่อเริ่ม</div></div>
+  <div class="tver">v0.6 · ภาพโดย ChatGPT</div>
 </div>
 
 <div class="ov" id="editor"><div class="panel">
