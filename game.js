@@ -1,4 +1,4 @@
-// ฟันมันส์ — คอมโบสกิลยาว
+// MAHA COMBO (มหาคอมโบ)
 // ภาพทั้งหมดในโฟลเดอร์ assets/ วาดด้วย ChatGPT แล้วตัดเป็นเฟรม
 (()=>{
 const W=960,H=540,GY=470;
@@ -167,6 +167,7 @@ const dmgScale=()=>1+.22*(stage-1);
 // ใช้ e.code = ปุ่มจริงบนคีย์บอร์ด กดได้แม้เปิดภาษาไทยอยู่
 const KM={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',KeyS:'jump',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyZ:'atk',KeyX:'skill'};
 addEventListener('keydown',e=>{ac();const c=e.code;const k=KM[c];
+  if(state==='title'){if(c==='Enter'||c==='Space'){e.preventDefault();startFromTitle();}return;}
   if(state==='edit'||state==='msg'){if(document.getElementById('modeSel').classList.contains('show'))return;if(c==='Enter'||c==='KeyC'||c==='Space'){e.preventDefault();if(state==='edit')closeEditor();else document.getElementById('mGo').click();}return;}
   if(k){keys[k]=true;e.preventDefault();if(e.repeat)return;if(k==='skill')tryRelease();if(k==='jump')jump();}
   if(c==='KeyC'||c==='Tab'){e.preventDefault();if(state==='play'&&!run&&!finale)openEditor('resume');}
@@ -698,5 +699,14 @@ function openModeSel(){const el=document.getElementById('modes');el.innerHTML=Ob
 document.getElementById('bMode').onclick=openModeSel;
 document.getElementById('bReset').onclick=()=>{const b=document.getElementById('bReset');if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='กดอีกครั้งเพื่อยืนยัน (ลบเซฟทั้งหมด)';return;}
   try{localStorage.removeItem('combo-proto');}catch(e){}location.reload();};
-loadAssets(()=>{if(!mode)openModeSel();else openHub('');requestAnimationFrame(loop);});
+// ===== หน้าปก =====
+const titleEl=document.getElementById('title');
+(()=>{const em=document.getElementById('embers');for(let i=0;i<28;i++){const s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.setProperty('--dx',(Math.random()*120-60)+'px');
+  s.style.animationDuration=(5+Math.random()*7)+'s';s.style.animationDelay=(-Math.random()*10)+'s';const z=2+Math.random()*4;s.style.width=s.style.height=z+'px';em.appendChild(s);}})();
+let started=false;
+function startFromTitle(){if(started)return;started=true;ac();sTone(220,880,.35,.2,'triangle');setTimeout(()=>sBoom(.5),120);titleEl.style.transition='opacity .5s';titleEl.style.opacity='0';
+  setTimeout(()=>{titleEl.classList.remove('show');if(!mode)openModeSel();else openHub('');},450);}
+document.getElementById('bStart').onclick=e=>{e.stopPropagation();startFromTitle();};titleEl.onclick=startFromTitle;
+state='title';
+loadAssets(()=>{requestAnimationFrame(loop);});
 })();
