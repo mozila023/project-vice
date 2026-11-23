@@ -675,7 +675,7 @@ function updateRun(dt){const id=chain[run.i];TICK[id](dt);run.t+=dt;run.total+=d
     if(run.i>=chain.length)startFinale();else beginStep();}}
 
 // ================= ฉากจบคอมโบ =================
-function startFinale(){TS.fin++;finale={t:0,hits:run.hits,dmg:run.dmg,phase:0,beats:0,slashes:[],queue:[],bonus:0,n:0,home:run.home};run=null;if(Math.abs(P.x-finale.home)>30){trail.push(ghostOf());P.x=finale.home;P.y=GY;P.vy=0;}P.finisher=9;P.vx=0;
+function startFinale(){TS.fin++;finale={t:0,hits:run.hits,dmg:run.dmg,phase:0,beats:0,slashes:[],queue:[],bonus:0,n:0,home:run.home};run=null;P.vy=Math.max(P.vy,0);P.finisher=9;P.vx=0;
   sTone(220,40,1.4,.3);}
 function crackGen(){const cs=[];const cx=W/2,cy=H/2-20;for(let i=0;i<12;i++){let a=i/12*Math.PI*2+rand(-.2,.2),x=cx,y=cy;const pts=[[x,y]];const L=rand(180,520);let d=0;
   while(d<L){const s=rand(20,50);a+=rand(-.45,.45);x+=Math.cos(a)*s;y+=Math.sin(a)*s;d+=s;pts.push([x,y]);
@@ -1208,8 +1208,8 @@ document.getElementById('bFill').onclick=()=>{const cap=capOf(),av=ORDER.filter(
     chain.push(syn.length&&Math.random()<.5?syn[0][1]:fit[Math.floor(Math.random()*fit.length)]);}renderEditor();};
 document.getElementById('bGo').onclick=closeEditor;
 
-if(/[?&]debug/.test(location.search))window.__mc={P,get enemies(){return enemies},get eeT(){return eeT},get energy(){return energy},set energy(v){energy=v},get state(){return state},get scene(){return scene},get stage(){return stage},startStage,makeEnemy,add(e){enemies.push(e);return e;},loadClass,setMode(m){mode=m;},startTutorial,get tut(){return tut},TS,setChain(a){chain=a;},setStage(n){stage=n;},get kills(){return kills},set kills(v){kills=v},get run(){return run}};
-window.MAHA_VERSION='2026-11-23d';
+if(/[?&]debug/.test(location.search))window.__mc={P,get enemies(){return enemies},get eeT(){return eeT},get energy(){return energy},set energy(v){energy=v},get state(){return state},get scene(){return scene},get stage(){return stage},startStage,makeEnemy,add(e){enemies.push(e);return e;},loadClass,setMode(m){mode=m;},startTutorial,get tut(){return tut},TS,setChain(a){chain=a;},setStage(n){stage=n;},get kills(){return kills},set kills(v){kills=v},get run(){return run},get finale(){return finale}};
+window.MAHA_VERSION='2026-11-23e';
 window.__dbg=()=>({drops:drops.length,bag:bag.length,eq:Object.values(eq).filter(Boolean).length,kills,enemies:enemies.length,types:[...new Set(enemies.map(e=>e.type))]});
 function loadClass(c,fresh){cls=c;ORDER=ORDERS[c];SYN=SYNS[c];const sv=fresh?null:readSave(c);
   save=Object.assign({stage:1,chain:CLS[c].def.slice(),found:[]},sv||{});
