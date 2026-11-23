@@ -80,3 +80,7 @@
 เล่นออนไลน์: https://mozila023.github.io/project-vice/
 
 โปรเจกต์เก่า (เกมเกาะ Godot) ยังย้อนดูได้ในประวัติ git ที่ commit `159dfda`
+
+## เครดิตเสียง
+เสียงเอฟเฟกต์จริงใน `assets/sfx/` มาจาก Kenney (www.kenney.nl) สัญญาอนุญาต CC0 (สาธารณสมบัติ ใช้ได้ฟรีทุกกรณี): Impact Sounds, Foley Sounds, RPG Audio, Sci-Fi Sounds, Voiceover Pack Fighter — รายละเอียดใน `assets/sfx/CREDITS.txt`
+> เสียงจริงโหลดได้เมื่อเปิดผ่านเว็บ (GitHub Pages) ถ้าเปิดไฟล์ `index.html` ตรงๆ จากเครื่อง เบราว์เซอร์จะบล็อก เกมจะใช้เสียงสังเคราะห์แทนอัตโนมัติ
