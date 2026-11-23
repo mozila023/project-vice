@@ -11,6 +11,27 @@ function resize(){dpr=Math.min(2,window.devicePixelRatio||1);const s=Math.min(in
 addEventListener('resize',resize);resize();
 const isTouch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 if(isTouch)document.getElementById('touch').style.display='block';
+// วางปุ่มมือถือตามขนาดจอจริง: ใช้ขอบดำข้างจอ (จอมือถือกว้างกว่า 16:9) ให้มากที่สุด ปุ่มจะได้ไม่บังฉาก
+function layoutTouch(){if(!isTouch)return;const vw=innerWidth,vh=innerHeight,u=Math.max(46,Math.min(84,vh*.17)),side=(vw-parseFloat(cv.style.width||vw))/2;
+  const pad=Math.max(10,Math.min(side-u*.55,24)),B=Math.max(10,vh*.04);
+  const put=(k,cx,cy,sz,fs)=>{const el=document.querySelector('#touch [data-k="'+k+'"]');if(!el)return;cx=Math.max(sz/2+4,Math.min(vw-sz/2-4,cx));cy=Math.max(sz/2+4,Math.min(vh-sz/2-4,cy));el.style.width=el.style.height=sz+'px';el.style.left=(cx-sz/2)+'px';el.style.top=(cy-sz/2)+'px';el.style.right=el.style.bottom='auto';el.style.fontSize=(fs||sz*.38)+'px';};
+  // ซ้าย: เดิน
+  const lx=pad+u*.6,ly=vh-B-u*.6;put('left',lx,ly,u*1.1);put('right',lx+u*1.3,ly,u*1.1);
+  // ขวา: ฟันใหญ่ตรงมุม ปุ่มอื่นเรียงเป็นวงโค้งรอบนิ้วโป้ง
+  const ax=vw-pad-u*.72,ay=vh-B-u*.72,R=u*1.42;put('atk',ax,ay,u*1.45);
+  const arc=(k,deg,r,sz)=>{const a=deg*Math.PI/180;put(k,ax+Math.cos(a)*r,ay-Math.sin(a)*r,sz);};
+  arc('jump',180,R,u*.92);arc('dodge',138,R,u*.86);arc('core',97,R,u*.86);arc('skill',80,R*1.85,u*.84);
+  const cw=parseFloat(cv.style.width||vw),ch=parseFloat(cv.style.height||vh),cl=(vw-cw)/2,ct=(vh-ch)/2,sc=cw/W;
+  if(side>=u*.8)put('edit',vw-side/2,ct+u*.45,u*.7);else put('edit',cl+700*sc,ct+26*sc+u*.2,u*.62);
+  const sk=document.getElementById('tutSkip');if(sk){sk.style.position='fixed';sk.style.right=(pad+u*.8)+'px';sk.style.top=(Math.max(10,vh*.03)+u*.12)+'px';}}
+addEventListener('resize',()=>setTimeout(layoutTouch,50));setTimeout(layoutTouch,0);
+// เกจบนปุ่มมือถือ (Core / คอมโบ / คูลดาวน์หลบ)
+const tbs={};function touchGauges(){if(!isTouch)return;const q=k=>tbs[k]||(tbs[k]=document.querySelector('#touch [data-k="'+k+'"]'));
+  const set=(k,p,ready,col)=>{const el=q(k);if(!el)return;el.classList.add('g');const v=Math.round(p*100);if(el._p!==v){el._p=v;el.style.setProperty('--p',v);}el.classList.toggle('ready',!!ready);if(col&&el._c!==col){el._c=col;el.style.setProperty('--c',col);}};
+  const inStage=scene==='stage'&&state==='play';
+  set('core',P.core/100,P.core>=100&&inStage,'#ffe066');set('skill',energy/100,energy>=100&&inStage&&!run&&!finale,'#8fb0ff');set('dodge',1-P.dodgeCD/.5,false,'#9fd8ff');
+  for(const k of ['core','skill','dodge'])q(k)&&q(k).classList.toggle('hide',scene==='town');
+  const ab=q('atk');if(ab){const cnt=eeT>0&&!P.cnt;if(ab._e!==cnt){ab._e=cnt;ab.style.boxShadow=cnt?'0 0 18px 6px #c9a8ff':'';}}}
 
 // ================= สกิล =================
 const SK={
@@ -320,6 +341,7 @@ const P={x:200,y:GY,vx:0,vy:0,face:1,hp:100,maxHp:100,inv:0,ihit:0,core:0,coreA:
 let enemies=[],parts=[],fxs=[],projs=[],texts=[],trail=[],drops=[],pickups=[];
 let energy=0,kills=0,quota=30,spawnT=0,state='edit',afterEdit='start',doomedN=0;
 let timeScale=1,hitstop=0,shake=0,zoom=1,zoomT=1,desat=0,desatT=0,flash=0,dark=0,darkT=0,chroma=0,blackT=0;
+let tut=null;const TS={ee:0,cnt:0,core:0,brk:0,dodge:0,jump:0,fin:0};
 let eeT=0,eeMax=2.4,eeSrc=null,lights=[],motes=[],punch=0;
 let run=null,finale=null,bigTotal=null,banner=null,toast=null,t0=0,cracks=null;
 let scene='stage',goldT=0,camLead=0,WORLD_W=4200,camX=0,portalX=4000;
@@ -336,15 +358,16 @@ addEventListener('keydown',e=>{ac();const c=e.code;const k=KM[c];
   if(scene==='town'&&state==='play'&&(c==='KeyW'||c==='ArrowUp'||c==='Enter'||c==='KeyE')){e.preventDefault();if(!e.repeat)talk();return;}
   if(k){keys[k]=true;e.preventDefault();if(e.repeat)return;press(k);}
   if(c==='KeyC'||c==='Tab'){e.preventDefault();if(state==='play'&&!run&&!finale){openEditor(scene==='town'?'town':'resume');}}
+  if(c==='Escape'&&tut&&state==='play'){e.preventDefault();finishTutorial(true);return;}
   if(c==='KeyM'){muted=!muted;musicVol();}if(c==='KeyN'){musicOn=!musicOn;musicVol();}});
 addEventListener('keyup',e=>{const k=KM[e.code];if(k)keys[k]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 addEventListener('pointerdown',()=>{ac();try{window.focus();}catch(e){}});
 document.querySelectorAll('#touch .b').forEach(b=>{const k=b.dataset.k;
-  b.addEventListener('pointerdown',e=>{e.preventDefault();ac();if(k==='edit'){if(state==='play'&&!run&&!finale){if(scene==='town'&&nearNpc)talk();else openEditor(scene==='town'?'town':'resume');}return;}keys[k]=true;press(k);});
-  const up=()=>keys[k]=false;b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);});
+  b.addEventListener('pointerdown',e=>{e.preventDefault();ac();b.classList.add('on');if(k==='edit'){if(state==='play'&&!run&&!finale){if(scene==='town'&&nearNpc)talk();else openEditor(scene==='town'?'town':'resume');}return;}keys[k]=true;press(k);});
+  const up=()=>{keys[k]=false;b.classList.remove('on');};b.addEventListener('pointerup',up);b.addEventListener('pointerleave',up);b.addEventListener('pointercancel',up);});
 function press(k){if(k==='skill')tryRelease();else if(k==='jump')jump();else if(k==='dodge')dodge();else if(k==='core')startCore();else if(k==='atk'&&eeT>0&&!P.cnt&&state==='play')startCounter();}
-function jump(){if(state==='play'&&P.ground&&!finale&&!(run&&['slam','dash','xslash'].includes(chain[run.i]))){P.vy=-780;P.ground=false;P.jt=.14;for(let i=0;i<8;i++)parts.push({x:P.x+rand(-20,20),y:GY,vx:rand(-120,120),vy:rand(-120,-30),life:.35,max:.35,col:'#b8a088',sz:rand(3,6),g:300,solid:1});}}
+function jump(){if(state==='play'&&P.ground&&!finale&&!(run&&['slam','dash','xslash'].includes(chain[run.i]))){TS.jump++;P.vy=-780;P.ground=false;P.jt=.14;for(let i=0;i<8;i++)parts.push({x:P.x+rand(-20,20),y:GY,vx:rand(-120,120),vy:rand(-120,-30),life:.35,max:.35,col:'#b8a088',sz:rand(3,6),g:300,solid:1});}}
 
 // ================= เอฟเฟกต์ =================
 function arc(x,y,r,a0,a1,col,w=10,life=.18,face=1){fxs.push({t:'arc',x,y,r,a0,a1,col,w,life,max:life,face});}
@@ -408,9 +431,9 @@ const perfWin=()=>MD().pw||.22;
 function inStrikeRange(e,px){const T=ET[e.type];return Math.abs(e.x-px)<e.w/2+(T.reach||30)+14&&Math.abs((e.y-e.h/2)-(P.y-70))<Math.max(80,e.h/2+30);}
 function dodge(){if(state!=='play'||run||finale||P.cnt||P.coreA>0||P.dodgeCD>0||P.finisher>0)return;
   const mv=(keys.right?1:0)-(keys.left?1:0),dir=mv||P.face;P.face=dir;
-  P.dodgeT=.32;P.dodgeAge=0;P.dodgeCD=.5;P.dodgeX=P.x;P.inv=Math.max(P.inv,.32);P.vx=dir*980;if(!P.ground)P.vy=Math.min(P.vy,0);
+  TS.dodge++;P.dodgeT=.32;P.dodgeAge=0;P.dodgeCD=.5;P.dodgeX=P.x;P.inv=Math.max(P.inv,.32);P.vx=dir*980;if(!P.ground)P.vy=Math.min(P.vy,0);
   nz(1300,.9,.14,.16,'bandpass',.12,500);for(let i=0;i<10;i++)parts.push({x:P.x+rand(-14,14),y:GY-rand(0,10),vx:-dir*rand(120,360),vy:rand(-120,-20),life:.4,max:.4,col:'rgba(200,215,255,.8)',sz:rand(3,6),g:200,solid:1});}
-function extremeEvade(e){eeT=eeMax;eeSrc=e;P.inv=Math.max(P.inv,.6);window.__ee=(window.__ee||0)+1;
+function extremeEvade(e){TS.ee++;eeT=eeMax;eeSrc=e;P.inv=Math.max(P.inv,.6);window.__ee=(window.__ee||0)+1;
   energy=Math.min(100,energy+10*enMul());P.core=Math.min(100,P.core+35);
   ring(P.x,P.y-80,10,240,'#9fd8ff',.45,10);ring(P.x,P.y-80,6,150,'#fff',.3,4);light(P.x,P.y-80,320,'140,200,255',.7,.4);
   hitstop=Math.max(hitstop,.06);punch=Math.max(punch,.06);osc('sine',1800,600,.5,.12,.6);osc('triangle',2700,2600,.6,.05,.7);nz(6000,.8,.12,.3,'highpass',.5);}
@@ -421,16 +444,16 @@ function enemyStrike(e){const T=ET[e.type],dir=Math.sign(P.x-e.x)||1;
   if(!inR)return;
   if(P.dodgeT>0&&P.dodgeAge<=perfWin()){extremeEvade(e);return;}
   if(P.inv>0||P.cnt||P.coreA>0||run||finale)return;
-  const dm=Math.max(1,Math.round(T.dmg*MD().dmg*(1+.18*(stage-1))*(1-defOf())));P.hp-=dm;addText(P.x,P.y-170,dm,false,true);
+  const dm=Math.max(1,Math.round(T.dmg*MD().dmg*(1+.18*(stage-1))*(1-defOf())*(tut?.4:1)));P.hp-=dm;addText(P.x,P.y-170,dm,false,true);
   P.inv=.9;P.ihit=.9;P.hurt=.35;P.hc=0;P.vx=dir*420;P.vy=-320;P.ground=false;shake=10;flash=Math.max(flash,.15);light(P.x,P.y-80,200,'255,60,70',.5);sTone(200,80,.2,.2,'square');}
-function breakEnemy(e){e.broken=3.5;e.brkV=e.brkMax;e.wind=0;e.stun=3.5;e.vy=-320;e.ground=false;window.__brk=(window.__brk||0)+1;
+function breakEnemy(e){TS.brk++;e.broken=3.5;e.brkV=e.brkMax;e.wind=0;e.stun=3.5;e.vy=-320;e.ground=false;window.__brk=(window.__brk||0)+1;
   energy=Math.min(100,energy+25*enMul());
   texts.push({x:e.x,y:e.y-e.h-30,vy:-50,txt:'BREAK!',col:'#7ff3ff',sz:40,life:1.3,max:1.3,crit:1,pop:.2});
   ring(e.x,e.y-e.h/2,10,260,'#7ff3ff',.45,14);ring(e.x,e.y-e.h/2,6,170,'#fff',.3,6);spr('fx_burst',e.x,e.y-e.h/2,360,0,1,.35,1.5);
   for(let i=0;i<24;i++){const a=rand(0,6.3),sp=rand(400,900);parts.push({x:e.x,y:e.y-e.h/2,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.45,max:.45,col:i%2?'#7ff3ff':'#fff',sz:rand(3,6),g:600});}
   light(e.x,e.y-e.h/2,380,'120,240,255',.8,.35);flash=Math.max(flash,.35);shake=Math.max(shake,18);hitstop=Math.max(hitstop,.14);punch=Math.max(punch,.1);sBoom(.6);sCrit();}
 function startCounter(){if(run||finale||P.cnt||scene!=='stage')return;let tg=eeSrc&&!eeSrc.dead?eeSrc:nearestEnemy(P.x,P.y-70,520);if(!tg)return;
-  P.cnt={t:0,n:0,tg,acc:0};P.inv=Math.max(P.inv,1.2);P.vx=0;window.__cnt=(window.__cnt||0)+1;
+  TS.cnt++;P.cnt={t:0,n:0,tg,acc:0};P.inv=Math.max(P.inv,1.2);P.vx=0;window.__cnt=(window.__cnt||0)+1;
   texts.push({x:P.x,y:P.y-200,vy:-60,txt:'เงาวาร์ป!',col:'#c9a8ff',sz:26,life:.8,max:.8,lab:1,pop:.12});osc('sawtooth',140,900,.25,.12,.4);}
 function updateCounter(dt){const C=P.cnt;C.t+=dt;C.acc+=dt;
   while(C.acc>=.085&&C.n<7){C.acc-=.085;let e=C.tg;if(!e||e.dead)e=C.tg=nearestEnemy(P.x,P.y-70,600);if(!e){C.n=7;break;}
@@ -443,7 +466,7 @@ function updateCounter(dt){const C=P.cnt;C.t+=dt;C.acc+=dt;
 const CORE_N={sword:'ฟันแยกฟ้า',shaman:'ระเบิดวิญญาณ',archer:'ศรทะลวงฟ้า'};
 function startCore(){if(state!=='play'||scene!=='stage'||run||finale||P.cnt||P.coreA>0||P.finisher>0)return;
   if(P.core<100){say('Core ยังไม่เต็ม — ฟันธรรมดาเพื่อเติม','#ff8a8a');return;}
-  P.core=0;P.coreA=.55;P.coreS={};P.inv=Math.max(P.inv,.65);window.__core=(window.__core||0)+1;
+  TS.core++;P.core=0;P.coreA=.55;P.coreS={};P.inv=Math.max(P.inv,.65);window.__core=(window.__core||0)+1;
   texts.push({x:P.x,y:P.y-200,vy:-60,txt:CORE_N[cls],col:'#ffe066',sz:26,life:.9,max:.9,lab:1,pop:.12});osc('sawtooth',220,1200,.3,.14,.4);}
 function updateCore(dt){const el=.55-P.coreA,st=P.coreS;
   if(cls==='sword'){if(el<.16){P.vx=P.face*1350;trail.push(ghostOf());}
@@ -589,7 +612,7 @@ function updateRun(dt){const id=chain[run.i];TICK[id](dt);run.t+=dt;run.total+=d
     if(run.i>=chain.length)startFinale();else beginStep();}}
 
 // ================= ฉากจบคอมโบ =================
-function startFinale(){finale={t:0,hits:run.hits,dmg:run.dmg,phase:0,beats:0,slashes:[],queue:[],bonus:0,n:0};run=null;P.finisher=9;P.vx=0;
+function startFinale(){TS.fin++;finale={t:0,hits:run.hits,dmg:run.dmg,phase:0,beats:0,slashes:[],queue:[],bonus:0,n:0};run=null;P.finisher=9;P.vx=0;
   sTone(220,40,1.4,.3);}
 function crackGen(){const cs=[];const cx=W/2,cy=H/2-20;for(let i=0;i<12;i++){let a=i/12*Math.PI*2+rand(-.2,.2),x=cx,y=cy;const pts=[[x,y]];const L=rand(180,520);let d=0;
   while(d<L){const s=rand(20,50);a+=rand(-.45,.45);x+=Math.cos(a)*s;y+=Math.sin(a)*s;d+=s;pts.push([x,y]);
@@ -627,7 +650,7 @@ function makeEnemy(x,type,wander){const T=ET[type];const hp=Math.round(T.hp*hpSc
   return{type,x,y:T.fly?GY-150:GY,vx:0,vy:0,w:T.w,h:T.h,hp,max:hp,heavy:T.kb<.6,kb:T.kb,speed:rand(T.sp[0],T.sp[1]),hitT:0,stun:0,ground:!T.fly,bob:rand(0,6),home:x,aggro:!wander,wt:rand(0,6),dive:0,cd:rand(1,3),wind:0,acd:rand(.5,1.4),hpLag:hp,brkV:0,brkMax:(T.brk||0)*(1+.12*(stage-1)),broken:0};}
 function populate(){enemies=[];drops=[];for(let x=700;x<WORLD_W-350;x+=rand(420,620)){const n=Math.floor(rand(3,6));for(let i=0;i<n;i++)enemies.push(makeEnemy(x+rand(-120,120),pickType(),true));}
   if(stage>=2)enemies.push(makeEnemy(portalX-260,'golem',true));}
-function spawn(dt){spawnT-=dt;if(finale)return;
+function spawn(dt){spawnT-=dt;if(finale||tut)return;
   const vis=enemies.filter(e=>!e.dead&&!e.doomed&&e.x>camX-500&&e.x<camX+W+500).length;
   const want=run?28:8+stage*2;const iv=Math.max(.25,1.2-.1*stage)/(run?3:1);
   if(spawnT<=0&&vis<want){spawnT=iv;let side=Math.random()<.5?-1:1;let x=side<0?camX-50:camX+W+50;
@@ -660,7 +683,7 @@ function updatePlayer(dt){
   if(P.finisher>0)P.finisher-=dt;
   // ประตูวาร์ป
   if(scene==='town'){if(Math.abs(P.x-portalX)<50){save.chain=chain;saveEq();startStage();}}
-  else if(kills>=quota&&!run&&!finale&&!bigTotal&&Math.abs(P.x-portalX)<60)stageClear();
+  else if(!tut&&kills>=quota&&!run&&!finale&&!bigTotal&&Math.abs(P.x-portalX)<60)stageClear();
 }
 function updateEnemies(dt){
   for(const e of enemies){if(e.dead)continue;const T=ET[e.type];
@@ -738,8 +761,10 @@ function update(rdt){
   if(state!=='play')return;
   if(hitstop>0){hitstop-=rdt;return;}
   if(eeT>0){eeT-=rdt;if(eeT<=0){eeT=0;eeSrc=null;}}
-  const dt=rdt*timeScale,edt=dt*(eeT>0&&!finale?.14:1);
+  const dt=rdt*timeScale*(tutAssist()?.25:1),edt=dt*(eeT>0&&!finale?.14:1);
   updatePlayer(dt);if(run)updateRun(dt);updateEnemies(edt);updateProjs(dt);updateFx(dt);if(scene==='stage')spawn(edt);
+  if(tut)updateTut(rdt,dt);
+  if(P.hp<=0&&tut){P.hp=P.maxHp;say('บทสอนไม่ตายจริง — ฟื้นเลือดให้แล้ว ลองใหม่!','#ffd76a',2);}
   if(P.hp<=0){P.hp=0;saveEq();openHub('💀 แพ้แล้ว — เงินและของที่เก็บได้ยังอยู่ครบ ลองซื้อของหรือตีบวกแล้วลุยด่าน '+stage+' ใหม่');}
 }
 
@@ -870,10 +895,10 @@ function drawHUD(){if(scene==='town'){drawTownHUD();return;}
   txt('HP '+Math.max(0,Math.ceil(P.hp))+'/'+P.maxHp,246,29,12,'#fff','left',700);txt('พลังโจมตี ×'+atkMul().toFixed(2),18,112,13,'#ffcf9a','left',700);{const gs=1+goldT*.5;if(ok(IMG.ui_coin))ctx.drawImage(IMG.ui_coin,16,122,22,22);ctx.save();ctx.translate(42,139);ctx.scale(gs,gs);txt(gold.toLocaleString(),0,0,15,'#ffd76a','left',800);ctx.restore();if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,120,122,22,22);txt(''+stones,146,139,15,'#d8c2ff','left',800);txt(MD().n,190,139,12,MD().col,'left',800);}
   pickups.forEach((p,i)=>{if(p.stone){const a=Math.min(1,p.life/p.max*3),y=H-210-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle='#b98cff';ctx.fillRect(W-330,y-24,4,36);if(ok(IMG.ui_stone))ctx.drawImage(IMG.ui_stone,W-322,y-21,30,30);txt('หินตีบวก +1 (มี '+stones+')',W-286,y+2,15,'#d8c2ff','left',800);ctx.globalAlpha=1;return;}const R=RAR[p.it.r],a=Math.min(1,p.life/p.max*3),y=H-210-i*40;ctx.globalAlpha=a;ctx.fillStyle='rgba(15,10,25,.8)';ctx.fillRect(W-330,y-24,312,36);ctx.fillStyle=R.c;ctx.fillRect(W-330,y-24,4,36);
     const im=IMG[iicon(p.it)];if(ok(im))ctx.drawImage(im,W-322,y-21,30,30);txt(iname(p.it)+' ('+R.n+')',W-286,y-6,14,R.c,'left',800);txt(istatTxt(p.it).slice(0,46)+' · '+p.msg,W-286,y+9,11,'#ddd','left',600);ctx.globalAlpha=1;});txt('พลัง',246,65,12,'#cfd8ff','left',700);if(full)txt((isTouch?'★':'X')+' ปล่อยคอมโบ '+chainTime().toFixed(1)+' วิ!',18,92,16,'#ffd76a','left');
-  txt('ด่าน '+stage,W-18,32,18,'#fff','right');
+  if(tut){drawTut();}else{txt('ด่าน '+stage,W-18,32,18,'#fff','right');
   txt('กำจัด '+Math.min(kills,quota)+' / '+quota,W-18,56,15,kills>=quota?'#ffd76a':'#cfc6e8','right',700);
-  if(!isTouch&&!run&&!finale)txt('C จัดคอมโบ',W-18,78,12,'#8d83aa','right',600);
-  if(!run&&!finale&&!bigTotal){const mw=300,mx=(W-mw)/2,my=24;ctx.fillStyle='rgba(10,6,20,.6)';ctx.fillRect(mx-6,my-8,mw+12,16);ctx.fillStyle='#4a3d66';ctx.fillRect(mx,my-1,mw,2);
+  if(!isTouch&&!run&&!finale)txt('C จัดคอมโบ',W-18,78,12,'#8d83aa','right',600);}
+  if(!tut&&!run&&!finale&&!bigTotal){const mw=300,mx=(W-mw)/2,my=24;ctx.fillStyle='rgba(10,6,20,.6)';ctx.fillRect(mx-6,my-8,mw+12,16);ctx.fillStyle='#4a3d66';ctx.fillRect(mx,my-1,mw,2);
     for(const e of enemies){if(e.dead)continue;ctx.fillStyle=ET[e.type].mm;ctx.fillRect(mx+e.x/WORLD_W*mw-1,my-3,2,6);}
     ctx.fillStyle=kills>=quota?'#ffd76a':'#888';ctx.beginPath();ctx.arc(mx+portalX/WORLD_W*mw,my,5,0,7);ctx.fill();
     ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(mx+P.x/WORLD_W*mw,my,4,0,7);ctx.fill();
@@ -981,7 +1006,7 @@ function render(){
   const zz=zoom*(1+punch*1.2);ctx.save();ctx.translate(W/2+sx,H/2+sy);ctx.scale(zz,zz);ctx.translate(-fx,-fy);
   drawBG();drawMotes(false);
   ctx.translate(-camX,0);
-  drawPortal();if(scene==='town')drawNpcs();
+  if(!tut)drawPortal();if(scene==='town')drawNpcs();
   for(const e of enemies)if(e.x>camX-200&&e.x<camX+W+200)drawEnemy(e);
   drawDrops();drawVortex();drawRunExtras();drawPlayer();drawFx();drawLights();
   ctx.restore();drawMotes(true);drawEE();
@@ -998,7 +1023,7 @@ function render(){
   drawHUD();
 }
 let last=performance.now();
-function loop(now){const rdt=Math.min(.05,(now-last)/1000);last=now;update(rdt);render();requestAnimationFrame(loop);}
+function loop(now){const rdt=Math.min(.05,(now-last)/1000);last=now;update(rdt);render();touchGauges();requestAnimationFrame(loop);}
 
 // ================= ลำดับเกม =================
 function startStage(){scene='stage';projs=[];fxs=[];parts=[];texts=[];trail=[];run=null;finale=null;bigTotal=null;cracks=null;doomedN=0;timeScale=1;zoomT=1;desatT=0;darkT=0;blackT=0;
@@ -1107,7 +1132,7 @@ document.getElementById('bFill').onclick=()=>{const cap=capOf(),av=ORDER.filter(
     chain.push(syn.length&&Math.random()<.5?syn[0][1]:fit[Math.floor(Math.random()*fit.length)]);}renderEditor();};
 document.getElementById('bGo').onclick=closeEditor;
 
-if(/[?&]debug/.test(location.search))window.__mc={P,get enemies(){return enemies},get eeT(){return eeT},get energy(){return energy},set energy(v){energy=v},get state(){return state},get scene(){return scene},get stage(){return stage},startStage,makeEnemy,add(e){enemies.push(e);return e;},loadClass,setMode(m){mode=m;}};
+if(/[?&]debug/.test(location.search))window.__mc={P,get enemies(){return enemies},get eeT(){return eeT},get energy(){return energy},set energy(v){energy=v},get state(){return state},get scene(){return scene},get stage(){return stage},startStage,makeEnemy,add(e){enemies.push(e);return e;},loadClass,setMode(m){mode=m;},startTutorial,get tut(){return tut},TS};
 window.__dbg=()=>({drops:drops.length,bag:bag.length,eq:Object.values(eq).filter(Boolean).length,kills,enemies:enemies.length,types:[...new Set(enemies.map(e=>e.type))]});
 function loadClass(c,fresh){cls=c;ORDER=ORDERS[c];SYN=SYNS[c];const sv=fresh?null:readSave(c);
   save=Object.assign({stage:1,chain:CLS[c].def.slice(),found:[]},sv||{});
@@ -1129,12 +1154,60 @@ function openModeSel(changeOnly){const sv=readSave(cls);const has=sv&&sv.mode;
   const bc=document.getElementById('bCont');if(bc)bc.onclick=()=>{msEl.classList.remove('show');openHub('ยินดีต้อนรับกลับ '+CLS[cls].n+'!');};
   el.querySelectorAll('[data-m]').forEach(c=>c.onclick=()=>{
     if(!changeOnly&&has&&c.dataset.c!=='1'){el.querySelectorAll('[data-m]').forEach(x=>x.dataset.c='');c.dataset.c='1';c.querySelector('small').textContent='กดอีกครั้งเพื่อยืนยันเริ่มใหม่ (เซฟเดิมของ'+CLS[cls].n+'จะหาย)';return;}
-    if(!changeOnly)loadClass(cls,true);mode=c.dataset.m;saveEq();msEl.classList.remove('show');openHub(CLS[cls].n+' · โหมด '+MD().n+' — จัดคอมโบแล้วออกเดินทางได้เลย');});
+    if(!changeOnly)loadClass(cls,true);mode=c.dataset.m;saveEq();msEl.classList.remove('show');if(!changeOnly&&!tutSeen())startTutorial();else openHub(CLS[cls].n+' · โหมด '+MD().n+' — จัดคอมโบแล้วออกเดินทางได้เลย');});
   edEl.classList.remove('show');state='edit';msEl.classList.add('show');}
+document.getElementById('tutSkip').onclick=e=>{e.stopPropagation();if(tut)finishTutorial(true);};
+document.getElementById('bTut').onclick=()=>{activeNpc=null;edEl.classList.remove('show');save.chain=chain;saveEq();startTutorial();};
 document.getElementById('bMode').onclick=()=>openModeSel(true);
 document.getElementById('bClass').onclick=()=>{saveEq();openClassSel();};
 document.getElementById('bReset').onclick=()=>{const b=document.getElementById('bReset');if(b.dataset.c!=='1'){b.dataset.c='1';b.textContent='กดอีกครั้งเพื่อยืนยัน (ลบเซฟของอาชีพนี้)';return;}
   try{localStorage.removeItem('mahacombo-'+cls);if(cls==='sword')localStorage.removeItem('combo-proto');}catch(e){}location.reload();};
+// ===== บทสอนเล่น (ขึ้นหลังเลือกอาชีพ + โหมด ครั้งแรก) =====
+const tutSeen=()=>{try{return localStorage.getItem('mahacombo-tut')==='1';}catch(e){return false;}};
+const KEYT=isTouch?{move:'◀ ▶',jump:'⤒',atk:'⚔️',dodge:'💨',core:'◆',skill:'★',edit:'☰',skip:'ปุ่ม ข้าม'}:{move:'A / D',jump:'S',atk:'Z',dodge:'Shift',core:'F',skill:'X',edit:'C',skip:'Esc'};
+function tutFoe(type,dx,opt){const e=makeEnemy(Math.max(60,Math.min(WORLD_W-60,P.x+dx)),type,false);Object.assign(e,opt||{});e.aggro=true;e.tut=1;enemies.push(e);
+  for(let i=0;i<14;i++)parts.push({x:e.x+rand(-30,30),y:GY-rand(0,e.h),vx:rand(-120,120),vy:rand(-260,-60),life:.5,max:.5,col:'#b98cff',sz:rand(3,6),g:0});return e;}
+const tutAlive=()=>enemies.filter(e=>!e.dead&&!e.doomed&&e.tut).length;
+const TSTEPS=[
+ {id:'move',t:'เดิน',d:()=>`กด ${KEYT.move} เดินไปทางขวาสักหน่อย`,k:'move',done:T=>T.moved>260},
+ {id:'jump',t:'กระโดด',d:()=>`กด ${KEYT.jump} เพื่อกระโดด`,k:'jump',done:T=>TS.jump>T.b.jump},
+ {id:'atk',t:'ฟัน',d:()=>`กด ${KEYT.atk} ฟันผีน้อยให้หมด (กดค้างได้)`,k:'atk',setup(){for(let i=0;i<3;i++)tutFoe('ghost',220+i*70,{hp:18,max:18,hpLag:18,acd:9});},done:()=>tutAlive()===0},
+ {id:'dodge',t:'หลบ',d:()=>`กด ${KEYT.dodge} พุ่งหลบ — ระหว่างพุ่งจะไม่โดนตี (กดพร้อมทิศทางได้)`,k:'dodge',done:T=>TS.dodge>T.b.dodge},
+ {id:'ee',t:'หลบเฉียดฉิว',d:()=>`ศัตรูจะง้างตัวเป็นสีแดงก่อนตี — รอจน<b>แสงวาบสีขาว</b>แล้วกด ${KEYT.dodge}!`,k:'dodge',
+  setup(){if(!tutAlive())tutFoe('skel',230,{hp:9999,max:9999,hpLag:9999,acd:1});},keep(){if(!tutAlive())this.setup();},done:T=>TS.ee>T.b.ee},
+ {id:'cnt',t:'สวนกลับ',d:()=>`เวลาช้าลงแล้ว! กด ${KEYT.atk} เพื่อ "เงาวาร์ป" ฟันสวน`,k:'atk',done:T=>TS.cnt>T.b.cnt,
+  keep(T){if(eeT<=0&&!P.cnt&&TS.cnt<=T.b.cnt){T.back=1;}}},
+ {id:'core',t:'Core Attack',d:()=>`ฟันธรรมดาเติมเกจ Core (แถบสีทอง) ให้เต็ม แล้วกด ${KEYT.core}`,k:'core',
+  setup(){for(const e of enemies)if(e.tut)e.dead=true;P.core=Math.max(P.core,70);for(let i=0;i<4;i++)tutFoe('ghost',200+i*60,{acd:9});},keep(){if(!tutAlive()&&P.core<100)for(let i=0;i<3;i++)tutFoe('ghost',180+i*60,{acd:9});},done:T=>TS.core>T.b.core},
+ {id:'brk',t:'Break',d:()=>`ยักษ์มีเกจ <b style="color:#7ff3ff">Break</b> สีฟ้า — ตีจนเต็มแล้วมันจะล้ม · มันไม่สะดุ้งตอนง้าง ต้องหลบ!`,k:'atk',
+  setup(){const y=tutFoe('yak',300,{acd:1.5});y.hp=y.max=y.hpLag=y.max*4;y.brkV=y.brkMax*.4;P.core=100;},keep(){if(!enemies.some(e=>e.tut&&!e.dead&&e.type==='yak'))this.setup();},done:T=>TS.brk>T.b.brk},
+ {id:'combo',t:'ปล่อยคอมโบ',d:()=>`ฟัน หลบ Break ล้วนเติมเกจพลัง — เต็มแล้ว! กด ${KEYT.skill} ปล่อยคอมโบยาว`,k:'skill',
+  setup(){energy=100;for(let i=0;i<5;i++)tutFoe('ghost',160+i*80,{acd:9});},keep(){if(!run&&!finale&&TS.fin<=this._b&&energy<100)energy=100;},done:T=>TS.fin>T.b.fin&&!finale&&!bigTotal},
+ {id:'end',t:'จบบทสอน',d:()=>`เก่งมาก! กด ${KEYT.edit} จัดลำดับสกิลในคอมโบได้ทุกเมื่อ — ไปเมืองกันเลย`,k:'edit',done:T=>T.t>3},
+];
+function startTutorial(){startStage();WORLD_W=2400;portalX=99999;enemies=[];drops=[];energy=0;P.x=300;quota=0;
+  tut={i:-1,t:0,moved:0,wait:0,b:{}};nextTut();banner={t:'บทสอนเล่น — '+CLS[cls].n,col:'#ffd76a',life:2,max:2};
+  const sk=document.getElementById('tutSkip');if(sk)sk.style.display='block';}
+function nextTut(){tut.i++;tut.t=0;tut.back=0;tut.b=Object.assign({},TS);const st=TSTEPS[tut.i];if(!st)return finishTutorial(false);st._b=TS.fin;if(st.setup)st.setup();}
+function finishTutorial(skipped){try{localStorage.setItem('mahacombo-tut','1');}catch(e){}tut=null;const sk=document.getElementById('tutSkip');if(sk)sk.style.display='none';
+  eeT=0;P.cnt=null;openHub(skipped?'ข้ามบทสอนแล้ว — เปิดดูอีกครั้งได้ที่ C → วิธีเล่น':'🎉 จบบทสอน! จัดคอมโบที่ฤๅษี แล้วออกเดินทางทางขวา');}
+function updateTut(rdt,dt){const T=tut,st=TSTEPS[T.i];if(!st)return;T.t+=rdt;
+  if((keys.left||keys.right)&&Math.abs(P.vx)>60)T.moved+=Math.abs(P.vx)*dt;
+  if(T.wait>0){T.wait-=rdt;if(T.wait<=0)nextTut();return;}
+  if(st.keep)st.keep.call(st,T);
+  if(T.back){T.i-=2;say('ช้าไปนิด — ลองหลบเฉียดฉิวอีกครั้ง','#ff8a8a',1.8);nextTut();return;}
+  if(st.done(T)){T.wait=st.id==='end'?.01:st.id==='ee'?.05:.9;if(st.id!=='end'){texts.push({x:P.x,y:P.y-200,vy:-70,txt:'สำเร็จ!',col:'#7dff9a',sz:28,life:.9,max:.9,lab:1,pop:.15});osc('triangle',660,1320,.18,.12,.3);setTimeout(()=>osc('triangle',990,1980,.2,.1,.3),90);}}}
+// ช่วยจังหวะในบทสอน: ตอนแสงวาบ ศัตรูจะช้าลงให้กดทัน
+const tutAssist=()=>tut&&TSTEPS[tut.i]&&TSTEPS[tut.i].id==='ee'&&!tut.wait&&eeT<=0&&enemies.some(e=>e.wind>0&&e.wind<=perfWin());
+function drawTut(){const st=TSTEPS[tut.i];if(!st)return;const n=TSTEPS.length,pw=560,px=(W-pw)/2,py=156,done=tut.wait>0&&st.id!=='end';
+  ctx.save();ctx.fillStyle='rgba(12,8,26,.82)';ctx.fillRect(px,py,pw,70);ctx.fillStyle=done?'#7dff9a':'#ffd76a';ctx.fillRect(px,py,4,70);
+  for(let i=0;i<n;i++){ctx.fillStyle=i<tut.i||(i===tut.i&&done)?'#7dff9a':i===tut.i?'#ffd76a':'#3a3058';ctx.fillRect(px+pw-14-(n-i)*16,py+10,12,5);}
+  txt('บทสอน '+(tut.i+1)+'/'+n+' · '+st.t,px+16,py+24,17,done?'#7dff9a':'#ffd76a','left',800);
+  const d=st.d().replace(/<[^>]+>/g,'');txt(d,px+16,py+52,14,'#f1ecff','left',700);
+  ctx.restore();
+  if(!isTouch)txt('Esc = ข้าม',W-18,82,12,'#8d83aa','right',700);
+  if(tutAssist()){const k=1+.1*Math.sin(t0*30);ctx.save();ctx.translate(W/2,268);ctx.scale(k,k);txt('กด '+KEYT.dodge+' เลย!',0,0,34,'#fff7c0','center',900);ctx.restore();}}
+
 // ===== หน้าปก =====
 const titleEl=document.getElementById('title');
 (()=>{const em=document.getElementById('embers');for(let i=0;i<28;i++){const s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.setProperty('--dx',(Math.random()*120-60)+'px');
