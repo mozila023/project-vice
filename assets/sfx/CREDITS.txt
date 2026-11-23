@@ -1,0 +1,8 @@
+Real sound effects in this folder come from Kenney (www.kenney.nl) packs, license CC0 (public domain):
+- Impact Sounds (1.0)   -> flesh*, soft*, bone*, stone4, clang3-4, glass*
+- Foley Sounds (1.0)    -> swing*, blade*, stone0-3, clang0-2
+- RPG Audio (1.0)       -> slice*
+- Sci-Fi Sounds (1.0)   -> boom*, boomBig*
+- Voiceover Pack Fighter -> v_*
+https://creativecommons.org/publicdomain/zero/1.0/
+Files were trimmed, normalized and converted to mono MP3.
