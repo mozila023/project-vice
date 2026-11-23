@@ -1212,6 +1212,7 @@ document.getElementById('bFill').onclick=()=>{const cap=capOf(),av=ORDER.filter(
 document.getElementById('bGo').onclick=closeEditor;
 
 if(/[?&]debug/.test(location.search))window.__mc={P,get enemies(){return enemies},get eeT(){return eeT},get energy(){return energy},set energy(v){energy=v},get state(){return state},get scene(){return scene},get stage(){return stage},startStage,makeEnemy,add(e){enemies.push(e);return e;},loadClass,setMode(m){mode=m;},startTutorial,get tut(){return tut},TS,setChain(a){chain=a;},setStage(n){stage=n;},get kills(){return kills},set kills(v){kills=v},get run(){return run}};
+window.MAHA_VERSION='2026-11-23c';
 window.__dbg=()=>({drops:drops.length,bag:bag.length,eq:Object.values(eq).filter(Boolean).length,kills,enemies:enemies.length,types:[...new Set(enemies.map(e=>e.type))]});
 function loadClass(c,fresh){cls=c;ORDER=ORDERS[c];SYN=SYNS[c];const sv=fresh?null:readSave(c);
   save=Object.assign({stage:1,chain:CLS[c].def.slice(),found:[]},sv||{});
@@ -1230,7 +1231,7 @@ function openModeSel(changeOnly){const sv=readSave(cls);const has=sv&&sv.mode;
   document.getElementById('modeSub').textContent=changeOnly?'เปลี่ยนแล้วมีผลตั้งแต่ด่านถัดไป ของและเงินยังอยู่ครบ':has?'มีเซฟเดิมอยู่ เล่นต่อได้เลย หรือเลือกโหมดเพื่อเริ่มใหม่ (เซฟเดิมของอาชีพนี้จะหาย)':'เปลี่ยนได้ภายหลังในหน้าวิธีเล่น';
   document.getElementById('cont').innerHTML=(!changeOnly&&has)?`<div class="card" id="bCont"><b style="color:#ffd76a">▶ เล่นต่อ</b><small>ด่าน ${sv.stage} · โหมด ${MODE[sv.mode].n} · ${(sv.gold||0).toLocaleString()} G · หินตีบวก ${sv.stones||0}</small></div>`:'';
   const el=document.getElementById('modes');el.innerHTML=Object.entries(MODE).map(([k,m])=>`<div class="card" data-m="${k}" style="border-left:4px solid ${m.col}"><b style="color:${m.col}">${(!changeOnly&&has?'เริ่มใหม่ · ':'')+m.n}</b><small>${m.desc}</small></div>`).join('');
-  const bc=document.getElementById('bCont');if(bc)bc.onclick=()=>{msEl.classList.remove('show');openHub('ยินดีต้อนรับกลับ '+CLS[cls].n+'!');};
+  const bc=document.getElementById('bCont');if(bc)bc.onclick=()=>{msEl.classList.remove('show');if(!tutSeen())startTutorial();else openHub('ยินดีต้อนรับกลับ '+CLS[cls].n+'!');};
   el.querySelectorAll('[data-m]').forEach(c=>c.onclick=()=>{
     if(!changeOnly&&has&&c.dataset.c!=='1'){el.querySelectorAll('[data-m]').forEach(x=>x.dataset.c='');c.dataset.c='1';c.querySelector('small').textContent='กดอีกครั้งเพื่อยืนยันเริ่มใหม่ (เซฟเดิมของ'+CLS[cls].n+'จะหาย)';return;}
     if(!changeOnly)loadClass(cls,true);mode=c.dataset.m;saveEq();msEl.classList.remove('show');if(!changeOnly&&!tutSeen())startTutorial();else openHub(CLS[cls].n+' · โหมด '+MD().n+' — จัดคอมโบแล้วออกเดินทางได้เลย');});
